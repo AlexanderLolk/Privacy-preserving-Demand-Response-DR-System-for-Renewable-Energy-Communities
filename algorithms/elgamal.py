@@ -28,8 +28,8 @@ def Alice():
     print(f"From ciphertext, c2 is : {ciphertext[1]}")
 
     # x = pow(ciphertext[1], secretKey_a) % largePrime_p
-    
-    c1Star = pow(ciphertext[0], (largePrime_p - secretKey_a - 1))
+    # note: Not have the modular part in the calulation it will make it whole progress much longer, could take hours.
+    c1Star = pow(ciphertext[0], (largePrime_p - secretKey_a - 1), largePrime_p)
     print(f"c1Star is : {c1Star}")
     message = c1Star * ciphertext[1] % largePrime_p
 
@@ -54,12 +54,28 @@ def Bob(pk):
 
     return (c1, c2)
 
-
-def gen_key(q):
-
-    key = random.randint(pow(10, 20), q)
-    while gcd(q, key) != 1:
-        key = random.randint(pow(10, 20), q)
-
-    return key
 Alice()
+
+def el_setup():
+    largePrime_p = number.getPrime(random.randint(2000, 2024))
+    generatorOfGroup_g = 35 # add elgamlCore here. get the highest g, not how it should be made, but for testing it is okay
+    secretKey_a = random.randint(2, (largePrime_p-1))
+    A = pow(generatorOfGroup_g, secretKey_a, largePrime_p)
+    pk = (largePrime_p, generatorOfGroup_g, A)
+    return pk, secretKey_a
+
+def el_encrypt(pk, message_m):
+    ephemeralKey_k = random.randint(1, (pk[0]-1))
+    c1 = pow(pk[1], ephemeralKey_k, pk[0])
+    c2 = message_m * pow(pk[2], ephemeralKey_k, pk[0])
+    return (c1, c2)
+
+def el_decrypt(pk, secretKey_a, ciphertext):
+    c1Star = pow(ciphertext[0], (pk[0] - secretKey_a - 1), pk[0])
+    message = c1Star * ciphertext[1] % pk[0]
+
+    print(f"Message is from encrypted message : {message}")
+
+# pk, sk = el_setup()
+# ciphertext = el_encrypt(pk, 2920)
+# el_decrypt(pk, sk, ciphertext)
