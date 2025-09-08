@@ -60,6 +60,9 @@ x = 7
 
 this was chosen randomly from the range {1 ... q-1} (remember q is 11)
 
+### y (public key)
+y = g^x mod p = 2^7 mod 23 = 13
+
 # Hashing
 
 Why is the hashing even needed? Because it prevents forgery and ensures message integrity.
@@ -152,10 +155,10 @@ compute the modular multiplicative inverse of y^e
 
 ### y_inv (inverse example calculation)
 <ol>
-<li>y = 18 (Bob's public key = g^x mod p = 2^7 mod 23)</li>
+<li>y = 13 (Bob's public key = g^x mod p = 2^7 mod 23)</li>
 <li>e = 10</li>
 <li>p = 23</li>
-<li>the calculation for inverse: y_inv = 18^(-10) mod 23 = 1</li>
+<li>the calculation for inverse: y_inv = y^(-e) mod p = 13^(-10) mod 23 = 13</li>
 </ol>
 
 We use y_inv to reconstruct r'.
@@ -165,7 +168,7 @@ r = 8 so we need r' to be 8 too.
 
 This is the calculation for r'
 
-r' = g^s * y^(-e) mod p
+r' = g^s * y^(-e) mod p = 2^7 * 13 mod 23 = 8
 
 proof:
 
