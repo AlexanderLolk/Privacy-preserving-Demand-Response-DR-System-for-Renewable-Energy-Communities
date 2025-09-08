@@ -5,7 +5,7 @@ from math import gcd
 def Alice():
     print("ALICE SIDE\n")
     
-    largePrime_p = number.getPrime(random.randint(20, 40))
+    largePrime_p = number.getPrime(random.randint(10, 19))
     print(f"p is : {largePrime_p}")
     
     generatorOfGroup_g = 35
@@ -13,7 +13,7 @@ def Alice():
     secretKey_a = random.randint(2, (largePrime_p-1))
     print(f"alice's secretKey a is : {secretKey_a}")
     
-    A = pow(generatorOfGroup_g, secretKey_a, largePrime_p)
+    A = pow(generatorOfGroup_g, secretKey_a, largePrime_p) # A is alice's public key component
     print(f"alice's A is : {A}")
     
     pk = (largePrime_p, generatorOfGroup_g, A)

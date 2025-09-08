@@ -3,7 +3,7 @@ import hashlib
 print("\n\n======================start\n")
 
 # parameters
-p = 23  # prime number from Z_p
+p = 23  # prime number from Z_p*
 q = 11  # order of subgroup (q divides p-1)
 g = 2   # generator of subgroup of order q in Z_p*
 
@@ -25,6 +25,9 @@ def H(val):
 	hash_hex = hashlib.sha256(val).hexdigest()
 	hash_int = int(hash_hex, 16)
 	hash_mod_q = hash_int % q
+	print(f"Hex code from message: {hash_hex}")
+	print(f"Numerical value of hex: {hash_int}")
+	print(f"Numerical value mod q: {hash_mod_q}")
 	return hash_mod_q
 
 # signing
@@ -60,6 +63,7 @@ def schnorr_verify(msg, signature):
 	print(f"Calculate inverse with y^(-e) mod p = {y}^(-{e}) mod {p} = {y_inv}")
 	
     # TODO study the proof more. This is apparently like a zero knowledge proof
+	# zero knowledge proofs needs to have Completeness, Soundness, and Zero-knowledge
 	r_prime = (pow(g, s, p) * y_inv) % p # compute r' = g^s * y^{-e} mod p
 	print(f"Calculate the commit value  r' = g^s * y^(-e) mod p = {g}^{s} * {y_inv} mod {p} = {r_prime}") # mathematical proof for this to verify bobs signature without ever knowing bobs private key
 	
