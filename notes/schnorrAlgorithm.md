@@ -1,5 +1,5 @@
 # Step by step Schnorr's algorithm
-Following schnorr.py programming and general math examples
+Following ./algorithms/schnorr.py programming and math examples
 
 ## Quick Overview
 1. **Setup**: Choose parameters p, q, g and generate key pair (x, y)
@@ -8,10 +8,12 @@ Following schnorr.py programming and general math examples
 
 # Parameters
 
-### p
-is chosen from the multiplicaple group of Z_p*
+### p (prime number)
+p is chosen from the multiplicaple group of Z_p*
 
-### q
+### q (subgroup of p)
+q is chosen from the subgroup of p, this means: 
+
 <ul>
     <li>q must divide (p-1).</li>
     <li>q is the size of a smaller subgroup within Z_p*.</li>
@@ -19,58 +21,50 @@ is chosen from the multiplicaple group of Z_p*
     <li>Choose q to be the larges prime factor of p-1</li>
 </ul>
 
-### g
-must not be 1 and has to take the "full round" of numbers when going through Z_p*. I.e
+### g (generated)
+g must not be 1 and has to take the "full round" of numbers when going through Z_p*. I.e
 Pick a number 'h' from Z_p* {2,3,4... 22} and start caclculating g = h^((p-1)/q) mod p.
 For instance, 2 works directly because 2^11 ≡ 1 (mod 23).
 
 
 ### x (private key)
-private key is chosen randomly in the range {1 ... q-1}. So in our case x is one of these choices {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+private key is chosen randomly in the range {1 ... q-1}. So in our case x are one of these choices {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 
 ## Parameter examples
 
-### p
-Z_23* = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22}
-
+### p (prime number)
 p = 23:
 
-### q
+Z_23* = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22}
+
+### q (subgroup of p)
+q = 11
+
 <ol>
     <li>p - 1 = 23 - 1 = 22</li>
     <li>in Z_p* what numbers divide 22? {1, 2, 11, 22}.</li>
     <li>Which number do we choose? one of the highest since lower numbers are more insecure. 11 is the best match here for optimal security. But why not 22? It contains small factors like 2*11, which is lower security too apparently</li>
-    <li>q = 11</li>
 </ol>
 
-### g
-p = 23
+### g (generated)
+we know that: p = 23, q = 11 and we have chosen that h = 2 (random chosen number thats not 1)
 
-q = 11
+Now we calculate g = h^((p-1)/q) mod p.
 
-h = 2 (random chosen number thats not 1)
+The integer '2' works, since it can go the "full round" of 11 elements before repeating (already seen this example on blackboard, notes github)
+'4' is another that would work for g.
 
-2 works, since it can go the "full round" of 11 elements before repeating (already seen this example on blackboard, notes github)
-4 is another that would work for g.
-
-### x
+### x (private key)
 x = 7
 
+this was chosen randomly from the range {1 ... q-1} (remember q is 11)
 
 # Hashing
 
-Why is the hashing even needed? Because it prevents forgery and ensures message integrity
+Why is the hashing even needed? Because it prevents forgery and ensures message integrity.
 
 The Schnorr signatures use Fiat-Shamir heuristic to convert an interactive zero-knowledge proofs into a non-interactive signature scheme.
-
-### example without hashing
-<ul>
-<li>Bob:        "I know the private key x"</li>
-<li>Alice:      "Prove it! Here's a random challenge e"</li>
-<li>Bob:"Here's my response s"</li>
-<li>Alice:      "Verified!"</li>
-</ul>
 
 #### without hashing an attacker could
 <ul>
@@ -78,11 +72,6 @@ The Schnorr signatures use Fiat-Shamir heuristic to convert an interactive zero-
 <li>Compute r' = g^s * y^(-e) mod p</li>
 <li>Claim this is a valid signature for any message</li>
 </ul>
-
-### example with hashing
-Bob creates his own challenge: e = H(message || r)
-
-No back-and-forth is needed.
 
 #### with hashing an attacker cannot
 <ul>
@@ -101,19 +90,19 @@ from coding example in schnorr.py
 <li>now convert hex into integer</li>
 <li>Numerical value of hex: 108372749238573363761270345913201371466881101674911690443957810710438403660878</li>
 <li>Now mod that number using q (which is 11 in our case)</li>
-<li>Numerical value mod q: 10</li>
 <li>e = 10</li>
 </ol>
 
 # Signing
 
-### k = nonce
+### k (nonce)
 k is chosen randomly and is unique for each signing, it is chosen the same way x (private key) is chosen, [1, q-1]. i.e. k is one of {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}. k is called the nonce (as it is always unique).
 
-### r = ephemeral key
+### r (ephemeral key)
 r is the ephemeral key and is calculated from r = g^k mod p
+r = 2^3 mod 23 = 8
 
-### e = hashing the message and r
+### e (hashing the message and r)
 to find e, we hash it the message itself and r like so.
 <ol>
 <li>msg = b'hey' (message in bytes)</li>
@@ -125,7 +114,7 @@ to find e, we hash it the message itself and r like so.
 <li>now reduce the hash_int with modulo q, i.e., hash_int % 11</li>
 </ol>
 
-### s = signature
+### s (signature)
 s is just a calculation: s = (k + x * e) % q = (3 + 7 * e) % 11
 now s contains k, x and e inside of it.
 
@@ -138,9 +127,13 @@ r = g^k mod p = 2^3 mod 23 = 8
 
 e = 10
 
-calculate s, s = (k + x * e) % q = (3 + 7 * 10) % 11 = 7
+calculate s:
 
-we send (e, s) to alice, i.e. (10, 7)
+s = (k + x * e) % q = (3 + 7 * 10) % 11 = 7
+
+we send (e, s) to alice
+
+return (10, 7)
 
 # Verification
 
