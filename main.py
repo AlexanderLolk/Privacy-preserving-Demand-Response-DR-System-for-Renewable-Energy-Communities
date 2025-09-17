@@ -1,7 +1,7 @@
-import aggregators.energy as energy
+import boards.board as board
 
 def main():
-    supply = energy.get_DSO_supply()
+    supply = board.get_DSO_supply()
     print(f"DSO supply: {supply}")
 
 main()
