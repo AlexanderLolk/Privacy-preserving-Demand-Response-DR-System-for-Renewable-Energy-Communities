@@ -23,7 +23,7 @@ def is_generator(g, p):
             return False  # g fails, doesnt have a set going from 1 to p-1
     return True  # g passes, full cycle, meaning set {1, 2, ... ,p - 1} but dont have to be in that order
 
-
+# TODO optimize this function, it is very slow for large p
 def get_highest_generator(p):
     for g in range(p - 1, 1, -1):  # Start from p-1, and then going backwards
         if is_generator(g, p):
