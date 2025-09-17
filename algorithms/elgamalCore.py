@@ -45,7 +45,7 @@ def show_cycle(g, p):
 
 
 def example():
-    p = 11
+    p = 9
     highest_g = get_highest_generator(p)
     print(f"Prime p = {p}")
     print(f"Highest possible generator g = {highest_g}")
