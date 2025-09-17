@@ -3,8 +3,8 @@
 from Crypto.Util import number
 import random
 
-def prime_p():
-    return number.getPrime(random.randint(2000, 2024))
+def prime_p(bits=2048):
+    return number.getPrime(bits)
 
 def generator_g():
     return 35 # add elgamlCore here. get the highest g, not how it should be made, but for testing it is okay

@@ -30,28 +30,28 @@ def get_highest_generator(p):
             return g
     return None # bad g
 
-# Showing a generater that have set going from 1 to p-1
-def show_cycle(g, p):
-    print(f"\nCycle for g = {g} (mod {p}):")
-    value = 1
-    sequence = []
-    for power in range(1, p):
-        oldValue = value
-        value = (value * g) % p
-        sequence.append(value)
-        print(f"g^{power} = {oldValue} * {g} mod {p} = {value}")
-    print(f"\nFull sequence: {sequence}")
-    print(f"Cycle length = {len(sequence)}")
+# # Showing a generater that have set going from 1 to p-1
+# def show_cycle(g, p):
+#     print(f"\nCycle for g = {g} (mod {p}):")
+#     value = 1
+#     sequence = []
+#     for power in range(1, p):
+#         oldValue = value
+#         value = (value * g) % p
+#         sequence.append(value)
+#         print(f"g^{power} = {oldValue} * {g} mod {p} = {value}")
+#     print(f"\nFull sequence: {sequence}")
+#     print(f"Cycle length = {len(sequence)}")
 
 
-def example():
-    p = 9
-    highest_g = get_highest_generator(p)
-    print(f"Prime p = {p}")
-    print(f"Highest possible generator g = {highest_g}")
+# def example():
+#     p = 9
+#     highest_g = get_highest_generator(p)
+#     print(f"Prime p = {p}")
+#     print(f"Highest possible generator g = {highest_g}")
 
-    # Show the full cycle for this g
-    show_cycle(highest_g, p)
+#     # Show the full cycle for this g
+#     show_cycle(highest_g, p)
 
-example()
+# example()
 
