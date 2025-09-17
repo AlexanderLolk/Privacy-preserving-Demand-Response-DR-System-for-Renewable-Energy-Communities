@@ -1,34 +1,45 @@
-def is_generator(g, p):
-    roof = p - 1  # The size of the multiplicative group
-    factors = []  # Prime factors of roof
+import random
 
-    # get roof's prime factors
-    n = roof
-    i = 2
-    while i * i <= n:
-        if n % i == 0:
-            factors.append(i)
-            while n % i == 0:
-                n //= i
-        i += 1
-    if n > 1:
-        factors.append(n)
+def get_generator(p: int):
+    while True:
+        generator = random.randrange(3, p)
+        if pow(generator, 2, p) == 1:
+            continue
+        if pow(generator, p, p) == 1:
+            continue
+        return generator
 
-    # print(factors)
+# def is_generator(g, p):
+#     roof = p - 1  # The size of the multiplicative group
+#     factors = []  # Prime factors of roof
+
+#     # get roof's prime factors
+#     n = roof
+#     i = 2
+#     while i * i <= n:
+#         if n % i == 0:
+#             factors.append(i)
+#             while n % i == 0:
+#                 n //= i
+#         i += 1
+#     if n > 1:
+#         factors.append(n)
+
+#     # print(factors)
     
-    # check if 
-    # g^(roof/q) mod p must NOT equal 1 for ANY prime factor q
-    for q in factors:
-        if pow(g, roof // q, p) == 1:
-            return False  # g fails, doesnt have a set going from 1 to p-1
-    return True  # g passes, full cycle, meaning set {1, 2, ... ,p - 1} but dont have to be in that order
+#     # check if 
+#     # g^(roof/q) mod p must NOT equal 1 for ANY prime factor q
+#     for q in factors:
+#         if pow(g, roof // q, p) == 1:
+#             return False  # g fails, doesnt have a set going from 1 to p-1
+#     return True  # g passes, full cycle, meaning set {1, 2, ... ,p - 1} but dont have to be in that order
 
-# TODO optimize this function, it is very slow for large p
-def get_highest_generator(p):
-    for g in range(p - 1, 1, -1):  # Start from p-1, and then going backwards
-        if is_generator(g, p):
-            return g
-    return None # bad g
+# # TODO optimize this function, it is very slow for large p
+# def get_highest_generator(p):
+#     for g in range(p - 1, 1, -1):  # Start from p-1, and then going backwards
+#         if is_generator(g, p):
+#             return g
+#     return None # bad g
 
 # # Showing a generater that have set going from 1 to p-1
 # def show_cycle(g, p):

@@ -1,7 +1,7 @@
 # Parameters generation for ElGamal
 # perhaps use PyCryptodome (updated library) 
 from Crypto.Util import number
-from .g_generator import get_highest_generator
+from .g_generator import get_generator
 import random
 
 # Elgamal
@@ -9,17 +9,19 @@ def prime_p(bits=2048):
     return number.getPrime(bits)
 
 def generator_g():
-    return 0 # get_highest_generator(prime_p()) # TODO improve get_highest_generator, potentially slow
+    return get_generator(prime_p())
 
-def secret_key():
+def private_key():
     return random.randint(2, (prime_p()-1))
 
 # TODO change this name to be more descriptive
-def computation_A(secretKey_a, largePrime_p, generatorOfGroup_g):
-    return pow(generatorOfGroup_g, secretKey_a, largePrime_p)
+def computation_A(privateKey_a, largePrime_p, generatorOfGroup_g):
+    return pow(generatorOfGroup_g, privateKey_a, largePrime_p)
 
-def public_key(largePrime_p, generatorOfGroup_g, A):
-    return (largePrime_p, generatorOfGroup_g, A)
+def public_key(largePrime_p, generatorOfGroup_g, computation_A):
+    return (largePrime_p, generatorOfGroup_g, computation_A)
+
+
 
 
 # Schnorr's signature params
