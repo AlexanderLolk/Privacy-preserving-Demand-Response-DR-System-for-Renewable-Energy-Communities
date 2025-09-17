@@ -1,5 +1,5 @@
 # Parameters generation for ElGamal
-# PyCryptodome 
+# perhaps use PyCryptodome (updated library) 
 from Crypto.Util import number
 import random
 
@@ -17,13 +17,3 @@ def A(secretKey_a, largePrime_p, generatorOfGroup_g):
 
 def public_key(largePrime_p, generatorOfGroup_g, A):
     return (largePrime_p, generatorOfGroup_g, A)
-
-def el_setup():
-    largePrime_p = prime_p()
-    generatorOfGroup_g = generator_g()
-    secretKey_a = secret_key()
-    A_value = A(secretKey_a, largePrime_p, generatorOfGroup_g)
-    pk = public_key(largePrime_p, generatorOfGroup_g, A_value)
-    return pk, secretKey_a
-
-# print(el_setup())
