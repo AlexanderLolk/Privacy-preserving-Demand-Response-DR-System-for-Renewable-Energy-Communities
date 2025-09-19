@@ -5,7 +5,7 @@ from .g_generator import get_generator
 import random
 
 # Elgamal
-def prime_p(bits=2048):
+def prime_p(bits=20):
     return number.getPrime(bits)
 
 def generator_g():
