@@ -5,14 +5,14 @@ from .g_generator import get_generator
 import random
 
 # Elgamal
-def prime_p(bits=20):
+def prime_p(bits=20): 
     return number.getPrime(bits)
 
-def generator_g():
-    return get_generator(prime_p())
+def generator_g(p):
+    return get_generator(p)
 
-def private_key():
-    return random.randint(2, (prime_p()-1))
+def private_key(p):
+    return generator_g(p)
 
 # TODO change this name to be more descriptive
 def computation_A(privateKey_a, largePrime_p, generatorOfGroup_g):

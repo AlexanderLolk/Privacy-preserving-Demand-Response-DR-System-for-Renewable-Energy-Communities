@@ -29,7 +29,7 @@ with open(names_path, "r") as file:
 
 # user's public keys
 for i in range(NUM_USERS):
-    user_sk = params.private_key()
+    user_sk = params.private_key(largeprime_p)
     user_A = params.computation_A(user_sk, largeprime_p, generator_g)
     user_pk = params.public_key(largeprime_p, generator_g, user_A)
     user_keys.append({user_pk})
