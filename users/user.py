@@ -10,7 +10,7 @@ NUM_USERS = 3
 
 # parameters
 largeprime_p = params.prime_p()
-generator_g = params.generator_g()
+generator_g = params.generator_g(largeprime_p)
 user_keys = []
 
 user_names = []
