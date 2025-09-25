@@ -3,11 +3,14 @@
 # aggregator anonymizes key send its back to keep track of users
 
 import utils.params as params
+# import utils.generators as gen
 import os 
 
 
 NUM_USERS = 3
 
+
+# TODO: change params to gen with correct names and funcktions
 # parameters
 largeprime_p = params.prime_p()
 generator_g = params.generator_g(largeprime_p)
