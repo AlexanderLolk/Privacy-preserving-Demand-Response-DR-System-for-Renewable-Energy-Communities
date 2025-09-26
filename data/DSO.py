@@ -34,8 +34,8 @@ def registration():
     agg_info = agg.get_agg_signature(pp)
     if not (verify_agg_user(agg_info, registered_aggs, "aggregator")):
         return "failed"
-    
-    return (registered_users, registered_aggs)
+    dso_info = (id, (pk, pp, proof))
+    return (dso_info, registered_users, registered_aggs)
 
 # signed list of registered aggregators
 def verify_agg_user(component_info, registered, component_type):

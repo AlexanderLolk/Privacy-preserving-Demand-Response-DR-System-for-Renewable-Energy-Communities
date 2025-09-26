@@ -5,6 +5,6 @@ registered_users = []
 registered_aggs = []
 
 def get_registered_users_and_aggregators():
-    registered_users, registered_aggs = dso.registration()
+    dso_info, registered_users, registered_aggs = dso.registration()
 
 # print(get_registered_users_and_aggregators())
