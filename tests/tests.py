@@ -16,7 +16,7 @@ def test():
 
     # Schnorr NIZKP
     msg_zkp = "hello proof"
-    proof = NIZKP.schnorr_proof(params, pk, sk, msg_zkp)
+    proof = NIZKP.schnorr_NIZKP_proof(params, pk, sk, msg_zkp)
     print("Proof (c, r, W):", proof)
     proof_valid = NIZKP.schnorr_NIZKP_verify(params, pk, proof, msg_zkp)
     print("Proof valid?", proof_valid)

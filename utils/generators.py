@@ -13,7 +13,8 @@
 
 from petlib.ec import EcGroup
 import random
-import utils.signature as Sig
+import utils.signature as sig
+import utils.NIZKP as nizkp
 
 def pub_param(nid=713):
     group_G = EcGroup()
@@ -26,5 +27,7 @@ def pub_param(nid=713):
 def skey_gen(id=random, pp=None):
     if pp is None:
         pp = pub_param()
-    sk, pk = Sig.key_gen(pp)
-    return ((id, pk), sk)
+    sk, pk = sig.key_gen(pp)
+    proof =  nizkp.schnorr_NIZKP_proof(pp, pk, sk)
+    
+    return ((id, (pk, pp, proof)), sk)
