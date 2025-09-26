@@ -1,6 +1,5 @@
 # participating user
 # non-participating user
-# aggregator anonymizes key send its back to keep track of users
 
 import utils.generators as gen
 import os 
@@ -11,7 +10,6 @@ user_keys = []
 user_info = {}
 user_names = []
 user_iden = []
-
 
 def make_user(pp):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -29,17 +27,10 @@ def make_user(pp):
     # user's public keys
     for i in range(NUM_USERS):
         user_id = user_iden[i]
-        ((id, (pk, pp, proof)), sk) = gen.skey_gen(pp) # PP runs from the DSO first and populates the parameters, thats why its not none
+        ((id, (pk, pp, proof)), sk) = gen.skey_gen(pp)
         verification = (pk, pp, proof)
         user_info[user_id] = verification
     return user_info
 
-
-
-
 def get_user_signature(pp):
     return make_user(pp)
-
-# user_ids = list(user_info.keys())
-
-# print("User IDs: ", user_ids)
