@@ -8,4 +8,6 @@ def get_registered_users():
     return registered_users
 
 dso_info, registered_users, registered_aggs = make_registered_users_and_aggregators()
+
+
 print(registered_users)

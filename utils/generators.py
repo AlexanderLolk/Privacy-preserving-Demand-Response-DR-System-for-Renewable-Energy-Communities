@@ -50,7 +50,7 @@ def ekey_gen(pp=None):
 # needs signature and different randomness r for each pki the user gets gr′
 # not r′)
 
-# to be reworked
+# t to be reworked
 def mix_id(pk_list):
 
     # shuffle
@@ -82,5 +82,21 @@ def mix_id(pk_list):
 # 4. Compute σ $ ←− Sig.Sign(sk, (t, ct)).
 # 5. Return (pk, (t, ct, σ)).
 
+user_info = {}
+
 def report(id, sk, ek, m, t):
-    return ""
+    # user
+    pk = user_info[id]
+    pp = pk[1]
+
+    # convert message to binary in a list of bits
+    mbin = [int(x) for x in bin(m)[2:]]
+    
+    # encrypt
+    ct = [ahe.enc(ek[1], ek[0], m) for m in mbin]
+
+    # sign (pk = (pk, pp, proof))
+    signing_σ = sig.schnorr_sign(pp, sk, str((t, ct)))
+
+    # get pk
+    return (pk, (t, ct, signing_σ))

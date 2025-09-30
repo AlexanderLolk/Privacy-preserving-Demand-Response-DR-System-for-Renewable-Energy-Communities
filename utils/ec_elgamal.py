@@ -8,8 +8,11 @@ def key_gen(params):
 # standard elgamal encryption
 def enc(params, pub, counter):
     G, g, o = params
+    # k = r
     k = o.random()
+    #   r * g 
     a = k * g
+    #   r * ek  +    m    * g
     b = k * pub + counter * g
     return (a, b)
 

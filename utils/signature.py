@@ -22,7 +22,7 @@ def schnorr_sign(sec_params, sk, msg):
     _, g, order = sec_params
     k = order.random()            # nonce
     R = k * g                     # ephemeral public key
-    e = Hash(R, msg, order)      # challenge
+    e = Hash(R, msg, order)       # challenge
     s = (k + sk * e) % order      # signature
     return (R, s)
 

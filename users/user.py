@@ -33,4 +33,15 @@ def make_user(pp):
     return user_info
 
 def get_user_signature(pp):
-    return make_user(pp)
+    mu = make_user(pp)
+    print(user_info["K. C"])
+    return mu
+
+
+# def report_baseline():
+    
+#     for user in user_info:
+#         gen.report()
+# for user in user_info:
+
+# print(user_info["K. C"])
