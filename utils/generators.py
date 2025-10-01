@@ -1,16 +1,3 @@
-# SKeyGen(id, pp) → ((id, pk), sk):
-
-# On input identity id and pp executes (sk, pk) ← Sig.KeyGen(1λ, id)
-# to generate signature key pair (sk, pk).
-
-# It computes πsk ← Proofsk((id, pp, pk), sk) and updates
-# pk such that pk contains pp and a proof of knowledge πsk, and returns ((id, pk), sk).
-
-# 1^lambda = sec_params
-
-# TODO
-# integrate non-interactive proof of zero knowledge (NIZKPK) for the secret key sk corresponding to pk
-
 from petlib.ec import EcGroup
 import random
 import utils.signature as sig
@@ -50,7 +37,7 @@ def ekey_gen(pp=None):
 # needs signature and different randomness r for each pki the user gets gr′
 # not r′)
 
-# t to be reworked
+# TODO to be reworked
 def mix_id(pk_list):
 
     # shuffle
@@ -59,20 +46,39 @@ def mix_id(pk_list):
     
     # randomize
     pk_mixed = []
-    r_list = [] # list of randomness for each pk
+    r_map = {}  # id -> ωmix (so the agg can decrypt later)
 
+    # each shuffled pk is randomized by adding a skalar ωmix is generated for each pki
     for id_val, (pk, pp, proof) in pk_shuffled:
         _, g, order = pp
         ωmix = order.random() 
         pk_mark = pk + ωmix * g # randomize by adding ωmix * g so pk′ = pk + ωmix·g
         pk_mixed.append((id_val, (pk_mark, pp, proof)))
-        r_list.append(ωmix)
+        r_map[id_val] = ωmix
+        
+    πmix = nizkp.schnorr_NIZKP_proof(pp, pk_mark, ωmix) # not the correct kind of proof?
 
-    πmix = nizkp.schnorr_NIZKP_proof(pp, pk_mark, ωmix) # not the correct proof?
-
-    return (pk_mixed, r_list, πmix)
+    return (pk_mixed, r_map, πmix)
 
 # print("mix", mix_id([("id1", skey_gen("id1")[0][1]), ("id2", skey_gen("id2")[0][1]) ]))
+
+# mix ([('id1', (EcPt(033ad5c54716f631412d1edee9e3d24d733d24c4cafb6c948a8fd210b9),
+# (EcGroup(713), EcPt(02b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21),
+# 26959946667150639794667015087019625940457807714424391721682722368061),
+# (16487592668787700327411264756475871888147889605471678419735314536109,
+# 15677843351911813246479566031283882558293444917739170338356983039811,
+# EcPt(0239a23a3a718e553dac06980183c72e2d806a2b403c000dfca50985b0)))),
+# ('id2', (EcPt(02bdc8c3af46f4fc766ee996d3dae3b645257f255bd3b4e558af04f373),
+# (EcGroup(713), EcPt(02b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21),
+# 26959946667150639794667015087019625940457807714424391721682722368061),
+# (14275928813026181319373889587855852115018972873843934298902265471464,
+# 6081532365769620532019736159259168037079384161615141394057917199796,
+# EcPt(03d6f5c5e2ecd533ee2768cd99c22c26020d3cbd224edb20018b2b05e8))))],
+# {'id1': 18931678444940182860025687809087546505377619989474182416854594156446,
+# 'id2': 19184775423589560902869614866061456474272209509369751989357596653140},
+# (3800893349750884971216537661225274199943156039382845467434248082837,
+# 14153630748931177267687421563799780440769580861363180919287019841092,
+# EcPt(0248147293828e6ad8773cfc3a2725ac3c6f72e3ed7f7721ae3baced21)))
 
 # Report(id, sk, ek, m, t) → (pk, (t, ct, σ)): on input smart meter identity id ∈ ID, secret signing
 # key sk, servers public encryption key ek, smart meter data m ∈ M, and timestamp t does the following:

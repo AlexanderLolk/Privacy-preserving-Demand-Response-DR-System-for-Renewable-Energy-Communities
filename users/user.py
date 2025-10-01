@@ -3,6 +3,7 @@
 
 import utils.generators as gen
 import os 
+from datetime import datetime
 
 NUM_USERS = 3
 
@@ -38,10 +39,11 @@ def get_user_signature(pp):
     return mu
 
 
-# def report_baseline():
+def report_baseline():
     
-#     for user in user_info:
-#         gen.report()
+    timestamp = datetime.now()    
+    for user in user_info:
+        gen.report(user[0][0],user[1])
 # for user in user_info:
 
 # print(user_info["K. C"])
