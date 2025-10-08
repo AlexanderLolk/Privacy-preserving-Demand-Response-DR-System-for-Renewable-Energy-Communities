@@ -76,20 +76,16 @@ def receive_randomization(user_id, r_val):
 ###############################################################
 # MIX, testing receive_randomization                          #
 ###############################################################
-pp = gen.pub_param()
-
-# Get registered users and aggregators
-user_info = make_user(pp)  # from user.py
-agg_info = agg.make_aggregator(pp)  # from aggregator.py
-
-# Prepare input for mixing
-ID_pk = [(agg_id, agg_val) for agg_id, agg_val in agg_info.items()]
-
-# Run mixing to get r_map
-pk_mixed, r_map, proofs, πmix = agg.create_mixed_anon_pk_set(ID_pk)
-
-# test the users receive their r'
-for user_id, r_val in r_map.items():
-    receive_randomization(user_id, r_val)
-
-print("User randomizations:", user_randomizations)
+if __name__ == "__main__":
+    pp = gen.pub_param()
+    # Get registered users and aggregators
+    user_info = make_user(pp)  # from user.py
+    agg_info = agg.make_aggregator(pp)  # from aggregator.py
+    # Prepare input for mixing
+    ID_pk = [(agg_id, agg_val) for agg_id, agg_val in agg_info.items()]
+    # Run mixing to get r_map
+    pk_mixed, r_map, proofs, πmix = agg.create_mixed_anon_pk_set(ID_pk)
+    # test the users receive their r'
+    for user_id, r_val in r_map.items():
+        receive_randomization(user_id, r_val)
+    print("User randomizations:", user_randomizations)
