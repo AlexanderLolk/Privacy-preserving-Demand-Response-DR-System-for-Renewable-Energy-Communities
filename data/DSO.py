@@ -16,6 +16,9 @@ import users.user as use
 import aggregators.aggregator as agg
 import random
 
+el_info = ()
+pp = ""
+
 # signed list of registered users
 def registration():
     registered_users = []
@@ -78,7 +81,7 @@ def calculate_DR_param_and_target_reduction():
     return dr_param, target_reduction_value
 
 # noisy list
-def generate_noisy_target_list():
+def generate_reduction_target_list():
     _, target_reduction = calculate_DR_param_and_target_reduction()
 
     max_noise = max(1, target_reduction - 1)
@@ -92,7 +95,14 @@ def generate_noisy_target_list():
     return values
 
 # publish the noisy target list to BB using BB's public key
-def publish_noisy_target_list(board_pk):
-    noisy_list = generate_noisy_target_list()
-    encrypted_list = [ahe.enc(gen.pub_param(), board_pk, val) for val in noisy_list]
-    return encrypted_list
+def publish_reduction_target_list(board_pk):
+    noisy_list = generate_reduction_target_list()
+    reduction_target_list = [ahe.enc(gen.pub_param(), board_pk, val) for val in noisy_list]
+    return reduction_target_list
+
+# for board, aggregator, and users
+def establish_secure_connection():
+    # ((ek, pp, πdk), dk)
+    if el_info == ():
+        el_info = gen.ekey_gen(pp)
+    return el_info[0][0]

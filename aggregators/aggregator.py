@@ -34,3 +34,17 @@ def make_aggregator(pp):
 
 def get_agg_signature(pp):
     return make_aggregator(pp)
+
+# MIX: create mixed anonymous pk set
+def create_mixed_anon_pk_set(ID_pk):
+    pk_mixed, r_map, proofs, πmix = gen.mix_id(ID_pk)
+    return (pk_mixed, r_map, proofs, πmix)
+
+# send (pk', πmix) to board
+def publish_to_board(pk_mixed, πmix, board_publish_func):
+    board_publish_func(pk_mixed, πmix)
+
+# send r' to users
+def send_r_mark_to_users(r_map, user_receive_func):
+    for user_id, r_val in r_map.items():
+        user_receive_func(user_id, r_val)

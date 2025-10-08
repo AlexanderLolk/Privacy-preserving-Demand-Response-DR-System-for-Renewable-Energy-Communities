@@ -1,4 +1,5 @@
 from petlib.ec import EcGroup
+import hashlib
 import random
 import utils.signature as sig
 import utils.NIZKP as nizkp
@@ -9,6 +10,8 @@ def pub_param(nid=713):
     g = group_G.generator()
     order = group_G.order()
     return (group_G, g, order)
+
+pp = pub_param()
 
 # SKey_Gen(id, pp) → ((id, pk), sk)
 # generates signature key pair (sk, pk) for identity id
@@ -39,46 +42,50 @@ def ekey_gen(pp=None):
 
 # TODO to be reworked
 def mix_id(pk_list):
-
     # shuffle
     pk_shuffled = pk_list.copy()
-    random.shuffle(pk_shuffled)
+    random.shuffle(pk_shuffled) # TODO use a secret shuffle
     
-    # randomize
+    # lists and map
     pk_mixed = []
-    r_map = {}  # id -> ωmix (so the agg can decrypt later)
+    r_map = {}
+    proofs = []
 
-    # each shuffled pk is randomized by adding a skalar ωmix is generated for each pki
     for id_val, (pk, pp, proof) in pk_shuffled:
         _, g, order = pp
-        ωmix = order.random() 
-        pk_mark = pk + ωmix * g # randomize by adding ωmix * g so pk′ = pk + ωmix·g
+        ωmix = order.random()
+        pk_mark = pk + ωmix * g # randomize the key
+        # compute difference and proof (pk_mark - pk = (pk + ωmix * g) - pk = ωmix * g)
+        diff = pk_mark - pk
+        πmix = nizkp.schnorr_NIZKP_proof(pp, diff, ωmix) # proof that can prove knowledge of ωmix
         pk_mixed.append((id_val, (pk_mark, pp, proof)))
         r_map[id_val] = ωmix
-        
-    πmix = nizkp.schnorr_NIZKP_proof(pp, pk_mark, ωmix) # not the correct kind of proof?
+        proofs.append(πmix)
 
-    return (pk_mixed, r_map, πmix)
+    # πmix could be a hash/signature of all proofs, or a Merkle root, etc.
+    proof_bytes = b''.join([str(p).encode() for p in proofs])
+    πmix_ = hashlib.sha256(proof_bytes).hexdigest()
 
-# print("mix", mix_id([("id1", skey_gen("id1")[0][1]), ("id2", skey_gen("id2")[0][1]) ]))
+    return (pk_mixed, r_map, proofs, πmix_)
 
-# mix ([('id1', (EcPt(033ad5c54716f631412d1edee9e3d24d733d24c4cafb6c948a8fd210b9),
-# (EcGroup(713), EcPt(02b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21),
-# 26959946667150639794667015087019625940457807714424391721682722368061),
-# (16487592668787700327411264756475871888147889605471678419735314536109,
-# 15677843351911813246479566031283882558293444917739170338356983039811,
-# EcPt(0239a23a3a718e553dac06980183c72e2d806a2b403c000dfca50985b0)))),
-# ('id2', (EcPt(02bdc8c3af46f4fc766ee996d3dae3b645257f255bd3b4e558af04f373),
-# (EcGroup(713), EcPt(02b70e0cbd6bb4bf7f321390b94a03c1d356c21122343280d6115c1d21),
-# 26959946667150639794667015087019625940457807714424391721682722368061),
-# (14275928813026181319373889587855852115018972873843934298902265471464,
-# 6081532365769620532019736159259168037079384161615141394057917199796,
-# EcPt(03d6f5c5e2ecd533ee2768cd99c22c26020d3cbd224edb20018b2b05e8))))],
-# {'id1': 18931678444940182860025687809087546505377619989474182416854594156446,
-# 'id2': 19184775423589560902869614866061456474272209509369751989357596653140},
-# (3800893349750884971216537661225274199943156039382845467434248082837,
-# 14153630748931177267687421563799780440769580861363180919287019841092,
-# EcPt(0248147293828e6ad8773cfc3a2725ac3c6f72e3ed7f7721ae3baced21)))
+# def verify_mix_id(pk_list, pk_mixed, r_map, proofs):
+#     # Build a mapping from id to original pk and pp
+#     pk_dict = {id_val: (pk, pp) for id_val, (pk, pp, _) in pk_list}
+#     results = []
+#     for i, (id_val, (pk_mark, pp, _)) in enumerate(pk_mixed):
+#         pk, _pp = pk_dict[id_val]
+#         ωmix = r_map[id_val]
+#         πmix = proofs[i]
+#         diff = pk_mark - pk
+#         verified = nizkp.schnorr_NIZKP_verify(pp, diff, πmix)
+#         results.append((id_val, verified))
+#     return results
+
+
+# pk_list = [("id1", skey_gen("id1")[0][1]), ("id2", skey_gen("id2")[0][1]), ("id3", skey_gen("id3")[0][1]), ("id4", skey_gen("id4")[0][1])]
+# pk_mixed, r_map, proofs, πmix = mix_id(pk_list)
+# print("verify", verify_mix_id(pk_list, pk_mixed, r_map, proofs))
+
 
 # Report(id, sk, ek, m, t) → (pk, (t, ct, σ)): on input smart meter identity id ∈ ID, secret signing
 # key sk, servers public encryption key ek, smart meter data m ∈ M, and timestamp t does the following:

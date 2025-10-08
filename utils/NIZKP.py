@@ -35,7 +35,7 @@ def schnorr_NIZKP_verify(sec_params, pk, proof, msg=""):
     W_check = (r * g + c * pk)
     # recompute challenge
     challenge = schnorr_NIZKP_challenge([
-        g.export().hex(),
+        g.export().hex(),   
         pk.export().hex(),
         W_check.export().hex(),
         msg
