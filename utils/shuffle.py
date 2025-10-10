@@ -16,21 +16,9 @@ def GenPermutation(N):
         I[k] = I[i]
     return j_i
 
-#######################
-# def gen_permutation(length):
-#     i = []
-#     for j in range(length):
-#         i.append(j)
-#     random.shuffle(i)
-#     return i
-
-# print("papir: " + str(GenPermutation(5)))
-# print("re: " + str(gen_permutation(5)))
-#######################
-
-# Algorithm 4.1: Generates a random permutation ψ ∈ ΨN and uses it to shuffle a
-# given list e of public keys (pk, from skey_gen) into a shuffled list e′.
-def GenShuffle(e):
+# Generates a random permutation ψ ∈ Ψ_N and use it to shuffle a
+# given list e of pk_i into a shuffled list e′.
+def GenShuffle(e, pk):
     N = len(e)
     ψ = GenPermutation(N)
     _, _, order = gen.pp
@@ -42,9 +30,9 @@ def GenShuffle(e):
         r_i = order.random()
         r_prime.append(r_i)
         
-        pk_tuple = e[i] 
-        pk = pk_tuple[1][0] # pk_tuple[1][0] # get pk from (id, (pk, pp, proof))
-        pk_prime = pk * r_i # randomize the encryption
+        pk = e[i]
+        # pk_prime = pk * pow(g, r_i)
+        pk_prime = pk * r_i # make sure the elliptic curve calculation conversion is correct
         
         e_prime.append(pk_prime)
 
@@ -55,8 +43,28 @@ def GenShuffle(e):
 
 # Algorithm 4.4: Generates a commitment c = Com(ψ, r) to a permutation ψ by
 # committing to the columns of the corresponding permutation matrix.
-def GenCommitment():
-    return ""
+# Algorithm: GenCommitment(ψ)
+# Input: Permutation ψ = (j1, ... , jN ) ∈ Ψ_N
+# for i = 1, ... , N do
+# r_j_i ∈R Z_q
+# c_j_i ← g^r_j_i h_i mod p
+# c ← (c_1, ... , c_N )
+# r ← (r_1, ... , r_N )
+# return (c, r)
+def GenCommitment(ψ):
+    _, g, order = gen.pp
+    N = len(ψ)
+    c = []
+    r = []
+
+    for i in range(N):
+        r_j_i = order.random()
+        r.append(r_j_i)
+
+        
+
+    return (c, r)
+
 
 # Algorithm 4.5: Generates a commitment chain c0 → c1 → · · · → cN relative to a
 # list of public challenges u and starting with a given commitment c0
