@@ -72,7 +72,6 @@ def receive_randomization(user_id, r_val):
     user_randomizations[user_id] = r_val
     print(f"User {user_id} received randomization r′: {r_val}")
 
-
 ###############################################################
 # MIX, testing receive_randomization                          #
 ###############################################################

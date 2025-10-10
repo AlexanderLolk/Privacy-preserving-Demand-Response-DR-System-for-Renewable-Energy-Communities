@@ -41,6 +41,7 @@ def ekey_gen(pp=None):
 # not r′)
 
 # TODO to be reworked
+# mix should not encrypt but randomize the pk with r
 def mix_id(pk_list):
     # shuffle
     pk_shuffled = pk_list.copy()
