@@ -6,12 +6,17 @@ import utils.NIZKP as nizkp
 import utils.ec_elgamal as ahe
 
 def pub_param(nid=713):
-    group_G = EcGroup()
+    group_G = EcGroup(nid)
     g = group_G.generator()
     order = group_G.order()
+    
+    # h = group_G.generator()
+    # print("" + str(h))
+    print("" + str(g))
     return (group_G, g, order)
 
 pp = pub_param()
+hh = pub_param(725)
 
 # SKey_Gen(id, pp) → ((id, pk), sk)
 # generates signature key pair (sk, pk) for identity id
