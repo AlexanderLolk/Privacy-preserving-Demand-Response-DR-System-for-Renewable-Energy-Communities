@@ -32,3 +32,6 @@ venv/
 *.db
 *.bak
 *.tmp
+
+# stuff
+HYPERmixnet.py

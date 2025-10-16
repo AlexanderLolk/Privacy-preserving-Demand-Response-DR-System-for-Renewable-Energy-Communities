@@ -9,14 +9,13 @@ def pub_param(nid=713):
     group_G = EcGroup(nid)
     g = group_G.generator()
     order = group_G.order()
-    
-    # h = group_G.generator()
-    # print("" + str(h))
-    print("" + str(g))
+    group_h = EcGroup(nid)
+
+    print(str(group_G.generator()))
+    print(str(group_h.generator()))
     return (group_G, g, order)
 
 pp = pub_param()
-hh = pub_param(725)
 
 # SKey_Gen(id, pp) → ((id, pk), sk)
 # generates signature key pair (sk, pk) for identity id
@@ -73,25 +72,6 @@ def mix_id(pk_list):
     πmix_ = hashlib.sha256(proof_bytes).hexdigest()
 
     return (pk_mixed, r_map, proofs, πmix_)
-
-# def verify_mix_id(pk_list, pk_mixed, r_map, proofs):
-#     # Build a mapping from id to original pk and pp
-#     pk_dict = {id_val: (pk, pp) for id_val, (pk, pp, _) in pk_list}
-#     results = []
-#     for i, (id_val, (pk_mark, pp, _)) in enumerate(pk_mixed):
-#         pk, _pp = pk_dict[id_val]
-#         ωmix = r_map[id_val]
-#         πmix = proofs[i]
-#         diff = pk_mark - pk
-#         verified = nizkp.schnorr_NIZKP_verify(pp, diff, πmix)
-#         results.append((id_val, verified))
-#     return results
-
-
-# pk_list = [("id1", skey_gen("id1")[0][1]), ("id2", skey_gen("id2")[0][1]), ("id3", skey_gen("id3")[0][1]), ("id4", skey_gen("id4")[0][1])]
-# pk_mixed, r_map, proofs, πmix = mix_id(pk_list)
-# print("verify", verify_mix_id(pk_list, pk_mixed, r_map, proofs))
-
 
 # Report(id, sk, ek, m, t) → (pk, (t, ct, σ)): on input smart meter identity id ∈ ID, secret signing
 # key sk, servers public encryption key ek, smart meter data m ∈ M, and timestamp t does the following:

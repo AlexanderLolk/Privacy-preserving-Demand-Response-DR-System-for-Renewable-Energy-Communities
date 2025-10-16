@@ -1,8 +1,5 @@
 # Reading material at voting17_HLKD17.pdf
 
-# libraries:
-# Verificatum Mix-Net
-# UniCrypt library
 import random
 import utils.generators as gen
 from petlib.bn import Bn
@@ -21,6 +18,7 @@ def GenPermutation(N):
 
 # Generates a random permutation ψ ∈ Ψ_N and use it to shuffle a
 # given list e of pk_i into a shuffled list e′.
+# keep in mind, this reencrypts the list and then shuffles it
 def GenShuffle(e, pk):
     N = len(e)
     ψ = GenPermutation(N)
@@ -35,8 +33,9 @@ def GenShuffle(e, pk):
         
         pk = e[i]
         # pk_prime = pk * pow(g, r_i)
-        pk_prime = pk * r_i # make sure the elliptic curve calculation conversion is correct
-        
+        # pk_prime = pk * r_i # make sure the elliptic curve calculation conversion is correct
+        pk_prime = pk.pt_mul(r_i)
+
         e_prime.append(pk_prime)
 
     # shuffle it
@@ -54,10 +53,14 @@ def GenCommitment(ψ):
 
     group = gen.pp[0] # gets the group for h
 
+    global h_generators
+    h_generators = []
+
+    # TODO make sure we can actually use a correct h
     for i in range(N):
         # Check if translating a label to a point is more safe then just getting a point on the elliptic curve 
         h_i = group.hash_to_point(f"h_generator_label_{i}".encode()) # creates h, which is a fixed label. (uses petlib's hash_to_point)
-        h_generators.append(h_i)
+        h_generators.append(h_i) # 
 
     for i in range(N):
         r_j_i = order.random()
@@ -132,97 +135,125 @@ def GenCommitmentChain(c0, u):
 # t4: Proves knowledge of r'(re-encryption randomness) - this is a pair for ElGamal
 import hashlib
 
-def hash_to_zq(data, modulus):
+def hash_to_zq(data):
     """Cryptographically secure hash to Zq"""
     hasher = hashlib.sha256()
     hasher.update(str(data).encode())
-    return Bn.from_binary(hasher.digest()) % modulus
+    return Bn.from_binary(hasher.digest())
 
-# TODO review
-def GenProof(e, e_prime, r_prime, ψ, pk):
-    group, g, order = gen.pp
+# genproof AI
+def GenProof_ai(e, e_prime, r_prime, ψ, pk):
+    """
+    Generate shuffle proof for public anonymized keys
+    
+    Args:
+        e: List of original public keys [pk1, pk2, ..., pkN]
+        e_prime: List of shuffled & re-randomized public keys
+        r_prime: Re-randomization values
+        ψ: Permutation
+        pk: Base public key (generator g)
+    """
+    _, g, order = gen.pp
     N = len(e)
     q = order
 
+    # Step 1: Commit to permutation
     c, r = GenCommitment(ψ)
 
+    # Step 2-7: Generate challenges and commitments
     u = []
-    u_prime = []
-
     for i in range(N):
-        u_i = hash_to_zq((str(e), str(e_prime), str(c), i), q)
+        u_i = hash_to_zq((str(e), str(e_prime), str(c), i))
         u.append(u_i)
+
+    # Step 3: Permute challenges to get u_prime
+    u_prime = []
+    for i in range(N):
         u_prime.append(u[ψ[i]])
+        
+    # in genCommitmentChain h is c0
+    h = g.pt_mul(order.random()) 
+    c_hat, r_hat = GenCommitmentChain(h, u_prime)
 
-    h = group.hash_to_point(b"label")
-    hat_c, hat_r = GenCommitmentChain(h, u_prime)
-
-    # line 8
+    # Step 8-14: Compute weighted sums
     r_bar = sum(r) % q
 
-    # lines 9-11
     v = [0] * N
     v[N-1] = 1
-    for i in range(N-2,-1,-1):
+    for i in range(N-2, -1, -1):
         v[i] = (u_prime[i+1] * v[i+1]) % q
     
-    # line 12-14
-    hat_r_sum = sum(hat_r[i] * v[i] for i in range(N)) % q
-    r_tilde = sum(r[i] * u[i] for i in range(N)) % q
-    r_prime_sum = sum(r_prime[i] * u[i] for i in range(N)) % q
+    r_hat_sum = sum((r_hat[i] * v[i]) % q for i in range(N)) % q
+    r_tilde = sum((r[i] * u[i]) % q for i in range(N)) % q
+    r_prime_sum = sum((r_prime[i] * u_prime[i]) % q for i in range(N)) % q
 
-    # line 15-18
-    omega = [order.random() for _ in range(4)]
-    hat_omega =  [order.random() for _ in range(N)]   # ω2
-    omega_prime =  [order.random() for _ in range(N)] # ω3
+    # Step 15-25: Generate witnesses and t-values
+    w = [order.random() for _ in range(4)]
+    w_hat = [order.random() for _ in range(N)]
+    w_prime = [order.random() for _ in range(N)]
 
-    # line 19-22
-    t1 = g.pt_mul(omega[0])  # g^ω1 mod p → ω1 * g
-    t2 = g.pt_mul(omega[1])  # g^ω2 mod p → ω2 * g
-
-    # t3 = g^ω3 * ∏h_i^ω'_i → ω3 * g + Σ(ω'_i * h_i)
-    t3 = g.pt_mul(omega[2])
-    for i in range(N):
-        t3 = t3.pt_add(h_generators[i].pt_mul(omega_prime[i]))
+    t1 = g.pt_mul(w[0])
+    t2 = g.pt_mul(w[1])
     
-    # TODO review
-    # ElGamal pairs (AI GENERATED)
-    t4_1 = pk.pt_mul(-omega[3])
-    t4_2 = g.pt_mul(-omega[3])
+    t3 = g.pt_mul(w[2])
+    for i in range(N):
+        t3 = t3.pt_add(h_generators[i].pt_mul(w_prime[i])) # TODO Make sure that h_generators is actually populated
     
+    # normally this step is for ElGamal pairs
+    # we have an anonymized list of public keys so its simpler
+    t4 = g.pt_mul(-w[3]) # Start with -ω4 * g
+
     for i in range(N):
-        a_prime_i, b_prime_i = e_prime[i]
-        t4_1 = t4_1.pt_add(a_prime_i.pt_mul(omega_prime[i]))
-        t4_2 = t4_2.pt_add(b_prime_i.pt_mul(omega_prime[i]))
+        # e_prime[i] is a single EC point
+        t4 = t4.pt_add(e_prime[i].pt_mul(w_prime[i]))
 
-    # line 23-25
-    hat_c0 = h
-    hat_t = []
+    t_hat = []
     for i in range(N):
-        prev_c = hat_c0 if i == 0 else hat_c[i-1]
-        hat_t_i = g.pt_mul(hat_omega[i]).pt_add(prev_c.pt_mul(omega_prime[i]))
-        hat_t.append(hat_t_i)
+        prev_c = h if i == 0 else c_hat[i-1]
+        hat_t_i = g.pt_mul(w_hat[i]).pt_add(prev_c.pt_mul(w_prime[i]))
+        t_hat.append(hat_t_i)
 
-    # line 26-27
-    y = (str(e), str(e_prime), str(c), str(hat_c), str(pk))
-    t = (str(t1), str(t2), str(t3), str((t4_1, t4_2)), str(hat_t))
-    challenge = hash_to_zq((y, t), q)
+    # Step 26-27: Compute challenge
+    y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
+    t = (str(t1), str(t2), str(t3), str((t4)), str(t_hat))
+    challenge = hash_to_zq((y, t))
 
-    # line 28-33
-    s1 = (omega[0] + challenge * r_bar) % q
-    s2 = (omega[1] + challenge * hat_r_sum) % q
-    s3 = (omega[2] + challenge * r_tilde) % q
-    s4 = (omega[3] + challenge * r_prime_sum) % q
+    # Step 28-33: Compute responses
+    s1 = (w[0] + challenge * r_bar) % q
+    s2 = (w[1] + challenge * r_hat_sum) % q
+    s3 = (w[2] + challenge * r_tilde) % q
+    s4 = (w[3] + challenge * r_prime_sum) % q
 
-    hat_s = [(hat_omega[i] + challenge * hat_r[i]) % q for i in range(N)]
-    s_prime = [(omega_prime[i] + challenge * u_prime[i]) % q for i in range(N)]
+    s_hat = [(w_hat[i] + challenge * r_hat[i]) % q for i in range(N)]
+    s_prime = [(w_prime[i] + challenge * u_prime[i]) % q for i in range(N)]
 
-    # line 34-36
-    s = (s1, s2, s3, s4, hat_s, s_prime)
-    proof = (t, s, challenge, hat_c)
+    # Return only the proof π = (t, s, c, ĉ)
+    proof = {
+        't': (t1, t2, t3, t4, t_hat),
+        's': (s1, s2, s3, s4, s_hat, s_prime),
+        'c': c,
+        'c_hat': c_hat,
+        'h': h  # Needed for verification
+    }
 
     return proof
 
+def test_shuffle_proof():
+    _, g, order = gen.pp
+    N = 5
+    # Generate test public keys (as EC points)
+    e = [g.pt_mul(order.random()) for _ in range(N)]
+
+    # Shuffle and re-randomize
+    e_prime, r_prime, ψ = GenShuffle(e, g)
+
+    # Generate proof using the AI version
+    proof = GenProof_ai(e, e_prime, r_prime, ψ, g)
+
+    print("Shuffle proof generated:")
+    print(proof)
+
+test_shuffle_proof()
 # Algorithm 4.6: Checks the correctness of a shuffle proof π generated by Algo-
 # rithm 4.3. The public values are the ElGamal encryptions e and e′ and the public
 # encryption key pk.
