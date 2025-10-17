@@ -7,12 +7,18 @@ import utils.ec_elgamal as ahe
 
 def pub_param(nid=713):
     group_G = EcGroup(nid)
+    # g is the base point of the curve, which is also called the generator
     g = group_G.generator()
+    
     order = group_G.order()
-    group_h = EcGroup(nid)
+    # group_h = EcGroup(nid)
+    
+    # print(str(group_G))
+    # print(str(g))
+    # print(str(order.random()))
+    # print(str(order.random()))
+    # print(str(order.random()))
 
-    print(str(group_G.generator()))
-    print(str(group_h.generator()))
     return (group_G, g, order)
 
 pp = pub_param()
