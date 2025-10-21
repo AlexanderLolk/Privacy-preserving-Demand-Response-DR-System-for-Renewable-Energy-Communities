@@ -15,8 +15,10 @@ import utils.ec_elgamal as ahe
 import users.user as use
 import aggregators.aggregator as agg
 import random
-
+    
+# ((ek, pp, πdk), dk)
 el_info = ()
+
 pp = ""
 
 # signed list of registered users
@@ -44,6 +46,13 @@ def registration():
     dso_info = (id, (pk, pp, proof))
     
     return (dso_info, registered_users, registered_aggs)
+
+# for board
+def create_encryption_key_set():
+    global el_info
+    if el_info == ():
+        el_info = gen.ekey_gen(pp)
+    return el_info[0]
 
 # signed list of registered aggregators
 def verify_user(component_info, registered, component_type):
@@ -92,17 +101,12 @@ def generate_reduction_target_list():
     values.append(target_reduction) 
     values += [0] * zero_noise
     random.shuffle(values)
+    
     return values
 
 # publish the noisy target list to BB using BB's public key
-def publish_reduction_target_list(board_pk):
+def publish_reduction_target_list():
     noisy_list = generate_reduction_target_list()
-    reduction_target_list = [ahe.enc(gen.pub_param(), board_pk, val) for val in noisy_list]
+    reduction_target_list = [ahe.enc(gen.pub_param(), el_info[0][0], val) for val in noisy_list]
     return reduction_target_list
 
-# for board, aggregator, and users
-def establish_secure_connection():
-    # ((ek, pp, πdk), dk)
-    if el_info == ():
-        el_info = gen.ekey_gen(pp)
-    return el_info[0][0]

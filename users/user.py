@@ -1,19 +1,20 @@
 # participating user
 # non-participating user
 
-import utils.generators as gen
-import os 
-from datetime import datetime
+import os
+import time
 import utils.generators as gen
 import aggregators.aggregator as agg
 
 NUM_USERS = 3
 
 user_keys = []
-user_info = {}
-user_names = []
-user_iden = []
+user_info = {} # dict, key is id and value is pk. id -> pk
+user_secret_keys = {}
+user_names = [] # not super important
+user_iden = [] 
 el_info = ()
+anon_key = []
 
 # TODO: Make all users as threads
 def make_user(pp):
@@ -35,56 +36,52 @@ def make_user(pp):
         ((id, (pk, pp, proof)), sk) = gen.skey_gen(pp)
         verification = (pk, pp, proof)
         user_info[user_id] = verification
-
-    for i in range(NUM_USERS):
-        user_id = user_iden[i]
-        ((ek, pp, πdk), dk) = gen.ekey_gen(pp)
+        user_secret_keys[user_id] = sk # secret key for report
 
     return user_info
-
-def establish_secure_connection():
-    # ((ek, pp, πdk), dk)
-    if el_info == ():
-        el_info = gen.ekey_gen(user_info[0][1])
-    
-    return el_info[0][0]
 
 def get_user_signature(pp):
     mu = make_user(pp)
     print(user_info["K. C"])
     return mu
 
-# def report_baseline():
-#     timestamp = datetime.now()    
-#     for user in user_info:
-#         gen.report(self, user[1], timestamp)
-        
-# for user in user_info:
-
-# print(user_info["K. C"])
-
 ###############################################################
 # MIX, get r' from aggregator                                 #
 ###############################################################
-user_randomizations = {}
 
-def receive_randomization(user_id, r_val):
-    user_randomizations[user_id] = r_val
-    print(f"User {user_id} received randomization r′: {r_val}")
+def get_anon_key():
+    global anon_key
+    anon_key = agg.publish_anon_key()
 
 ###############################################################
-# MIX, testing receive_randomization                          #
+# REPORT, user generate report and send it to aggregator      #
 ###############################################################
-if __name__ == "__main__":
-    pp = gen.pub_param()
-    # Get registered users and aggregators
-    user_info = make_user(pp)  # from user.py
-    agg_info = agg.make_aggregator(pp)  # from aggregator.py
-    # Prepare input for mixing
-    ID_pk = [(agg_id, agg_val) for agg_id, agg_val in agg_info.items()]
-    # Run mixing to get r_map
-    pk_mixed, r_map, proofs, πmix = agg.create_mixed_anon_pk_set(ID_pk)
-    # test the users receive their r'
-    for user_id, r_val in r_map.items():
-        receive_randomization(user_id, r_val)
-    print("User randomizations:", user_randomizations)
+
+DSO_ek = None
+def get_DSO_ek(ek):
+    global DSO_ek
+    DSO_ek = ek
+    
+def generate_and_send_report():
+    t = int(time.time())
+    reports = []
+
+    for i in range(NUM_USERS):
+        user_id = user_iden[i]
+        sk = user_secret_keys[user_id]
+
+        # if else with non zero baseline
+        if i < NUM_USERS - 1: # TODO randomize number of participating users?
+            # participating user TODO
+            m = 10
+        else:
+            m = 0 # non-participating user sends 0 report
+
+        # gen.report Report(id, sk, ek, m, t) returns (pk, (t, ct, σ)) for each user
+        report = gen.report(user_id, sk, DSO_ek, m, t)
+        reports.append(report)
+    
+    agg.get_report_from_users(reports)
+
+    return reports
+    

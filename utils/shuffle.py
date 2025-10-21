@@ -1,11 +1,21 @@
 # Reading material at voting17_HLKD17.pdf
 
-from itertools import count
+import hashlib
 import random
 import utils.generators as gen
 from petlib.bn import Bn
 
-h_generators = []
+def get_h_generators(N):
+    _, g, order = gen.pp
+    h_generators_local = []
+    
+    for i in range(N):
+        # Use random scalar
+        h_scalar = order.random()
+        h_i_point = g.pt_mul(h_scalar)
+        h_generators_local.append(h_i_point)
+    
+    return h_generators_local
 
 # Generates a random permutation ψ ∈ Ψ_N
 def GenPermutation(N):
@@ -19,9 +29,8 @@ def GenPermutation(N):
 
 # Generates a random permutation ψ ∈ Ψ_N and use it to shuffle a
 # given list e of pk_i into a shuffled list e′.
-# keep in mind, this reencrypts the list and then shuffles it
-# TODO: Change pk to anonymization key
-def GenShuffle(e, pk):
+# then genshuffle anonymises the list with a random number form the curve 
+def GenShuffle(e):
     N = len(e)
     ψ = GenPermutation(N)
     _, _, order = gen.pp
@@ -32,11 +41,9 @@ def GenShuffle(e, pk):
     for i in range(N):
         r_i = order.random()
         r_prime.append(r_i)
-        
-        pk = e[i]
-        # pk_prime = pk * pow(g, r_i)
-        # pk_prime = pk * r_i # make sure the elliptic curve calculation conversion is correct
-        pk_prime = pk.pt_mul(r_i)
+
+        # anonymised pk with r_i
+        pk_prime = e[i][1][0].pt_mul(r_i)
 
         e_prime.append(pk_prime)
 
@@ -47,20 +54,11 @@ def GenShuffle(e, pk):
 # GenCommitment() generates a commitment c = Com(ψ, r) to a permutation ψ by
 # committing to the columns of the corresponding permutation matrix.
 # using GenCommitment() is to hide the permutation ψ in the shuffle proof
-def GenCommitment(ψ):
+def GenCommitment(ψ, h_gens):
     _, g, order = gen.pp
     N = len(ψ)
     c = []
     r = []
-
-    global h_generators
-    h_generators = []
-
-    for i in range(N):
-        ran = order.random()
-        h_i = g.pt_mul(ran) 
-        # print("g.mul(ran): " + str(h_i))
-        h_generators.append(h_i)
 
     for i in range(N):
         r_j_i = order.random()
@@ -72,27 +70,11 @@ def GenCommitment(ψ):
         # so ^ becomes *,  * becomes + and mod p is handled by the curve
         # pedersen commitment               c = g^r_j_i * h_i mod p
         # pedersen commitment (ecc)         c = r_j_i * g + h_i
-        c_j_i = h_generators[j].pt_add(g.pt_mul(r_j_i)) # commitments 
+        c_j_i = h_gens[j].pt_add(g.pt_mul(r_j_i)) # commitments 
         c.append(c_j_i)
 
     return (c, r)
 
-# Test gencommitment
-# def testCommitment():
-#     N = 4
-#     ψ = GenPermutation(N)
-#     print("permutations ", ψ)
-#     c, r = GenCommitment(ψ)
-#     print("the commits ", c)
-#     for index, c in enumerate(c):
-#         print(f"c[{index}] = {c}")
-#     print("the randomness ", r)
-
-# testCommitment()
-
-# GenCommitmentChain() generates a commitment chain c0 → c1 → ... → cN relative to a
-# list of public challenges u and starting with a given commitment c0
-# using GenCommitmentChain() is to prove consistency in the shuffle proof
 def GenCommitmentChain(c0, u):
     _, g, order = gen.pp
     N = len(u)
@@ -120,60 +102,35 @@ def GenCommitmentChain(c0, u):
     
     return (c, r)
 
-
-# Algorithm 4.3: Generates a proof of shuffle for given ElGamal encryptions e and
-# e′ according to Wikström’s method
-# GenProof(e, e′, r′, ψ, pk
-# Input:
-# ElGamal encryptions e = (e1, ... , eN ), e_i = (ai, bi) ∈ G^2_q
-# Shuffled ElGamal encryptions e′ = (e′ 1, ... , e′ N ), e′ i = (a′ i, b′ i) ∈ ^2_q
-# Re-encryption randomizations r′ = (r′ 1, ... , r′ N ), r′ i ∈ _q
-# Permutation ψ = (j1, ... , jN ) ∈ Ψ_N
-# Encryption key pk ∈ G
-# Wikström's shuffle proof protocol. The proof needs to demonstrate 4 different relations:
-
-# t1: Proves knowledge of r̄ (sum of permutation randomness)
-# t2: Proves knowledge of r̂ (weighted sum of chain randomness)
-# t3: Proves knowledge of r̃ (weighted permutation randomness)
-# t4: Proves knowledge of r'(re-encryption randomness) - this is a pair for ElGamal
-import hashlib
-
 def hash_to_zq(data):
-    """Cryptographically secure hash to Zq"""
     hasher = hashlib.sha256()
     hasher.update(str(data).encode())
     return Bn.from_binary(hasher.digest())
 
+# pk for ours is ek
 def GenProof(e, e_prime, r_prime, ψ, pk):
-    """
-    Generate shuffle proof for public anonymized keys
-    
-    Args:
-        e: List of original public keys [pk1, pk2, ..., pkN]
-        e_prime: List of shuffled & re-randomized public keys
-        r_prime: Re-randomization values
-        ψ: Permutation
-        pk: Base public key (generator g)
-    """
     _, g, order = gen.pp
     N = len(e)
     q = order
 
-    # Step 1: Commit to permutation
-    c, r = GenCommitment(ψ)
+    # get h
+    h_gens = get_h_generators(N)
 
-    # Step 2-7: Generate challenges and commitments
+    # Step 1: Commit to permutation
+    c, r = GenCommitment(ψ, h_gens)
+
+    # Step 2-7: Generate challenges
     u = []
     for i in range(N):
         u_i = hash_to_zq((str(e), str(e_prime), str(c), i))
         u.append(u_i)
 
-    # Step 3: Permute challenges to get u_prime
-    u_prime = []
+    # Step 3: Permute challenges
+    u_prime = [None] * N
     for i in range(N):
-        u_prime.append(u[ψ[i]])
+        u_prime[ψ[i]] = u[i]
         
-    # in genCommitmentChain h is c0
+    # GenCommitmentChain
     h = g.pt_mul(order.random()) 
     c_hat, r_hat = GenCommitmentChain(h, u_prime)
 
@@ -189,27 +146,31 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     r_tilde = sum((r[i] * u[i]) % q for i in range(N)) % q
     r_prime_sum = sum((r_prime[i] * u_prime[i]) % q for i in range(N)) % q
 
-    # Step 15-25: Generate witnesses and t-values
+    # Step 15-25: Generate witnesses
     w = [order.random() for _ in range(4)]
     w_hat = [order.random() for _ in range(N)]
     w_prime = [order.random() for _ in range(N)]
 
+    # t-values (commitments)
     t1 = g.pt_mul(w[0])
     t2 = g.pt_mul(w[1])
-    
     t3 = g.pt_mul(w[2])
     for i in range(N):
-        t3 = t3.pt_add(h_generators[i].pt_mul(w_prime[i]))
+        t3 = t3.pt_add(h_gens[i].pt_mul(w_prime[i]))
     
-    # normally this step is for ElGamal pairs
-    # we have an anonymized list of public keys so its simpler
-    t4 = g.pt_mul(-w[3]) # Start with -ω4 * g
-
-    for i in range(N):
-        # e_prime[i] is a single EC point
-        # t4: Proves knowledge of re-randomization values r_prime
-        # Computes: t4 = -w[3] * g + Σ(w_prime[i] * e_prime[i])
-        t4 = t4.pt_add(e_prime[i].pt_mul(w_prime[i]))
+    ##### TODO review
+    # t4: hyper lines 488-495
+    # t_4_1 = e[0].pt_mul(u[0])  # Σ(u_i * e_i)
+    # for i in range(1, N):
+    #     t_4_1 = t_4_1.pt_add(e[i].pt_mul(u[i]))
+    
+    # t_4_1 = t_4_1.pt_mul(w[3])  # Multiply by witness w[3]
+    
+    # t_4_2 = e_prime[0].pt_mul(w_prime[0])  # Σ(w'_i * e'_i)
+    # for i in range(1, N):
+    #     t_4_2 = t_4_2.pt_add(e_prime[i].pt_mul(w_prime[i]))
+    
+    # t4 = t_4_1.pt_add(t_4_2)  # Combine both parts
 
     t_hat = []
     for i in range(N):
@@ -223,7 +184,7 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
 
     # Step 26-27: Compute challenge
     y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
-    t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
+    t = (str(t1), str(t2), str(t3), str(t_hat)) # str(t4)
     challenge = hash_to_zq((y, t))
 
     # Step 28-33: Compute responses
@@ -235,142 +196,308 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     s_hat = [(w_hat[i] + challenge * r_hat[i]) % q for i in range(N)]
     s_prime = [(w_prime[i] + challenge * u_prime[i]) % q for i in range(N)]
 
-    # Return only the proof π = (t, s, c, ĉ)
     proof = {
-        't': (t1, t2, t3, t4, t_hat), # proofs
-        's': (s1, s2, s3, s4, s_hat, s_prime), # responses
-        'c': c, # challenge 
-        'c_hat': c_hat, # chain challenge
-        'h': h  # Needed for verification
+        't': (t1, t2, t3, t_hat), #t4
+        's': (s1, s2, s3, s4, s_hat, s_prime),
+        'c': c,
+        'c_hat': c_hat,
+        'h': h,
+        'h_gens': h_gens # so the h's are deterministic and not re-randomized
     }
 
     return proof
 
-# def test_shuffle_proof():
-#     _, g, order = gen.pp
-#     N = 5
-#     # Generate test public keys (as EC points)
-#     e = [g.pt_mul(order.random()) for _ in range(N)]
-
-#     # Shuffle and re-randomize
-#     e_prime, r_prime, ψ = GenShuffle(e, g)
-
-#     # Generate proof using the AI version
-#     proof = GenProof(e, e_prime, r_prime, ψ, g)
-
-#     print("Shuffle proof generated:")
-#     print(proof)
-
-# test_shuffle_proof()
-# Algorithm 4.6: Checks the correctness of a shuffle proof π generated by Algo-
-# rithm 4.3. The public values are the ElGamal encryptions e and e′ and the public
-# encryption key pk.
 def CheckProof(proof, e, e_prime, pk):
     _, g, order = gen.pp 
-    t = proof["t"]
-    s = proof["s"] 
-    c = proof["c"] 
-    c_hat = proof["c_hat"] 
-    h  = proof["h"]    
-    
-    u_bold = []
     N = len(e)
-    for i in range(N):
-        u_bold.append(hash_to_zq((e, e_prime, c), i))
-    
-    # line 5
-    mul1 = 0 
-    mul2 = 0
-    for i in range(N):
-        if(i == 0):
-            mul1 = c[i]
-            mul2 = h[i]
-        else:
-            mul1 = mul1.pt_mul(c[i])
-            mul2 = mul2.pt_mul(h[i])
 
-    # true div
-    c_bar = mul1 / mul2
+    print(f"\n[DEBUG] CheckProof started with N={N}")
     
-    # line 6
-    mul = 0
+    # Extract proof components
+    t1, t2, t3, t_hat = proof["t"]
+    s1, s2, s3, s_hat, s_prime = proof["s"]
+    c = proof["c"]
+    c_hat = proof["c_hat"]
+    h = proof["h"]
+    h_gens = proof["h_gens"]
+    
+    # Recompute challenges u (line 2-3)
+    u = []
     for i in range(N):
-        if(i == 0):
-            mul = u_bold[i]
-        else:
-            mul = mul.pt_mul(u_bold[i])
+        u_i = hash_to_zq((str(e), str(e_prime), str(c), i))
+        u.append(u_i)
     
-    u = mul % order
+    # Line 5: c_bar = Σc_i - Σh_i (point addition in ECC)
+    c_bar = c[0]
+    for i in range(1, N):
+        c_bar = c_bar.pt_add(c[i])
     
-    # line 7
-    c_hat2 = c_hat[N-1] / h.pt_mul(u)
+    h_sum = h_gens[0]
+    for i in range(1, N):
+        h_sum = h_sum.pt_add(h_gens[i])
     
-    # line 8
-    mul = 0
+    c_bar = c_bar.pt_add(h_sum.pt_neg())
+    
+    # Line 6: u_product = ∏u_i (scalar multiplication)
+    u_product = 1
     for i in range(N):
-        if(i == 0):
-            mul = c[i].pt_mul(u[i])
-        else:
-            mul = mul.pt_mul(c[i].pt_mul(u[i]))
-    c_tilde = mul
+        u_product = (u_product * u[i]) % order
     
-    # line 9
+    # Line 7: c_hat_final = c_hat[N-1] - u_product * h
+    c_hat_final = c_hat[N-1].pt_add(h.pt_mul(u_product).pt_neg())
     
-    # line 10
+    # Line 8: c_tilde = Σ(u_i * c_i)
+    c_tilde = c[0].pt_mul(u[0])
+    for i in range(1, N):
+        c_tilde = c_tilde.pt_add(c[i].pt_mul(u[i]))
+    
+    # Line 10-11: Recompute challenge
     y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
-    
-    # line 11
-    # this is "c2" TODO review
+    t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
     challenge = hash_to_zq((y, t))
     
-    # # line 12-15
-    t1, t2, t3, t4, t_hat = t
-    s1, s2, s3, s4, s_hat, s_prime = s
-    # t1 = c_bar^(-c) * g^s1
-    # t1' = s1 * g - challenge * c_bar
-    t1_prime = g.pt_mul(s1).pt_add(c_bar.pt_mul(challenge).pt_neg())
-
-    # t2 = c_hat_final^(-c) * g^s2
-    # t2' = s2 * g - challenge * c_hat_final
-    t2_prime = g.pt_mul(s2).pt_add(c_hat2.pt_mul(challenge).pt_neg())
+    # Line 12: Verify t1 = -challenge*c_bar + s1*g
+    t1_prime = c_bar.pt_mul(challenge).pt_neg().pt_add(g.pt_mul(s1))
+    t1_check = (t1 == t1_prime)
     
-    # t3 = c_tilde^(-c) * g^s3 * ∏(h_i^s'_i)
-    # t3' = s3 * g - challenge * c_tilde + Σ(s'_i * h_i)
-    t3_prime = g.pt_mul(s3).pt_add(c_tilde.pt_mul(challenge).pt_neg())
-    # for i in range(N):
-    #     t3_prime = t3_prime.pt_add(h_generators[i].pt_mul(s_prime[i]))
+    # Line 13: Verify t2 = -challenge*c_hat_final + s2*g
+    t2_prime = c_hat_final.pt_mul(challenge).pt_neg().pt_add(g.pt_mul(s2))
+    t2_check = (t2 == t2_prime)
     
-    # Step 15: Verify t4 (simplified for public keys, not ElGamal pairs)
-    # Original: t4 = (e_prime_weighted)^(-c) * pk^(-s4) * ∏(e'_i^s'_i)
-    # ECC: t4' = -challenge * e_prime_weighted - s4 * g + Σ(s'_i * e'_i)
-    # t4_prime = e_prime_weighted.pt_mul(challenge).pt_neg()
-    # t4_prime = t4_prime.pt_add(g.pt_mul(s4).pt_neg())
-    # for i in range(N):
-    #     t4_prime = t4_prime.pt_add(e_prime[i].pt_mul(s_prime[i]))
-
-    # Step 16-17: Verify t_hat chain
-    t_hat_checks = []
+    # Line 14: Verify t3 = -challenge*c_tilde + s3*g + Σ(s'_i*h_i)
+    t3_prime_1 = c_tilde.pt_mul(challenge).pt_neg()
+    t3_prime_2 = g.pt_mul(s3)
+    t3_prime_prod = h_gens[0].pt_mul(s_prime[0])
+    
+    print(f"[DEBUG] t3 computation starting...")
+    print(f"[DEBUG]   c_tilde * challenge (negated): computed")
+    print(f"[DEBUG]   g * s3: computed")
+    
+    for i in range(1, N):
+        t3_prime_prod = t3_prime_prod.pt_add(h_gens[i].pt_mul(s_prime[i]))
+    
+    print(f"[DEBUG]   Sum of h_gens[i] * s_prime[i]: computed for {N} elements")
+    
+    t3_prime = t3_prime_1.pt_add(t3_prime_2).pt_add(t3_prime_prod)
+    
+    t3_check = (t3 == t3_prime)
+    print(f"[DEBUG] t3 check: {t3_check}")
+    
+    if not t3_check:
+        # Extra debugging when t3 fails
+        print(f"\n[DEBUG] t3 FAILURE ANALYSIS:")
+        print(f"[DEBUG]   Expected (t3): {str(t3)[:60]}...")
+        print(f"[DEBUG]   Computed (t3_prime): {str(t3_prime)[:60]}...")
+        print(f"[DEBUG]   s3: {int(s3) % 1000}")
+        print(f"[DEBUG]   challenge: {int(challenge) % 1000}")
+        print(f"[DEBUG]   len(s_prime): {len(s_prime)}")
+        print(f"[DEBUG]   len(h_gens): {len(h_gens)}")
+        print(f"[DEBUG]   s_prime values (mod 1000): {[int(sp) % 1000 for sp in s_prime[:5]]}")
+    
+    # Line 16-17: Verify t_hat chain
+    t_hat_valid = True
     for i in range(N):
         if i == 0:
             prev_c = h
         else:
             prev_c = c_hat[i-1]
         
-        # ECC: t_hat'_i = s_hat[i] * g + s'_i * prev_c - challenge * c_hat[i]
-        t_hat_prime = g.pt_mul(s_hat[i]).pt_add(prev_c.pt_mul(s_prime[i]))
-        t_hat_prime = t_hat_prime.pt_add(c_hat[i].pt_mul(challenge).pt_neg())
+        # t_hat'_i = -challenge*c_hat[i] + s_hat[i]*g + s'_i*prev_c
+        t_hat_prime = c_hat[i].pt_mul(challenge).pt_neg()
+        t_hat_prime = t_hat_prime.pt_add(g.pt_mul(s_hat[i]))
+        t_hat_prime = t_hat_prime.pt_add(prev_c.pt_mul(s_prime[i]))
         
-        t_hat_checks.append(t_hat[i] == t_hat_prime)
+        if t_hat[i] != t_hat_prime:
+            t_hat_valid = False
+            print(f"[DEBUG] t_hat[{i}] check: FAIL")
+            break
+        else:
+            print(f"[DEBUG] t_hat[{i}] check: PASS")
     
-    # Step 18: Return conjunction of all checks
-    checks = [
-        t1 == t1_prime,
-        t2 == t2_prime,
-        t3 == t3_prime,
-        t4 == t4_prime
-    ] + t_hat_checks
+    print(f"[DEBUG] t_hat_valid: {t_hat_valid}")
     
-    return all(checks)
+    result = (
+        t1_check and
+        t2_check and
+        t3_check and
+        t_hat_valid
+    )
     
+    print(f"\n[DEBUG] Final result: {result}")
+    print(f"[DEBUG] Summary: t1={t1_check}, t2={t2_check}, t3={t3_check}, t_hat={t_hat_valid}")
     
-    return ""
+    return result
+
+# def test_basic_shuffle():
+#     """Simple test of shuffle proof"""
+#     print("\n" + "="*60)
+#     print("Testing Basic Shuffle Proof")
+#     print("="*60)
+    
+#     _, g, order = gen.pp
+#     N = 5
+    
+#     print(f"\n1. Generating {N} public keys...")
+#     e = [g.pt_mul(order.random()) for _ in range(N)]
+    
+#     print(f"2. Shuffling...")
+#     e_prime, r_prime, ψ = GenShuffle(e, g)
+#     print(f"   Permutation: {ψ}")
+    
+#     print(f"3. Generating proof...")
+#     proof = GenProof(e, e_prime, r_prime, ψ, g)
+    
+#     print(f"4. Verifying proof...")
+#     is_valid = CheckProof(proof, e, e_prime, g)
+    
+#     print(f"\n{'='*60}")
+#     print(f"Result: {'PASS' if is_valid else 'FAIL'}")
+#     print(f"{'='*60}\n")
+    
+#     return is_valid
+
+# if __name__ == "__main__":
+#     test_basic_shuffle()
+
+# testing flow
+# def test_basic_shuffle():
+#     print("\n" + "="*60)
+#     print("Testing Basic Shuffle Proof with Real Keys")
+#     print("="*60)
+    
+#     pp = gen.pp
+#     _, g, _ = pp
+#     N = 5
+    
+#     print(f"\n1. Generating {N} user keys ...")
+#     users = []
+#     e = []  # List of public keys to shuffle
+    
+#     for i in range(N):
+#         # Generate keys for users
+#         user_id = f"User_{i}"
+#         ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
+#         users.append({
+#             'id': user_id,
+#             'pk': pk,
+#             'sk': sk,
+#             'proof': proof
+#         })
+#         e.append(pk)  # Add public key to list
+#         print(f"   {user_id}: pk={str(pk)[:50]}...")
+    
+#     print(f"\n2. Shuffling and anonymizing public keys...")
+#     e_prime, r_prime, ψ = GenShuffle(e, g)
+#     print(f"   Permutation: {ψ}")
+#     print(f"   Original order: User_0, User_1, User_2, User_3, User_4")
+#     shuffled_order = [f"User_{ψ.index(i)}" for i in range(N)]
+#     print(f"   Shuffled order: {', '.join(shuffled_order)}")
+    
+#     print(f"\n3. Generating shuffle proof (πmix)...")
+#     proof = GenProof(e, e_prime, r_prime, ψ, g)
+#     print(f"   Proof generated with:")
+#     print(f"   - Commitments (c): {len(proof['c'])} elements")
+#     print(f"   - Commitment chain (c_hat): {len(proof['c_hat'])} elements")
+#     print(f"   - Responses (s): 6 values")
+    
+#     print(f"\n4. Verifying shuffle proof...")
+#     is_valid = CheckProof(proof, e, e_prime, g)
+    
+#     print(f"\n{'='*60}")
+#     print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
+#     print(f"{'='*60}")
+    
+#     if is_valid:
+#         print("\n Anonymization Summary:")
+#         print("   ✓ Public keys successfully shuffled and re-randomized")
+#         print("   ✓ Zero-knowledge proof verified")
+#         print("   ✓ Original identities hidden (permutation secret)")
+#         print("   ✓ Users can still use their keys with r' for operations")
+    
+#     print()
+#     return is_valid
+
+# def test_integration_with_aggregator():
+#     print("\n" + "="*60)
+#     print("Testing Full Integration Flow")
+#     print("="*60)
+    
+#     pp = gen.pp
+#     _, g, _ = pp
+#     N = 5
+    
+#     print(f"\n1. Users register with aggregator...")
+#     ID_pk = []
+#     user_data = {}
+    
+#     for i in range(N):
+#         user_id = f"A{i}"
+#         ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
+#         ID_pk.append((user_id, pk))
+#         user_data[user_id] = {'pk': pk, 'sk': sk}
+#         print(f"   {user_id} registered: pk={str(pk)[:40]}...")
+    
+#     print(f"\n2. Aggregator mixes public keys...")
+#     # Extract just the public keys
+#     e = [pk for _, pk in ID_pk]
+    
+#     # Perform shuffle
+#     e_prime, r_prime, ψ = GenShuffle(e, g)
+    
+#     # Generate proof
+#     πmix = GenProof(e, e_prime, r_prime, ψ, g)
+    
+#     print(f"   Shuffle complete with permutation: {ψ}")
+#     print(f"   Permutation meaning: position j gets element from position ψ[j]")
+    
+#     # Create r_map (map user_id to their randomization factor)
+#     # The shuffled output position j contains e_prime[ψ[j]] = e[ψ[j]] * r_prime[ψ[j]]
+#     # So to find where user i ended up, we need to find j where ψ[j] = i
+#     r_map = {}
+#     for i, (user_id, original_pk) in enumerate(ID_pk):
+#         # User i's key was re-randomized with r_prime[i]
+#         # Then placed at position j where ψ[j] = i
+#         # Find that position j
+#         shuffled_pos = ψ.index(i)  # Find j where ψ[j] = i
+        
+#         r_map[user_id] = r_prime[i]  # User gets their own r_prime[i]
+#         print(f"   {user_id} (original pos {i}) → shuffled pos {shuffled_pos}, r'={str(r_prime[i])[:40]}...")
+    
+#     print(f"\n3. Verifying shuffle proof...")
+#     is_valid = CheckProof(πmix, e, e_prime, g)
+    
+#     print(f"\n4. Users verify they can use anonymized keys...")
+#     all_verified = True
+#     for i, (user_id, original_pk) in enumerate(ID_pk):
+#         r_val = r_map[user_id]
+        
+#         # Find where this user's key ended up
+#         shuffled_pos = ψ.index(i)
+        
+#         # Compute expected: pk' = pk * r'
+#         expected_pk = original_pk.pt_mul(r_val)
+        
+#         # Check if it matches the shuffled position
+#         if expected_pk == e_prime[shuffled_pos]:
+#             print(f"   ✓ {user_id} verified: e_prime[{shuffled_pos}] = e[{i}] * r'[{i}]")
+#         else:
+#             print(f"   ✗ {user_id} FAILED verification")
+#             print(f"      Expected at pos {shuffled_pos}: {str(expected_pk)[:50]}")
+#             print(f"      Got: {str(e_prime[shuffled_pos])[:50]}")
+#             all_verified = False
+    
+#     print(f"\n{'='*60}")
+#     print(f"Shuffle Proof: {'✅ PASS' if is_valid else '❌ FAIL'}")
+#     print(f"User Verification: {'✅ PASS' if all_verified else '❌ FAIL'}")
+#     print(f"Overall: {'✅ PASS' if (is_valid and all_verified) else '❌ FAIL'}")
+#     print(f"{'='*60}\n")
+    
+#     return is_valid and all_verified
+
+# if __name__ == "__main__":
+#     # Test 1: Basic shuffle with generated keys
+#     test_basic_shuffle()
+    
+#     # Test 2: Full integration flow
+#     print("\n\n")
+#     test_integration_with_aggregator()

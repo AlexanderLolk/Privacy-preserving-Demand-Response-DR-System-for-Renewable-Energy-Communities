@@ -2,7 +2,8 @@
 # BB. The DSO can update the list of registered smart meters and aggregators dynamically
 
 import utils.generators as gen
-import os 
+import users.user as user
+import os
 
 NUM_AGG = 4
 
@@ -10,6 +11,7 @@ agg_keys = []
 agg_info = {}
 agg_names = []
 agg_iden = []
+board_ek = None
 
 def make_aggregator(pp):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,16 +37,22 @@ def make_aggregator(pp):
 def get_agg_signature(pp):
     return make_aggregator(pp)
 
+r_prime = []
 # MIX: create mixed anonymous pk set
-def create_mixed_anon_pk_set(ID_pk):
-    pk_mixed, r_map, proofs, πmix = gen.mix_id(ID_pk)
-    return (pk_mixed, r_map, proofs, πmix)
-
 # send (pk', πmix) to board
-def publish_to_board(pk_mixed, πmix, board_publish_func):
-    board_publish_func(pk_mixed, πmix)
+def create_mixed_anon_pk_set(ID_pk):
+    global r_prime
+    e_prime, r_prime, πmix_proof = gen.mix_id(ID_pk)
+    return (e_prime, r_prime, πmix_proof)
 
 # send r' to users
-def send_r_mark_to_users(r_map, user_receive_func):
-    for user_id, r_val in r_map.items():
-        user_receive_func(user_id, r_val)
+def publish_anon_key():
+    return r_prime
+
+def get_report_from_users():
+    user_reports = user.generate_and_send_report()
+    return user_reports
+
+def get_encryption_key(ek):
+    global board_ek
+    board_ek = ek

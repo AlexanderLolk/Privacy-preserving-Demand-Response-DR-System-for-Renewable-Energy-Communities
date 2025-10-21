@@ -1,9 +1,9 @@
 from petlib.ec import EcGroup
-import hashlib
 import random
 import utils.signature as sig
 import utils.NIZKP as nizkp
 import utils.ec_elgamal as ahe
+import utils.shuffle as shuffle
 
 def pub_param(nid=713):
     group_G = EcGroup(nid)
@@ -37,7 +37,7 @@ def skey_gen(id=random, pp=None):
 # It then computes πdk ← Proofdk((pp, ek), dk), updates ek such
 # that ek contains pp along with πdk, and returns (ek, dk).
 def ekey_gen(pp=None):
-    if pp is None:
+    if pp is None:  
         pp = pub_param()
     ek, dk = ahe.key_gen(pp)
     πdk = nizkp.schnorr_NIZKP_proof(pp, ek, dk)
@@ -52,32 +52,46 @@ def ekey_gen(pp=None):
 
 # TODO to be reworked
 # mix should not encrypt but randomize the pk with r
-def mix_id(pk_list):
-    # shuffle
-    pk_shuffled = pk_list.copy()
-    random.shuffle(pk_shuffled) # TODO use a secret shuffle
+def mix_id(ID_pk):
+    # ID_pk: list of tuples (id, (pk, pp, proof))
     
-    # lists and map
-    pk_mixed = []
-    r_map = {}
-    proofs = []
+    if not ID_pk:
+        return ([], {}, None)
+    
+    N = len(ID_pk)
 
-    for id_val, (pk, pp, proof) in pk_shuffled:
-        _, g, order = pp
-        ωmix = order.random()
-        pk_mark = pk + ωmix * g # randomize the key
-        # compute difference and proof (pk_mark - pk = (pk + ωmix * g) - pk = ωmix * g)
-        diff = pk_mark - pk
-        πmix = nizkp.schnorr_NIZKP_proof(pp, diff, ωmix) # proof that can prove knowledge of ωmix
-        pk_mixed.append((id_val, (pk_mark, pp, proof)))
-        r_map[id_val] = ωmix
-        proofs.append(πmix)
+    e_prime, r_prime, ψ = shuffle.GenShuffle(ID_pk)
+    # proof of shuffle and anonymised list of pks
+    πmix_proof= shuffle.GenProof(ID_pk, e_prime, r_prime, ψ, pk="need to remove")
 
-    # πmix could be a hash/signature of all proofs, or a Merkle root, etc.
-    proof_bytes = b''.join([str(p).encode() for p in proofs])
-    πmix_ = hashlib.sha256(proof_bytes).hexdigest()
+    return (e_prime, r_prime, πmix_proof)
 
-    return (pk_mixed, r_map, proofs, πmix_)
+
+    # # shuffle
+    # pk_shuffled = pk_list.copy()
+    # random.shuffle(pk_shuffled) # TODO use a secret shuffle
+    
+    # # lists and map
+    # pk_mixed = []
+    # r_map = {}
+    # proofs = []
+
+    # for id_val, (pk, pp, proof) in pk_shuffled:
+    #     _, g, order = pp
+    #     ωmix = order.random()
+    #     pk_mark = pk + ωmix * g # randomize the key
+    #     # compute difference and proof (pk_mark - pk = (pk + ωmix * g) - pk = ωmix * g)
+    #     diff = pk_mark - pk
+    #     πmix = nizkp.schnorr_NIZKP_proof(pp, diff, ωmix) # proof that can prove knowledge of ωmix
+    #     pk_mixed.append((id_val, (pk_mark, pp, proof)))
+    #     r_map[id_val] = ωmix
+    #     proofs.append(πmix)
+
+    # # πmix could be a hash/signature of all proofs, or a Merkle root, etc.
+    # proof_bytes = b''.join([str(p).encode() for p in proofs])
+    # πmix_ = hashlib.sha256(proof_bytes).hexdigest()
+
+    # return (pk_mixed, r_map, proofs, πmix_)
 
 # Report(id, sk, ek, m, t) → (pk, (t, ct, σ)): on input smart meter identity id ∈ ID, secret signing
 # key sk, servers public encryption key ek, smart meter data m ∈ M, and timestamp t does the following:
