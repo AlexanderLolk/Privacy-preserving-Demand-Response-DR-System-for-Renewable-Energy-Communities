@@ -36,6 +36,7 @@ def skey_gen(id=random, pp=None):
 # which outputs encryption key pair.
 # It then computes πdk ← Proofdk((pp, ek), dk), updates ek such
 # that ek contains pp along with πdk, and returns (ek, dk).
+# TODO change proof to correct decryption (so 'm' is also decrypted correct)
 def ekey_gen(pp=None):
     if pp is None:  
         pp = pub_param()

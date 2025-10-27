@@ -6,6 +6,8 @@ def key_gen(sec_params):
     _, g, order = sec_params
     priv_sk = order.random()
     pub_pk = priv_sk * g
+    # print("sig priv:" + str(priv_sk))
+    # print("sig pub:" + str(pub_pk))
     return (priv_sk, pub_pk)
 
 # Hash hashes the commitment R and message msg to a challenge
