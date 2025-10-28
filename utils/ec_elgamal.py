@@ -53,4 +53,4 @@ def dec(params, table, priv, c1):
     _, g, o = params
     a, b = c1
     plain = b + (-priv * a)
-    return table[plain] 
+    return table[plain]
