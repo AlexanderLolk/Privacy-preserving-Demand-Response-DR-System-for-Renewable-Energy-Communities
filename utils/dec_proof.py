@@ -13,9 +13,13 @@ def hash_to_bn(*points, order):
 def elgamal_encrypt(sec_params, ek, m_point):
     """Encrypt a message point m_point under public key ek."""
     _, g, order = sec_params
-    C1 = order * g
-    C2 = m_point + order * ek
-    return (C1, C2), order
+    # c1 = order * g 
+    C1 = g.pt_mul(order)
+
+    # C2 = m_point + order * w
+    # C2 = m_point + ek.pt_mul(order)
+    C2 = m_point.pt_add(ek.pt_mul(order))
+    return (C1, C2)
 
 def prove_correct_decryption(sec_params, ek, C1, C2, M, dk):
     """
@@ -25,14 +29,16 @@ def prove_correct_decryption(sec_params, ek, C1, C2, M, dk):
     """
     _, g, order = sec_params
 
-    
     r = order.random()       # random nonce
 
-    A1 = r * g      # commitment of ciphertext 1
-    A2 = r * C1     # commitment of ciphertext 2
+    # A1 = r * g      # commitment of ciphertext 1
+    # A2 = r * C1     # commitment of ciphertext 2
+    A1 = g.pt_mul(r)    # commitment of ciphertext 1
+    A2 = C1.pt_mul(r)     # commitment of ciphertext 2
 
     c = hash_to_bn(g, ek, C1, C2, M, A1, A2, order=order)
-    s = (r + c * dk) % order
+    # s = r + c * dk % order
+    s = r + c * dk % order
 
     return (A1, A2, s)
 
@@ -42,8 +48,9 @@ def verify_correct_decryption(sec_params, ek, C1, C2, M, proof):
 
     A1, A2, s = proof
 
-    V = C2 - M         # compute x * C1
-
+    # V = C2 - M         # compute x * C1
+    V = C2.pt_add(M.pt_neg())
+    
     # C2 = M + order * ek
     # C2 = M + order * x * g
     # C2 - M = order * x * g
@@ -52,8 +59,11 @@ def verify_correct_decryption(sec_params, ek, C1, C2, M, proof):
 
     c = hash_to_bn(g, ek, C1, C2, M, A1, A2, order=order)
 
-    check1 = (s * g == A1 + c * ek)
-    check2 = (s * C1 == A2 + c * V)
+    #  check1 = (s * g == A1 + c * ek)
+    check1 = (g.pt_mul(s) == A1.pt_add(ek.pt_mul(c)))
+
+    # check2 = (s * C1 == A2 + c * V)
+    check2 = (C1.pt_mul(s) == A2.pt_add(c * V))
 
     return check1 and check2
 
@@ -67,15 +77,17 @@ def demo():
 
     # Generate keypair
     x = q.random()
-    ek = x * g
+    # ek = x * g 
+    ek = g.pt_mul(x)
 
     # Encode message as an EC point (simple example)
     # In real systems, you'd use proper EC encoding or ECIES mapping.
     m_scalar = Bn(42)
-    M = m_scalar * g  # "message point"
+    # M = m_scalar * g  # "message point"
+    M = g.pt_mul(m_scalar) 
 
     # Encrypt
-    (C1, C2), _ = elgamal_encrypt(sec_param, ek, M)
+    (C1, C2) = elgamal_encrypt(sec_param, ek, M)
 
     # Decrypt
     # M_dec = C2 - x * C1

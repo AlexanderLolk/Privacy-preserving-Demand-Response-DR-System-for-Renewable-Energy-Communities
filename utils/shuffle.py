@@ -172,28 +172,14 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     t_4_1 = e[0].pt_mul(u[0])  # Σ(u_i * e_i)
     for i in range(1, N):
         t_4_1 = t_4_1.pt_add(e[i].pt_mul(u[i]))
-
-    # print(f"[DEBUG] t_4_1 after u_i sum: {t_4_1}")
     
     t_4_1 = t_4_1.pt_mul(w[3])  # Multiply by witness w[3]
-
-    # print(f"[DEBUG] t_4_1 after multiplying by w[3]: {t_4_1}")
     
     t_4_2 = e_prime[0].pt_mul(w_prime[0])  # Σ(w'_i * e'_i)
     for i in range(1, N):
         t_4_2 = t_4_2.pt_add(e_prime[i].pt_mul(w_prime[i]))
     
-    # print (f"[DEBUG] what is e_prime[0]: {str(e_prime[0])[:60]}...")
-    
-    # print(f"[DEBUG] t_4_2 after w'_i sum: {t_4_2}")
-    
-    t4 = t_4_1.pt_add(t_4_2)  # Combine both parts
-    # print(f"[DEBUG] t4 computed: {t4}")
-
-    # Add to GenProof after t4 computation
-    # print(f"[DEBUG GenProof] w[3]: {int(w[3]) % 1000}")
-    # print(f"[DEBUG GenProof] r_prime_sum: {int(r_prime_sum) % 1000}")
-    # print(f"[DEBUG GenProof] w_prime values: {[int(wp) % 1000 for wp in w_prime]}")
+    t4 = t_4_1.pt_add(t_4_2) 
 
     t_hat = []
     for i in range(N):
@@ -215,44 +201,10 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     s2 = (w[1] + challenge * r_hat_sum) % q
     s3 = (w[2] + challenge * r_tilde) % q
     s4 = (w[3] + challenge * r_prime_sum) % q
-    # print(f"[DEBUG GenProof] s4: {int(s4) % 1000}")
 
     s_hat = [(w_hat[i] + challenge * r_hat[i]) % q for i in range(N)]
     s_prime = [(w_prime[i] + challenge * u_prime[i]) % q for i in range(N)]
-    # print(f"[DEBUG GenProof] s_prime: {[int(x) % 1000 for x in s_prime]}")
-    # print(f"[DEBUG] challenge in GenProof: {int(challenge) % 1000}")
-    # print(f"[DEBUG] s4 in GenProof: {int(s4) % 1000}")
-    
-    # for i in range(N):
-    #     print(f"[DEBUG] GenProof: e_prime[{i}] is e[{ψ[i]}] * r_prime[{ψ[i]}], u_prime[{i}] = u[{ψ[i]}]")
 
-    # print("[DEBUG GenProof] e list:")
-    # for i, pk in enumerate(e):
-    #     print(f"  e[{i}]: {pk.export().hex()[:40]}...")
-
-    # print("[DEBUG GenProof] u list:")
-    # for i, u_i in enumerate(u):
-    #     print(f"  u[{i}]: {int(u_i) % 1000}")
-    
-    # print("[DEBUG GenProof] e_prime list:")
-    # for i, pk in enumerate(e_prime):
-    #     print(f"  e_prime[{i}]: {pk.export().hex()[:40]}...")
-
-    # print("[DEBUG GenProof] u_prime list:")
-    # for i, u_i in enumerate(u_prime):
-    #     print(f"  u_prime[{i}]: {int(u_i) % 1000}")
-
-    # for i in range(N):
-    #     print(f"[DEBUG] GenProof: e_prime[{i}], s_prime[{i}] = {e_prime[i].export().hex()[:40]}..., {int(s_prime[i]) % 1000}")
-
-    # print(f"============[GenProof] w[3]: {w[3]}")
-    # print(f"[GenProof] w_prime: {[wp for wp in w_prime]}")
-    # print(f"[GenProof] r_prime_sum: {r_prime_sum}")
-    # print(f"[GenProof] s4: {s4}")
-    # print(f"[GenProof] s_prime: {[sp for sp in s_prime]}")
-    # print(f"[GenProof] challenge: {challenge}")
-    # print(f"[GenProof] u_prime: {[up for up in u_prime]}")
-    # Print sum_u_e and sum_sprime_eprime as computed for t4
     sum_u_e = e[0].pt_mul(u[0])
     for i in range(1, N):
         sum_u_e = sum_u_e.pt_add(e[i].pt_mul(u[i]))
@@ -270,8 +222,6 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
         'c_hat': c_hat,
         'h': h,
         'h_gens': h_gens, # so the h's are deterministic and not re-randomized
-        # 'r_prime_sum': r_prime_sum,
-        # 'u_prime': u_prime these two are private and cant be used
     }
 
     return proof
@@ -279,8 +229,6 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
 def CheckProof(proof, e, e_prime, pk):
     _, g, order = gen.pp 
     N = len(e)
-
-    # print(f"\n[DEBUG] CheckProof started with N={N}")
     
     # Extract proof components
     t1, t2, t3, t4, t_hat = proof["t"]
@@ -339,30 +287,12 @@ def CheckProof(proof, e, e_prime, pk):
     t3_prime_2 = g.pt_mul(s3)
     t3_prime_prod = h_gens[0].pt_mul(s_prime[0])
     
-    # print(f"[DEBUG] t3 computation starting...")
-    # print(f"[DEBUG]   c_tilde * challenge (negated): computed")
-    # print(f"[DEBUG]   g * s3: computed")
-    
     for i in range(1, N):
         t3_prime_prod = t3_prime_prod.pt_add(h_gens[i].pt_mul(s_prime[i]))
-    
-    # print(f"[DEBUG]   Sum of h_gens[i] * s_prime[i]: computed for {N} elements")
     
     t3_prime = t3_prime_1.pt_add(t3_prime_2).pt_add(t3_prime_prod)
     
     t3_check = (t3 == t3_prime)
-    # print(f"[DEBUG] t3 check: {t3_check}")
-    
-    # if not t3_check:
-    #     # Extra debugging when t3 fails
-    #     print(f"\n[DEBUG] t3 FAILURE ANALYSIS:")
-    #     print(f"[DEBUG]   Expected (t3): {str(t3)[:60]}...")
-    #     print(f"[DEBUG]   Computed (t3_prime): {str(t3_prime)[:60]}...")
-    #     print(f"[DEBUG]   s3: {int(s3) % 1000}")
-    #     print(f"[DEBUG]   challenge: {int(challenge) % 1000}")
-    #     print(f"[DEBUG]   len(s_prime): {len(s_prime)}")
-    #     print(f"[DEBUG]   len(h_gens): {len(h_gens)}")
-    #     print(f"[DEBUG]   s_prime values (mod 1000): {[int(sp) % 1000 for sp in s_prime[:5]]}")
 
     # Verify t4
     # print(f"[DEBUG] check what e[0]:" + str(e[0])[:60] + "...")
@@ -413,29 +343,6 @@ def CheckProof(proof, e, e_prime, pk):
         else:
             print(f"[DEBUG] t_hat[{i}] check: PASS")
     
-    # print(f"[DEBUG] t_hat_valid: {t_hat_valid}")
-
-    # print(f"[DEBUG] challenge in CheckProof: {int(challenge) % 1000}")
-    # print(f"[DEBUG] s4 in CheckProof: {int(s4) % 1000}")
-
-    # for i in range(N):
-    #     print(f"[DEBUG] CheckProof: e_prime[{i}], s_prime[{i}]")
-
-    # print("[DEBUG CheckProof] e list:")
-    # for i, pk in enumerate(e):
-    #     print(f"  e[{i}]: {pk.export().hex()[:40]}...")
-    
-    # print("[DEBUG CheckProof] u list:")
-    # for i, u_i in enumerate(u):
-    #     print(f"  u[{i}]: {int(u_i) % 1000}")
-
-    # print("[DEBUG CheckProof] e_prime list:")
-    # for i, pk in enumerate(e_prime):
-    #     print(f"  e_prime[{i}]: {pk.export().hex()[:40]}...")
-    
-    # for i in range(N):
-    #     print(f"[DEBUG] CheckProof: e_prime[{i}], s_prime[{i}] = {e_prime[i].export().hex()[:40]}..., {int(s_prime[i]) % 1000}")
-    
     result = (
         t1_check and
         t2_check and
@@ -449,144 +356,144 @@ def CheckProof(proof, e, e_prime, pk):
     
     return result
 
-# testing flow
-def test_basic_shuffle():
-    print("\n" + "="*60)
-    print("Testing Basic Shuffle Proof with Real Keys")
-    print("="*60)
+# testing shuffle flow
+# def test_basic_shuffle():
+#     print("\n" + "="*60)
+#     print("Testing Basic Shuffle Proof with Real Keys")
+#     print("="*60)
     
-    pp = gen.pp
-    _, g, order = pp
-    N = 5
+#     pp = gen.pp
+#     _, g, order = pp
+#     N = 5
     
-    print(f"\n1. Generating {N} user keys ...")
-    users = []
-    e = []  # List of public keys to shuffle
+#     print(f"\n1. Generating {N} user keys ...")
+#     users = []
+#     e = []  # List of public keys to shuffle
     
-    for i in range(N):
-        # Generate keys for users
-        user_id = f"User_{i}"
-        ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
-        users.append({
-            'id': user_id,
-            'pk': pk,
-            'sk': sk,
-            'proof': proof
-        })
-        e.append(pk)  # Add public key to list
-        print(f"   {user_id}: pk={str(pk)[:50]}...")
+#     for i in range(N):
+#         # Generate keys for users
+#         user_id = f"User_{i}"
+#         ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
+#         users.append({
+#             'id': user_id,
+#             'pk': pk,
+#             'sk': sk,
+#             'proof': proof
+#         })
+#         e.append(pk)  # Add public key to list
+#         print(f"   {user_id}: pk={str(pk)[:50]}...")
     
-    print(f"\n2. Shuffling and anonymizing public keys...")
-    e_prime, r_prime, ψ = GenShuffle(e) 
-    print(f"   Permutation: {ψ}")
-    print(f"   Original order: User_0, User_1, User_2, User_3, User_4")
-    shuffled_order = [f"User_{ψ.index(i)}" for i in range(N)]
-    print(f"   Shuffled order: {', '.join(shuffled_order)}")
+#     print(f"\n2. Shuffling and anonymizing public keys...")
+#     e_prime, r_prime, ψ = GenShuffle(e) 
+#     print(f"   Permutation: {ψ}")
+#     print(f"   Original order: User_0, User_1, User_2, User_3, User_4")
+#     shuffled_order = [f"User_{ψ.index(i)}" for i in range(N)]
+#     print(f"   Shuffled order: {', '.join(shuffled_order)}")
     
-    print(f"\n3. Generating shuffle proof (πmix)...")
+#     print(f"\n3. Generating shuffle proof (πmix)...")
 
-    pk_for_proof = g 
-    proof = GenProof(e, e_prime, r_prime, ψ, pk_for_proof)
-    print(f"   Proof generated with:")
-    print(f"   - Commitments (c): {len(proof['c'])} elements")
-    print(f"   - Commitment chain (c_hat): {len(proof['c_hat'])} elements")
-    print(f"   - Responses (s): 6 values")
+#     pk_for_proof = g 
+#     proof = GenProof(e, e_prime, r_prime, ψ, pk_for_proof)
+#     print(f"   Proof generated with:")
+#     print(f"   - Commitments (c): {len(proof['c'])} elements")
+#     print(f"   - Commitment chain (c_hat): {len(proof['c_hat'])} elements")
+#     print(f"   - Responses (s): 6 values")
     
-    print(f"\n4. Verifying shuffle proof...")
-    is_valid = CheckProof(proof, e, e_prime, pk_for_proof)
+#     print(f"\n4. Verifying shuffle proof...")
+#     is_valid = CheckProof(proof, e, e_prime, pk_for_proof)
     
-    print(f"\n{'='*60}")
-    print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
-    print(f"{'='*60}")
+#     print(f"\n{'='*60}")
+#     print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
+#     print(f"{'='*60}")
     
-    if is_valid:
-        print("\n Anonymization Summary:")
-        print("   ✓ Public keys successfully shuffled and re-randomized")
-        print("   ✓ Zero-knowledge proof verified")
-        print("   ✓ Original identities hidden (permutation secret)")
-        print("   ✓ Users can still use their keys with r' for operations")
+#     if is_valid:
+#         print("\n Anonymization Summary:")
+#         print("   ✓ Public keys successfully shuffled and re-randomized")
+#         print("   ✓ Zero-knowledge proof verified")
+#         print("   ✓ Original identities hidden (permutation secret)")
+#         print("   ✓ Users can still use their keys with r' for operations")
     
-    print()
-    return is_valid
+#     print()
+#     return is_valid
 
-def test_integration_with_aggregator():
-    print("\n" + "="*60)
-    print("Testing Full Integration Flow")
-    print("="*60)
+# def test_integration_with_aggregator():
+#     print("\n" + "="*60)
+#     print("Testing Full Integration Flow")
+#     print("="*60)
     
-    pp = gen.pp
-    _, g, _ = pp
-    N = 5
+#     pp = gen.pp
+#     _, g, _ = pp
+#     N = 5
     
-    # print(f"\n1. Users register with aggregator...")
-    ID_pk = []
-    user_data = {}
+#     # print(f"\n1. Users register with aggregator...")
+#     ID_pk = []
+#     user_data = {}
     
-    for i in range(N):
-        user_id = f"A{i}"
-        ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
-        ID_pk.append((user_id, pk))
-        user_data[user_id] = {'pk': pk, 'sk': sk}
-        # print(f"   {user_id} registered: pk={str(pk)[:40]}...")
+#     for i in range(N):
+#         user_id = f"A{i}"
+#         ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
+#         ID_pk.append((user_id, pk))
+#         user_data[user_id] = {'pk': pk, 'sk': sk}
+#         # print(f"   {user_id} registered: pk={str(pk)[:40]}...")
     
-    print(f"\n2. Aggregator mixes public keys...")
-    # Extract just the public keys
-    e = [pk for _, pk in ID_pk]
+#     print(f"\n2. Aggregator mixes public keys...")
+#     # Extract just the public keys
+#     e = [pk for _, pk in ID_pk]
     
-    # Perform shuffle
-    e_prime, r_prime, ψ = GenShuffle(e)
+#     # Perform shuffle
+#     e_prime, r_prime, ψ = GenShuffle(e)
     
-    # Generate proof
-    πmix = GenProof(e, e_prime, r_prime, ψ, g)
+#     # Generate proof
+#     πmix = GenProof(e, e_prime, r_prime, ψ, g)
     
-    # print(f"   Shuffle complete with permutation: {ψ}")
-    # print(f"   Permutation meaning: position j gets element from position ψ[j]")
+#     # print(f"   Shuffle complete with permutation: {ψ}")
+#     # print(f"   Permutation meaning: position j gets element from position ψ[j]")
     
-    r_map = {}
-    for i, (user_id, original_pk) in enumerate(ID_pk):
-        # User i's key was re-randomized with r_prime[i]
-        # Then placed at position j where ψ[j] = i
-        # Find that position j
-        shuffled_pos = ψ.index(i)  # Find j where ψ[j] = i
+#     r_map = {}
+#     for i, (user_id, original_pk) in enumerate(ID_pk):
+#         # User i's key was re-randomized with r_prime[i]
+#         # Then placed at position j where ψ[j] = i
+#         # Find that position j
+#         shuffled_pos = ψ.index(i)  # Find j where ψ[j] = i
         
-        r_map[user_id] = r_prime[i]  # User gets their own r_prime[i]
-        # print(f"   {user_id} (original pos {i}) → shuffled pos {shuffled_pos}, r'={str(r_prime[i])[:40]}...")
+#         r_map[user_id] = r_prime[i]  # User gets their own r_prime[i]
+#         # print(f"   {user_id} (original pos {i}) → shuffled pos {shuffled_pos}, r'={str(r_prime[i])[:40]}...")
     
-    print(f"\n3. Verifying shuffle proof...")
-    is_valid = CheckProof(πmix, e, e_prime, g)
+#     print(f"\n3. Verifying shuffle proof...")
+#     is_valid = CheckProof(πmix, e, e_prime, g)
     
-    print(f"\n4. Users verify they can use anonymized keys...")
-    all_verified = True
-    for i, (user_id, original_pk) in enumerate(ID_pk):
-        r_val = r_map[user_id]
+#     print(f"\n4. Users verify they can use anonymized keys...")
+#     all_verified = True
+#     for i, (user_id, original_pk) in enumerate(ID_pk):
+#         r_val = r_map[user_id]
         
-        # Find where this user's key ended up
-        shuffled_pos = ψ.index(i)
+#         # Find where this user's key ended up
+#         shuffled_pos = ψ.index(i)
         
-        # Compute expected: pk' = pk * r'
-        expected_pk = original_pk.pt_mul(r_val)
+#         # Compute expected: pk' = pk * r'
+#         expected_pk = original_pk.pt_mul(r_val)
         
-        # Check if it matches the shuffled position
-        if expected_pk == e_prime[shuffled_pos]:
-            print(f"   ✓ {user_id} verified: e_prime[{shuffled_pos}] = e[{i}] * r'[{i}]")
-        else:
-            print(f"   ✗ {user_id} FAILED verification")
-            print(f"      Expected at pos {shuffled_pos}: {str(expected_pk)[:50]}")
-            print(f"      Got: {str(e_prime[shuffled_pos])[:50]}")
-            all_verified = False
+#         # Check if it matches the shuffled position
+#         if expected_pk == e_prime[shuffled_pos]:
+#             print(f"   ✓ {user_id} verified: e_prime[{shuffled_pos}] = e[{i}] * r'[{i}]")
+#         else:
+#             print(f"   ✗ {user_id} FAILED verification")
+#             print(f"      Expected at pos {shuffled_pos}: {str(expected_pk)[:50]}")
+#             print(f"      Got: {str(e_prime[shuffled_pos])[:50]}")
+#             all_verified = False
     
-    print(f"\n{'='*60}")
-    print(f"Shuffle Proof: {'✅ PASS' if is_valid else '❌ FAIL'}")
-    print(f"User Verification: {'✅ PASS' if all_verified else '❌ FAIL'}")
-    print(f"Overall: {'✅ PASS' if (is_valid and all_verified) else '❌ FAIL'}")
-    print(f"{'='*60}\n")
+#     print(f"\n{'='*60}")
+#     print(f"Shuffle Proof: {'✅ PASS' if is_valid else '❌ FAIL'}")
+#     print(f"User Verification: {'✅ PASS' if all_verified else '❌ FAIL'}")
+#     print(f"Overall: {'✅ PASS' if (is_valid and all_verified) else '❌ FAIL'}")
+#     print(f"{'='*60}\n")
     
-    return is_valid and all_verified
+#     return is_valid and all_verified
 
-if __name__ == "__main__":
-    # Test 1: Basic shuffle with generated keys
-    test_basic_shuffle()
+# if __name__ == "__main__":
+#     # Test 1: Basic shuffle with generated keys
+#     test_basic_shuffle()
     
-    # Test 2: Full integration flow
-    print("\n\n")
-    test_integration_with_aggregator()
+#     # Test 2: Full integration flow
+#     print("\n\n")
+#     test_integration_with_aggregator()

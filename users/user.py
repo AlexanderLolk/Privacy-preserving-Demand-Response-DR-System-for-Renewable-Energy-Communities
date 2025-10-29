@@ -70,8 +70,9 @@ def generate_and_send_report():
         user_id = user_iden[i]
         sk = user_secret_keys[user_id]
 
+        # TODO randomize number of participating users?
         # if else with non zero baseline
-        if i < NUM_USERS - 1: # TODO randomize number of participating users?
+        if i < NUM_USERS - 1: 
             # participating user TODO
             m = 10
         else:

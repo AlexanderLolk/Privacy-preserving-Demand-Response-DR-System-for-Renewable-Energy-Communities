@@ -44,6 +44,7 @@ reports = agg.get_report_from_users()
 def publish_reports(reports):
     print("=======================")
     print("published user reports:")
+    print("len of reports: " + str(len(reports)))
     for report in reports:
         print(report)
 

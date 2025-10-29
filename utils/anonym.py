@@ -7,3 +7,6 @@
 # aggregator computes a hash of all published values on PBB, signs it, and publishes it on BB.
 # The private bulletin board PBB is an append-only board where both aggregators can write
 # on it
+
+def Anonym():
+    return ""

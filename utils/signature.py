@@ -36,3 +36,4 @@ def schnorr_verify(sec_params, pk, msg, signature):
     expected_point = s * g                  # Elliptic curve point left side
     reconstructed_point = R + e * pk        # Elliptic curve point right side
     return expected_point == reconstructed_point
+
