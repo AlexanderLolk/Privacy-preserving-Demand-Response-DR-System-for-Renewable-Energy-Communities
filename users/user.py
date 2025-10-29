@@ -78,10 +78,8 @@ def generate_and_send_report():
             m = 0 # non-participating user sends 0 report
 
         # gen.report Report(id, sk, ek, m, t) returns (pk, (t, ct, σ)) for each user
-        report = gen.report(user_id, sk, DSO_ek, m, t)
+        report = gen.report(user_id, sk, DSO_ek, m, t, user_info)
         reports.append(report)
-    
-    agg.get_report_from_users(reports)
 
     return reports
     

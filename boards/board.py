@@ -42,7 +42,8 @@ user.get_anon_key()
 reports = agg.get_report_from_users()
 
 def publish_reports(reports):
-    print("some published reports")
+    print("=======================")
+    print("published user reports:")
     for report in reports:
         print(report)
 

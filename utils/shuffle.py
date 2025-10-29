@@ -188,7 +188,7 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     # print(f"[DEBUG] t_4_2 after w'_i sum: {t_4_2}")
     
     t4 = t_4_1.pt_add(t_4_2)  # Combine both parts
-    print(f"[DEBUG] t4 computed: {t4}")
+    # print(f"[DEBUG] t4 computed: {t4}")
 
     # Add to GenProof after t4 computation
     # print(f"[DEBUG GenProof] w[3]: {int(w[3]) % 1000}")
@@ -256,12 +256,12 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     sum_u_e = e[0].pt_mul(u[0])
     for i in range(1, N):
         sum_u_e = sum_u_e.pt_add(e[i].pt_mul(u[i]))
-    print(f"[GenProof] sum_u_e: {sum_u_e}")
+    # print(f"[GenProof] sum_u_e: {sum_u_e}")
 
     sum_sprime_eprime = e_prime[0].pt_mul(s_prime[0])
     for i in range(1, N):
         sum_sprime_eprime = sum_sprime_eprime.pt_add(e_prime[i].pt_mul(s_prime[i]))
-    print(f"[GenProof] sum_sprime_eprime: {sum_sprime_eprime}")
+    # print(f"[GenProof] sum_sprime_eprime: {sum_sprime_eprime}")
 
     proof = {
         't': (t1, t2, t3, t4, t_hat),
@@ -280,7 +280,7 @@ def CheckProof(proof, e, e_prime, pk):
     _, g, order = gen.pp 
     N = len(e)
 
-    print(f"\n[DEBUG] CheckProof started with N={N}")
+    # print(f"\n[DEBUG] CheckProof started with N={N}")
     
     # Extract proof components
     t1, t2, t3, t4, t_hat = proof["t"]
@@ -351,7 +351,7 @@ def CheckProof(proof, e, e_prime, pk):
     t3_prime = t3_prime_1.pt_add(t3_prime_2).pt_add(t3_prime_prod)
     
     t3_check = (t3 == t3_prime)
-    print(f"[DEBUG] t3 check: {t3_check}")
+    # print(f"[DEBUG] t3 check: {t3_check}")
     
     # if not t3_check:
     #     # Extra debugging when t3 fails
@@ -477,24 +477,23 @@ def test_basic_shuffle():
         print(f"   {user_id}: pk={str(pk)[:50]}...")
     
     print(f"\n2. Shuffling and anonymizing public keys...")
-    e_prime, r_prime, ψ = GenShuffle(e)  # FIXED: Removed 'g' argument
+    e_prime, r_prime, ψ = GenShuffle(e) 
     print(f"   Permutation: {ψ}")
     print(f"   Original order: User_0, User_1, User_2, User_3, User_4")
     shuffled_order = [f"User_{ψ.index(i)}" for i in range(N)]
     print(f"   Shuffled order: {', '.join(shuffled_order)}")
     
     print(f"\n3. Generating shuffle proof (πmix)...")
-    # Use a dummy public key or g as the 'pk' parameter
-    # This is just for the hash computation in the proof
-    pk_for_proof = g  # or you can use e[0] or any consistent value
-    proof = GenProof(e, e_prime, r_prime, ψ, pk_for_proof)  # FIXED: Use pk_for_proof
+
+    pk_for_proof = g 
+    proof = GenProof(e, e_prime, r_prime, ψ, pk_for_proof)
     print(f"   Proof generated with:")
     print(f"   - Commitments (c): {len(proof['c'])} elements")
     print(f"   - Commitment chain (c_hat): {len(proof['c_hat'])} elements")
     print(f"   - Responses (s): 6 values")
     
     print(f"\n4. Verifying shuffle proof...")
-    is_valid = CheckProof(proof, e, e_prime, pk_for_proof)  # FIXED: Use same pk_for_proof
+    is_valid = CheckProof(proof, e, e_prime, pk_for_proof)
     
     print(f"\n{'='*60}")
     print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
@@ -543,9 +542,6 @@ def test_integration_with_aggregator():
     # print(f"   Shuffle complete with permutation: {ψ}")
     # print(f"   Permutation meaning: position j gets element from position ψ[j]")
     
-    # Create r_map (map user_id to their randomization factor)
-    # The shuffled output position j contains e_prime[ψ[j]] = e[ψ[j]] * r_prime[ψ[j]]
-    # So to find where user i ended up, we need to find j where ψ[j] = i
     r_map = {}
     for i, (user_id, original_pk) in enumerate(ID_pk):
         # User i's key was re-randomized with r_prime[i]

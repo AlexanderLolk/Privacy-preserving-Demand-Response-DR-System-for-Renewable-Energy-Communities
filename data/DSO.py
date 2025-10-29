@@ -49,7 +49,9 @@ def registration():
 
 # for board
 def create_encryption_key_set():
-    global el_info
+    global el_info, pp
+    if pp == "" or pp is None:
+        pp = gen.pub_param()
     if el_info == ():
         el_info = gen.ekey_gen(pp)
     return el_info[0]
@@ -65,7 +67,6 @@ def verify_user(component_info, registered, component_type):
             return False
     return True
  
-
 # DR param
 # - p, the probability of selecting a consumer for participation in the DR program (cfr. Equations 4 and 5). 
 # - π∗, the reward for unit reduction, which corresponds to the TMC price (e.g. $0.05/kWh, see Figure 2).

@@ -1,9 +1,10 @@
-from petlib.ec import EcGroup
+from petlib.ec import EcGroup, Bn
 import random
 import utils.signature as sig
 import utils.NIZKP as nizkp
 import utils.ec_elgamal as ahe
 import utils.shuffle as shuffle
+from utils.dec_proof import elgamal_encrypt, prove_correct_decryption
 
 def pub_param(nid=713):
     group_G = EcGroup(nid)
@@ -37,12 +38,27 @@ def skey_gen(id=random, pp=None):
 # It then computes πdk ← Proofdk((pp, ek), dk), updates ek such
 # that ek contains pp along with πdk, and returns (ek, dk).
 # TODO change proof to correct decryption (so 'm' is also decrypted correct)
+# def ekey_gen(pp=None):
+#     if pp is None:  
+#         pp = pub_param()
+#     ek, dk = ahe.key_gen(pp)
+#     πdk = nizkp.schnorr_NIZKP_proof(pp, ek, dk)
+#     return ((ek, pp, πdk), dk)
+
 def ekey_gen(pp=None):
     if pp is None:  
         pp = pub_param()
     ek, dk = ahe.key_gen(pp)
-    πdk = nizkp.schnorr_NIZKP_proof(pp, ek, dk)
+
+    m_scalar = Bn(42)   # just a sample message for proof
+    M = m_scalar * pp[1]
+
+    (C1, C2), _ = elgamal_encrypt(pp, ek, M)
+
+    # Generate proof of correct decryption
+    πdk = prove_correct_decryption(pp, ek, C1, C2, M, dk)
     return ((ek, pp, πdk), dk)
+
 
 # MixID(pk) → (pk′, r′, πmix): On input set IDpk = {(id, pk)}id∈ID computes shuffle and ran-
 # domization to generate the mixed public key set pk′ = {pk′1, pk′2, ... , pk′n} where n = |ID|. It
@@ -60,10 +76,16 @@ def mix_id(ID_pk):
         return ([], {}, None)
     
     N = len(ID_pk)
+    Id_A_pk = []
+    for idpk in ID_pk:
+        # id = idpk[0] 
+        pk = idpk[1][0]
+        # Id_A_pk.append((id, pk))
+        Id_A_pk.append(pk)
 
-    e_prime, r_prime, ψ = shuffle.GenShuffle(ID_pk)
+    e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk)
     # proof of shuffle and anonymised list of pks
-    πmix_proof= shuffle.GenProof(ID_pk, e_prime, r_prime, ψ, pk="need to remove")
+    πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk="need to remove")
 
     return (e_prime, r_prime, πmix_proof)
 
@@ -94,18 +116,12 @@ def mix_id(ID_pk):
 
     # return (pk_mixed, r_map, proofs, πmix_)
 
-# Report(id, sk, ek, m, t) → (pk, (t, ct, σ)): on input smart meter identity id ∈ ID, secret signing
-# key sk, servers public encryption key ek, smart meter data m ∈ M, and timestamp t does the following:
-# 1. Compute mbin = (m1, m2, ... , mb) which is a binary form of m.
-# 2. Compute cti $ ←− AHE.Enc(ek,mi; ri) for each mi ∈ (m1, m2, ... , mb).
-# 3. Set ct = (ct1, ct2, ... , ctb) where ct is a list of encryptions of the binary representation of energy consumption m.
-# 4. Compute σ $ ←− Sig.Sign(sk, (t, ct)).
-# 5. Return (pk, (t, ct, σ)).
+# Report(id, sk, ek, m, t) → (pk, (t, ct, σ))
 
 user_info = {}
 
-def report(id, sk, ek, m, t):
-    # user
+def report(id, sk, ek, m, t, user_info):
+    # to get pk sended back
     pk = user_info[id]
     pp = pk[1]
 
