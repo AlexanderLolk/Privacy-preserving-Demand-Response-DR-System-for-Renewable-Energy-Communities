@@ -54,7 +54,7 @@ def create_encryption_key_set():
         pp = gen.pub_param()
     if el_info == ():
         el_info = gen.ekey_gen(pp)
-    return el_info[0]
+    return el_info[0] 
 
 # signed list of registered aggregators
 def verify_user(component_info, registered, component_type):
@@ -111,3 +111,11 @@ def publish_reduction_target_list():
     reduction_target_list = [ahe.enc(gen.pub_param(), el_info[0][0], val) for val in noisy_list]
     return reduction_target_list
 
+# for agg
+def get_key_set():
+    global el_info, pp
+    if pp == "" or pp is None:
+        pp = gen.pub_param()
+    if el_info == ():
+        el_info = gen.ekey_gen(pp)
+    return (el_info[0][1], el_info[1])

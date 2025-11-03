@@ -1,5 +1,5 @@
 # this is both for public and private boards
-import data.DSO as dso
+import dso.DSO as dso
 import aggregators.aggregator as agg
 import users.user as user
 
@@ -15,7 +15,7 @@ def make_DRparam_and_targetreduction():
     return dso.calculate_DR_param_and_target_reduction()
 
 # noisy list
-DSO_ek = dso.create_encryption_key_set() # so that it can be given to all others
+DSO_ek, DSO_dk = dso.create_encryption_key_set() # so that it can be given to all others
 reduction_target_list = dso.publish_reduction_target_list()
 user.get_DSO_ek(DSO_ek)
 
@@ -49,3 +49,8 @@ def publish_reports(reports):
         print(report)
 
 publish_reports(reports)
+
+# ===========
+# eval stuff
+# ===========
+ct_b = 100 # baseline report
