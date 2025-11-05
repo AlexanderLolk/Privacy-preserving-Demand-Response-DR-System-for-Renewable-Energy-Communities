@@ -208,12 +208,13 @@ def epet(ct_sum, ct_t_i):
     π_r_i is the zero knowledge proof
     """
     
-    
     # fix
     pub_param = gen.pub_param()
     _, g, order = pub_param
     r = order.random()
 
+    # ct_eq = ct_diff^r
+    # ct_diff = ct_sum - ct_t_i
     ct_eq = (ct)
 
     if ct_sum == ct_t_i:
@@ -222,7 +223,7 @@ def epet(ct_sum, ct_t_i):
     else:
         return ahe.e
 
-    return  
+    pass
 
 def proof_r(ct1, ct2, ct_eq, r):
     """
@@ -238,7 +239,7 @@ def proof_r(ct1, ct2, ct_eq, r):
     ct_diff = ahe.sub(ct1, ct2)
     C1_diff, C2_diff = ct_diff
 
-    k = order.random() # nonce
+    s = order.random() # nonce
 
     A1 = C1_diff.pt_mul(s)
     A2 = C2_diff.pt_mul(s)
@@ -247,45 +248,69 @@ def proof_r(ct1, ct2, ct_eq, r):
     challenge = dec_proof.hash_to_bn(g, dso_ek, C1_1, C1_2, C2_1, C2_2, C1_eq, C2_eq, A1, A2, order=order)
 
     # response
-    response = (k + challenge * r) % order
+    # TODO figure out r 
+    response = (s + challenge * r) % order
 
     return (A1, A2, response, challenge)
 
 def verify_r(ct1, ct2, ct_eq, proof):
     """
     Verify NIZK proof that ct_eq = (ct1 / ct2)^r
-    Returns b ∈ {0, 1} where b = 1 if proof is valid and 0 otherwise 
+    Returns b ∈ {0, 1} where b = 1 if proof is valid and 0 otherwise
+
+    Prover:
+    A1 = C1_diff * s (commitment 1)
+    A2 = C2_diff * s (commitment 2)
+    response = (s + challenge * r) % order
+    challenge = hashing...
     
-    Full mathematical verification:
+    verifier:
+    THe verifier wants to check that
+    ct_diff * response == A + ct_eq * challenge
+    so:
+
+    LEFT SIDE                 RIGHT SIDE
+
+    C1_diff * response    ==  A1 + (C1_eq * challenge)
+    C2_diff * response    ==  A2 + (C2_eq * challenge)
+
+    check 1:
+    left side:
+    V1  = C1_diff.pt_mul(response)
+        = C1_diff * response
+        = C1_diff * (s * challenge * r)
+        = C1_diff * s + C1_diff * (challenge * r)
+        = C1_diff * s + C1_diff * r * challenge
+        = C1_diff * s (C1_diff * r) * challenge
+
+    right side:
+    A1 + C1_eq.pt_mul(challenge)
+        = A1 + (C1_eq * challenge)
+        = (C1_diff * s) + (C1_eq * challenge)
+        = (C1_diff * s) + (C1_diff * r) * challenge
+        = C1_diff * s + C1_diff * r * challenge
     
-    PROVER computed:
-    1. ct_diff = ct1 / ct2 = (C1_diff, C2_diff)
-    2. ct_eq = ct_diff^r = (C1_diff * r, C2_diff * r) 
-    3. A = ct_diff^s = (C1_diff * s, C2_diff * s)
-    4. c = Hash(...)
-    5. z = s + c*r mod order
+    check 1 shows V1 == A1 + C1_eq * challenge
+
+    check 2:
+    left side
+    V2  = C2_diff.pt_mul(response)
+        = C2_diff * response
+        = C2_diff * (s * challenge * r)
+        = C2_diff * s + C2_diff * (challenge * r)
+        = C2_diff * s + C2_diff * r * challenge
+        = C2_diff * s (C2_diff * r) * challenge
     
-    VERIFIER checks:
-    ct_diff^z ?= A * ct_eq^c
+    right side:
+    A2.pt_add(C2_eq.pt_mul(challenge))
+        = A2 + (C2_eq * challenge)
+        = (C2_diff * s) + (C2_eq * challenge)
+        = (C2_diff * s) + (C2_diff * r) * challenge
+        = C2_diff * s + C2_diff * r * challenge
     
-    Expanding left side:
-    ct_diff^z = ct_diff^(s + c*r)           [substitute z]
-            = ct_diff^s * ct_diff^(c*r)     [exponent addition]
-            = ct_diff^s * (ct_diff^r)^c     [exponent multiplication]
-    
-    Expanding right side:
-    A * ct_eq^c = ct_diff^s * ct_eq^c       [substitute A]
-                = ct_diff^s * (ct_diff^r)^c [substitute ct_eq]
-    
-    Therefore: ct_diff^z == A * ct_eq^c
-    
-    This proves the prover knows r such that ct_eq = ct_diff^r
-    without revealing r.
-    
-    For ElGamal ciphertexts ct = (C1, C2):
-    ct^k = (C1 * k, C2 * k)  [scalar multiplication on elliptic curve]
-    ct1 * ct2 = (C1_1 + C1_2, C2_1 + C2_2)  [point addition]
+    check 2 shows V2 == A2 + C2_eq * challenge
     """
+
     _, g, order = gen.pub_param()
     A1, A2, response, challenge = proof
 
@@ -299,13 +324,19 @@ def verify_r(ct1, ct2, ct_eq, proof):
     C1_diff, C2_diff = ct_diff
 
     # Recompute challenge
-    challenge_check = dec_proof.hash_to_bn(g, dso_ek, C1_1, C1_2, C2_1, C2_2, C1_eq, C2_eq, A1, A2, order=order)
+    c_check = dec_proof.hash_to_bn(g, dso_ek, C1_1, C1_2, C2_1, C2_2, C1_eq, C2_eq, A1, A2, order=order)
     # response * ct_diff = A + challenge * ct_eq
     # ct_diff^z == ct_diff^s * ct_diff^(c*r)
     # ct_eq = ct_diff^r
 
-    return ""
-
+    # Commitments: A = ct_diff^s
+    V1 = C1_diff.pt_mul(response)
+    V2 = C2_diff.pt_mul(response)
+    
+    check1 = (V1 == A1.pt_add(C1_eq.pt_mul(challenge)))
+    check2 = (V2 == A2.pt_add(C2_eq.pt_mul(challenge)))
+    
+    return check1 and check2 and (challenge == c_check)
 
 # ({M}, π_dec) ← PDec(ct_eq, dk)
 def prove_epet_computation(ct_eq, dk):

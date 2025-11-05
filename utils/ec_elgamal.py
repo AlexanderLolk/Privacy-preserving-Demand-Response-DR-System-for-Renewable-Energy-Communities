@@ -54,3 +54,10 @@ def dec(params, table, priv, c1):
     a, b = c1
     plain = b + (-priv * a)
     return table[plain]
+
+# test for Eval() in aggregator
+def sub(c1, c2):
+    """Subtract two encrypted counters: c1 - c2"""
+    a1, b1 = c1
+    a2, b2 = c2
+    return (a1 + (-a2), b1 + (-b2))
