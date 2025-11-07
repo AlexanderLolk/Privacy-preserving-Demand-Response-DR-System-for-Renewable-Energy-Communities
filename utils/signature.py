@@ -20,7 +20,7 @@ def Hash(R, msg, order):
     return digest_bn % order
 
 # schnorr_sign creates a Schnorr signature on message msg using private key sk
-def schnorr_sign(sec_params, sk, msg):
+def schnorr_sign(sk, sec_params, msg):
     _, g, order = sec_params
     k = order.random()            # nonce
     R = k * g                     # ephemeral public key
@@ -29,7 +29,7 @@ def schnorr_sign(sec_params, sk, msg):
     return (R, s)
 
 # schnorr_verify verifies a Schnorr signature signature on message msg using public key pk
-def schnorr_verify(sec_params, pk, msg, signature):
+def schnorr_verify(pk, sec_params, msg, signature):
     _, g, order = sec_params
     R, s = signature
     e = Hash(R, msg, order)                # Recompute challenge

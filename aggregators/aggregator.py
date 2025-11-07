@@ -1,9 +1,53 @@
 # the DSO publishes a signed list of registered aggregators on
 # BB. The DSO can update the list of registered smart meters and aggregators dynamically
 
-from xxlimited import foo
-import utils.generators as gen
-import users.user as user
+from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
+from utils.signature import schnorr_verify
+from utils.ec_elgamal import dec, make_table
+
+class Aggregator:
+
+    def __init__(self, init_id="agg_id", pp=None):
+        
+        if pp is None:
+           pp = pub_param()
+
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
+        ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
+    
+    def get_id(self):
+        return self.id
+
+    def get_public_key(self):
+        return self.pk
+
+    def get_verfication_data(self):
+        return (self.pk, self.pp, self.s_proof)
+    
+    def set_dso_public_keys(self, dso_pk, dso_ek):
+        self.dso_pk = dso_pk
+        self.dso_ek = dso_ek
+        
+    def set_dso_dk(self, ciphertext, signature):
+        # TODO make sure signature is valid and encrypted data is from DSO
+        
+        table = make_table(self.pp)
+        msg = dec(self.dk, self.pp, table, ciphertext)
+        
+        if schnorr_verify(self.dso_pk, self.pp, msg, signature):
+            print(True)
+        else:
+            print(False)
+
+        # TODO should be a ec_point (is string now) check petlib if it has something to convert it with
+        self.dso_dk = self.dk
+
+
+
+
+
+
+import smartmeters.smartmeter as smartmeter
 import dso.DSO as dso
 import utils.ec_elgamal as ahe
 import utils.dec_proof as dec_proof
@@ -34,7 +78,7 @@ def make_aggregator(pp):
     # aggregator's public keys
     for i in range(NUM_AGG):
         agg_id = agg_iden[i]
-        ((id, (pk, pp, proof)), sk) = gen.skey_gen(pp)
+        ((id, (pk, pp, proof)), sk) = skey_gen(pp)
         verification = (pk, pp, proof)
         agg_info[agg_id] = verification
     return agg_info
@@ -47,7 +91,7 @@ r_prime = []
 # send (pk', πmix) to board
 def create_mixed_anon_pk_set(ID_pk):
     global r_prime
-    e_prime, r_prime, πmix_proof = gen.mix_id(ID_pk)
+    e_prime, r_prime, πmix_proof = mix_id(ID_pk)
     return (e_prime, r_prime, πmix_proof)
 
 # send r' to users
@@ -55,7 +99,7 @@ def publish_anon_key():
     return r_prime
 
 def get_report_from_users():
-    user_reports = user.generate_and_send_report()
+    user_reports = smartmeter.generate_and_send_report()
     return user_reports
 
 # This is done so the dk can be used in the Eval function 
@@ -69,7 +113,7 @@ def get_encryption_key_set():
 
 #=============
 # Eval(BB, PBB, dk) → (PBB, BB)
-# TODO revise
+# TODO revise (not finished)
 #=============
 
 def Eval(BB, PBB, dk):

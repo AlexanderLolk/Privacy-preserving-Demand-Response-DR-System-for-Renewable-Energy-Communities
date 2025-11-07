@@ -1,7 +1,49 @@
 # this is both for public and private boards
+from utils.signature import schnorr_verify
+from utils.NIZKP import schnorr_NIZKP_verify
+from 
+
+class Board:
+    
+    def publish_dso_public_keys(self, dso_keys):
+        # (pk, ek)
+        (pk, _, s_proof) = dso_keys[0]
+        (ek, _, e_proof) = dso_keys[1]
+        
+        
+        
+        self.pk, self.ek = dso_keys
+        
+    # The DSO registers and has verified users and aggregators, then sends it to the board
+    def publish_smartmeters_and_aggregators(self, signed_lists):
+        _, sm_sign, _, agg_sign = signed_lists
+        if not schnorr_verify(self.pk, sm_sign, self.register_smartmeter):
+            print("Smartmeters were not verified")
+        
+        if not schnorr_verify(self.pk, agg_sign, self.register_aggregator):
+            print("Aggregators were not verified")
+
+        self.register_smartmeter, _, self.register_aggregator, _ = signed_lists
+    
+
+    def target_reduction(self, T_r):
+        self.T_r = T_r
+
+    
+
+
+
+
+
+
+
+
+
+
+
 import dso.DSO as dso
 import aggregators.aggregator as agg
-import users.user as user
+import smartmeters.smartmeter as smartmeter
 
 # DSO, users and aggregators with their public keys
 def make_registered_users_and_aggregators():
@@ -17,7 +59,7 @@ def make_DRparam_and_targetreduction():
 # noisy list
 DSO_ek, DSO_dk = dso.create_encryption_key_set() # so that it can be given to all others
 reduction_target_list = dso.publish_reduction_target_list()
-user.get_DSO_ek(DSO_ek)
+smartmeter.get_DSO_ek(DSO_ek)
 
 ###################################################
 # MIX Aggregator sends anon mixed pk set to board #
@@ -36,7 +78,7 @@ pk_mixed, r_map, πmix = agg.create_mixed_anon_pk_set(ID_pk)
 publish_mixed_keys(pk_mixed, πmix)
 
 # users get their anon keys from aggregators which is sent to the board
-user.get_anon_key()
+smartmeter.get_anon_key()
 
 # get user reports and publish on board
 reports = agg.get_report_from_users()

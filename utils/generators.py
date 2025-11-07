@@ -22,7 +22,7 @@ def skey_gen(id=random, pp=None):
     if pp is None:
         pp = pub_param()
     sk, pk = sig.key_gen(pp)
-    proof =  nizkp.schnorr_NIZKP_proof(pp, pk, sk)
+    proof =  nizkp.schnorr_NIZKP_proof(pk, pp, sk)
     return ((id, (pk, pp, proof)), sk)
 
 # EKeyGen(pp) → (ek, dk): On input of the public parameter pp, executes (ek, dk) ← AHE.KeyGen(1λ)

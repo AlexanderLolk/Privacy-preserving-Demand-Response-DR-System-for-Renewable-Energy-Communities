@@ -12,7 +12,7 @@ def schnorr_NIZKP_challenge(elements):
     return Hash.digest()
 
 # schnorr_proof creates the NIZKP of knowledge of the secret key (rewrite the explanation)
-def schnorr_NIZKP_proof(sec_params, pk, sk, msg=""):
+def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
     _, g, order = sec_params
     r = order.random()            # nonce
     W = r * g                     # commitment
@@ -28,7 +28,7 @@ def schnorr_NIZKP_proof(sec_params, pk, sk, msg=""):
     return (c, s, W)
 
 # schnorr_NIZKP_verify verifies the NIZKP of knowledge of the secret key
-def schnorr_NIZKP_verify(sec_params, pk, proof, msg=""):
+def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
     _, g, order = sec_params
     c, s, W = proof
     # reconstruct commitment

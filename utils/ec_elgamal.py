@@ -6,7 +6,7 @@ def key_gen(params):
     return (pub, priv)
 
 # standard elgamal encryption
-def enc(params, pub, counter):
+def enc(pub, params, counter):
     G, g, o = params
     # k = r
     k = o.random()
@@ -48,7 +48,7 @@ def make_table(params):
         table[i * g] = i
     return table
 
-def dec(params, table, priv, c1):
+def dec(priv, params, table, c1):
     """Decrypt an encrypted counter"""
     _, g, o = params
     a, b = c1

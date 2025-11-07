@@ -1,9 +1,31 @@
 # participating user
 # non-participating user
 
+from utils.generators import pub_param, skey_gen, report
+
+class SmartMeter:
+    
+    def __init__(self, init_id="sm_id", pp=None):
+        if pp is None:
+           pp = pub_param()
+
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
+
+    def get_public_key(self):
+        return (self.pk, self.pp, self.s_proof)
+
+    def set_dso_public_keys(self, dso_pk, dso_ek):
+        self.dso_pk = dso_pk
+        self.dso_ek = dso_ek
+
+
+
+
+
+
+
 import os
 import time
-import utils.generators as gen
 import aggregators.aggregator as agg
 
 NUM_USERS = 3
@@ -79,8 +101,8 @@ def generate_and_send_report():
             m = 0 # non-participating user sends 0 report
 
         # gen.report Report(id, sk, ek, m, t) returns (pk, (t, ct, σ)) for each user
-        report = gen.report(user_id, sk, DSO_ek, m, t, user_info)
-        reports.append(report)
+        get_report = report(user_id, sk, DSO_ek, m, t, user_info)
+        reports.append(get_report)
 
     return reports
     
