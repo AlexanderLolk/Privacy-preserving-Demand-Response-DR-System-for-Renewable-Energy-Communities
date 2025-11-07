@@ -1,19 +1,26 @@
 # this is both for public and private boards
 from utils.signature import schnorr_verify
 from utils.NIZKP import schnorr_NIZKP_verify
-from 
+from utils.dec_proof import verify_correct_decryption
 
 class Board:
     
     def publish_dso_public_keys(self, dso_keys):
+        
         # (pk, ek)
-        (pk, _, s_proof) = dso_keys[0]
+        (pk, pp, s_proof) = dso_keys[0]
         (ek, _, e_proof) = dso_keys[1]
         
+        if not schnorr_NIZKP_verify(pk, pp, s_proof):
+            print("DSO public key proof verification failed")  
         
+        # TODO: fix 
+        if not verify_correct_decryption(ek, pp, e_proof):
+            print("DSO encryption key proof verification failed")
         
         self.pk, self.ek = dso_keys
         
+    
     # The DSO registers and has verified users and aggregators, then sends it to the board
     def publish_smartmeters_and_aggregators(self, signed_lists):
         _, sm_sign, _, agg_sign = signed_lists
@@ -24,7 +31,7 @@ class Board:
             print("Aggregators were not verified")
 
         self.register_smartmeter, _, self.register_aggregator, _ = signed_lists
-    
+
 
     def target_reduction(self, T_r):
         self.T_r = T_r

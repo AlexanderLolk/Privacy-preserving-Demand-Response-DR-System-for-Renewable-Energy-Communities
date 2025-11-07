@@ -42,7 +42,7 @@ def prove_correct_decryption(sec_params, ek, C1, C2, M, dk):
 
     return (A1, A2, s)
 
-def verify_correct_decryption(sec_params, ek, C1, C2, M, proof):
+def verify_correct_decryption(ek, sec_params, C1, C2, M, proof):
     """Verify a Chaum–Pedersen style NIZK proof of correct decryption."""
     _, g, order = sec_params
 
