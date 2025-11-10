@@ -1,7 +1,9 @@
 # participating user
 # non-participating user
 
+import time
 from utils.generators import pub_param, skey_gen, report
+from utils.signature import schnorr_verify
 
 class SmartMeter:
     
@@ -18,91 +20,107 @@ class SmartMeter:
         self.dso_pk = dso_pk
         self.dso_ek = dso_ek
 
+    def set_agg_public_keys(self, agg_pk):
+        self.agg_pk = agg_pk
+
+    # mix
+    def set_anon_key(self, anon_key):
+        (anon_pk, signature) = anon_key
+        
+        if not schnorr_verify(self, self.pp, signature):
+            print("Anonymous key signature verification failed.")
+        
+        self.anon_pk = anon_pk
+
+    # report
+    # TODO: make sure m shouldnt be something else (placeholder right now)
+    def generate_and_send_report(self):
+        t = int(time.time())
+        return report(self.id, self.sk, self.DSO_ek, m=10, t=t, user_pk=(self.pk, self.pp))
+        
 
 
 
 
+# import os
+# import time
+# import aggregators.aggregator as agg
 
+# NUM_USERS = 3
 
-import os
-import time
-import aggregators.aggregator as agg
+# user_keys = []
+# user_info = {} # dict, key is id and value is pk. id -> pk
+# user_secret_keys = {}
+# user_names = [] # not super important
+# user_iden = [] 
+# el_info = ()
+# anon_key = []
 
-NUM_USERS = 3
+# # TODO: Make all users as threads
+# def make_user(pp):
+#     base_dir = os.path.dirname(os.path.abspath(__file__))
+#     names_path = os.path.join(base_dir, "../users/names.txt")
 
-user_keys = []
-user_info = {} # dict, key is id and value is pk. id -> pk
-user_secret_keys = {}
-user_names = [] # not super important
-user_iden = [] 
-el_info = ()
-anon_key = []
+#     # user names and ids
+#     with open(names_path, "r") as file:
+#         for line in file:
+#             words = line.strip().split()
+#             ids = [word[0] for word in words if word]
+#             ids = ids[0] + ". " + ids[1] 
+#             user_names.append(line.strip())
+#             user_iden.append(ids)
 
-# TODO: Make all users as threads
-def make_user(pp):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    names_path = os.path.join(base_dir, "../users/names.txt")
+#     # user's public keys
+#     for i in range(NUM_USERS):
+#         user_id = user_iden[i]
+#         ((id, (pk, pp, proof)), sk) = gen.skey_gen(pp)
+#         verification = (pk, pp, proof)
+#         user_info[user_id] = verification
+#         user_secret_keys[user_id] = sk # secret key for report
 
-    # user names and ids
-    with open(names_path, "r") as file:
-        for line in file:
-            words = line.strip().split()
-            ids = [word[0] for word in words if word]
-            ids = ids[0] + ". " + ids[1] 
-            user_names.append(line.strip())
-            user_iden.append(ids)
+#     return user_info
 
-    # user's public keys
-    for i in range(NUM_USERS):
-        user_id = user_iden[i]
-        ((id, (pk, pp, proof)), sk) = gen.skey_gen(pp)
-        verification = (pk, pp, proof)
-        user_info[user_id] = verification
-        user_secret_keys[user_id] = sk # secret key for report
+# def get_user_signature(pp):
+#     mu = make_user(pp)
+#     print(user_info["K. C"])
+#     return mu
 
-    return user_info
+# ###############################################################
+# # MIX, get r' from aggregator                                 #
+# ###############################################################
 
-def get_user_signature(pp):
-    mu = make_user(pp)
-    print(user_info["K. C"])
-    return mu
+# def get_anon_key():
+#     global anon_key
+#     anon_key = agg.publish_anon_key()
 
-###############################################################
-# MIX, get r' from aggregator                                 #
-###############################################################
+# ###############################################################
+# # REPORT, user generate report and send it to aggregator      #
+# ###############################################################
 
-def get_anon_key():
-    global anon_key
-    anon_key = agg.publish_anon_key()
-
-###############################################################
-# REPORT, user generate report and send it to aggregator      #
-###############################################################
-
-DSO_ek = None
-def get_DSO_ek(ek):
-    global DSO_ek
-    DSO_ek = ek
+# DSO_ek = None
+# def get_DSO_ek(ek):
+#     global DSO_ek
+#     DSO_ek = ek
     
-def generate_and_send_report():
-    t = int(time.time())
-    reports = []
+# def generate_and_send_report():
+#     t = int(time.time())
+#     reports = []
 
-    for i in range(NUM_USERS):
-        user_id = user_iden[i]
-        sk = user_secret_keys[user_id]
+#     for i in range(NUM_USERS):
+#         user_id = user_iden[i]
+#         sk = user_secret_keys[user_id]
 
-        # TODO randomize number of participating users?
-        # if else with non zero baseline
-        if i < NUM_USERS - 1: 
-            # participating user TODO
-            m = 10
-        else:
-            m = 0 # non-participating user sends 0 report
+#         # TODO randomize number of participating users?
+#         # if else with non zero baseline
+#         if i < NUM_USERS - 1: 
+#             # participating user TODO
+#             m = 10
+#         else:
+#             m = 0 # non-participating user sends 0 report
 
-        # gen.report Report(id, sk, ek, m, t) returns (pk, (t, ct, σ)) for each user
-        get_report = report(user_id, sk, DSO_ek, m, t, user_info)
-        reports.append(get_report)
+#         # gen.report Report(id, sk, ek, m, t) returns (pk, (t, ct, σ)) for each user
+#         get_report = report(user_id, sk, DSO_ek, m, t, user_info)
+#         reports.append(get_report)
 
-    return reports
+#     return reports
     

@@ -1,2 +1,11 @@
-# ct_t = consumption report
-ct_t = 50
+
+class PrivateBoard:
+    
+    def __init__(self):
+        pass
+    
+    def publish_anonym(self, anonym_data):
+        print("Anonym not implemented")
+        
+        
+    

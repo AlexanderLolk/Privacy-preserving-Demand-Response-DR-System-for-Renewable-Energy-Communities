@@ -6,6 +6,4 @@
 
 def Anonym(inputs, r_prime_list, secret_key_T):
     pk_list, t, ct_list, sig_list = inputs
-   
-
-    return ""
+    pass

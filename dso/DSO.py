@@ -12,6 +12,7 @@
 from utils.generators import pub_param, skey_gen, ekey_gen
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.signature import schnorr_sign
+from utils.ec_elgamal import enc
 import random
 
 class DSO:
@@ -67,7 +68,8 @@ class DSO:
         return dr_param, target_reduction_value
 
     # noisy list
-    def generate_noisy_list():
+    # TODO check if the noisy list is actually a mathematic implementation (this code was done as a translation of the report words)
+    def generate_noisy_list(self):
         _, target_reduction = DSO.calculate_target_reduction()
 
         max_noise = max(1, target_reduction - 1)
@@ -79,7 +81,9 @@ class DSO:
         values += [0] * zero_noise
         random.shuffle(values)
         
-        return values
+        enc_TR = enc(self.pp, self.ek, values)
+        
+        return enc_TR
 
     def get_public_key(self):
         return (self.pk, self.pp, self.s_proof)
@@ -87,6 +91,7 @@ class DSO:
     def get_encryption_key(self):
         return (self.ek, self.pp, self.e_proof)
     
+    # TODO MAY NOT WORK FOR LISTS
     def sign_registered_lists(self):
         sm_sign = schnorr_sign(self.sk, self.registered_sm)
         agg_sign = schnorr_sign(self.sk, self.registered_agg)

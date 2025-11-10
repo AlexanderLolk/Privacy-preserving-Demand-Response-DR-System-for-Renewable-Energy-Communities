@@ -54,12 +54,10 @@ def mix_id(ID_pk):
     N = len(ID_pk)
     Id_A_pk = []
     for idpk in ID_pk:
-        # id = idpk[0] 
         pk = idpk[1][0]
-        # Id_A_pk.append((id, pk))
         Id_A_pk.append(pk)
 
-    e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk)
+    e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk) 
     # proof of shuffle and anonymised list of pks
     πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk="need to remove")
 
@@ -68,10 +66,10 @@ def mix_id(ID_pk):
 # Report(id, sk, ek, m, t) → (pk, (t, ct, σ))
 user_info = {}
 
-def report(id, sk, ek, m, t, user_info):
+def report(id, sk, ek, m, t, user_pk):
     # to get pk sended back
-    pk = user_info[id]
-    pp = pk[1]
+    pk = user_pk[0]
+    pp = user_pk[1]
 
     # convert message to binary in a list of bits
     mbin = [int(x) for x in bin(m)[2:]]
