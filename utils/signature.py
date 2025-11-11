@@ -37,3 +37,23 @@ def schnorr_verify(pk, sec_params, msg, signature):
     reconstructed_point = R + e * pk        # Elliptic curve point right side
     return expected_point == reconstructed_point
 
+# signs lists of messages
+def schnorr_sign_list(sk, sec_params, msg_list):
+    signatures = []
+    for msg in msg_list:
+        sign = schnorr_sign(sk, sec_params, msg)
+        signatures.append(sign)
+    return signatures
+    
+    
+def schnorr_verify_list(pk, sec_params, msg_list, signatures):
+    results = []
+    for i, (msg, signature) in enumerate(zip(msg_list, signatures)):
+        is_valid = schnorr_verify(pk, sec_params, msg, signature)
+        if not is_valid:
+            results.append((i, msg, False))
+        else:
+            results.append((i, msg, True))
+    
+    all_valid = all(r[2] for r in results)
+    return (all_valid, results)

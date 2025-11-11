@@ -1,3 +1,6 @@
+from petlib.bn import Bn
+from petlib.ec import EcPt
+
 def key_gen(params):
     """Generates a fresh key pair"""
     _, g, o = params
@@ -6,14 +9,47 @@ def key_gen(params):
     return (pub, priv)
 
 # standard elgamal encryption
+# def enc(pub, params, counter):
+#     G, g, o = params
+#     # k = r
+#     k = o.random()
+#     #   r * g 
+#     a = k * g
+#     #   r * ek  +    m    * g
+#     b = k * pub + counter * g
+#     return (a, b)
+
+# def elgamal_encrypt(sec_params, ek, m_point):
+#     """Encrypt a message point m_point under public key ek."""
+#     _, g, order = sec_params
+#     # c1 = order * g 
+#     C1 = g.pt_mul(order)
+
+#     # C2 = m_point + order * w
+#     # C2 = m_point + ek.pt_mul(order)
+#     C2 = m_point.pt_add(ek.pt_mul(order))
+#     return (C1, C2)
+
 def enc(pub, params, counter):
     G, g, o = params
     # k = r
     k = o.random()
-    #   r * g 
-    a = k * g
-    #   r * ek  +    m    * g
-    b = k * pub + counter * g
+    #   r * g  
+    # a = k.pt_mul(g) 
+    a = g.pt_mul(k)
+
+    # if not isinstance(counter, Bn) and not isinstance(counter, EcPt):
+    #     counter = Bn(counter)
+    if isinstance(counter, EcPt):
+        m_point = counter
+    elif isinstance(counter, Bn):
+        m_point = g.pt_mul(counter)
+    else:
+        m_point = g.pt_mul(Bn(counter))
+    
+    #   ek * r  +    g   *  m
+    # b = pub.pt_mul(k).pt_add(g.pt_mul(counter))
+    b = pub.pt_mul(k).pt_add(m_point)
     return (a, b)
 
 # elgamal encryption with skalar element for zero-knowledge proof

@@ -4,7 +4,7 @@ import utils.signature as sig
 import utils.NIZKP as nizkp
 import utils.ec_elgamal as ahe
 import utils.shuffle as shuffle
-from utils.dec_proof import elgamal_encrypt, prove_correct_decryption
+from utils.dec_proof import prove_correct_decryption
 
 def pub_param(nid=713):
     group_G = EcGroup(nid)
@@ -34,13 +34,14 @@ def ekey_gen(pp=None):
         pp = pub_param()
     ek, dk = ahe.key_gen(pp)
 
+    # TODO maybe change this to something random
     m_scalar = Bn(42)   # just a sample message for proof
-    M = m_scalar * pp[1]
 
-    (C1, C2) = elgamal_encrypt(pp, ek, M)
+    # (C1, C2) = elgamal_encrypt(pp, ek, M)
+    (C1, C2) = ahe.enc(ek, pp, m_scalar)
 
     # Generate proof of correct decryption
-    πdk = prove_correct_decryption(pp, ek, C1, C2, M, dk)
+    πdk = prove_correct_decryption(ek, pp, m_scalar, dk)
     return ((ek, pp, πdk), dk)
 
 
@@ -75,9 +76,9 @@ def report(id, sk, ek, m, t, user_pk):
     mbin = [int(x) for x in bin(m)[2:]]
     
     # encrypt
-    ct = [ahe.enc(ek[1], ek[0], m) for m in mbin]
+    ct = [ahe.enc(ek[0], ek[1], m) for m in mbin]
 
     # sign (pk = (pk, pp, proof))
-    signing_σ = sig.schnorr_sign(pp, sk, str((t, ct)))
+    signing_σ = sig.schnorr_sign(sk, pp, str((t, ct)))
 
     return (pk, (t, ct, signing_σ))

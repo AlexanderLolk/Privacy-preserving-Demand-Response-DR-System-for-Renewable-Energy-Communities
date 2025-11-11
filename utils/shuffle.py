@@ -357,143 +357,143 @@ def CheckProof(proof, e, e_prime, pk):
     return result
 
 # testing shuffle flow
-# def test_basic_shuffle():
-#     print("\n" + "="*60)
-#     print("Testing Basic Shuffle Proof with Real Keys")
-#     print("="*60)
+def test_basic_shuffle():
+    print("\n" + "="*60)
+    print("Testing Basic Shuffle Proof with Real Keys")
+    print("="*60)
     
-#     pp = gen.pp
-#     _, g, order = pp
-#     N = 5
+    pp = gen.pp
+    _, g, order = pp
+    N = 5
     
-#     print(f"\n1. Generating {N} user keys ...")
-#     users = []
-#     e = []  # List of public keys to shuffle
+    print(f"\n1. Generating {N} user keys ...")
+    users = []
+    e = []  # List of public keys to shuffle
     
-#     for i in range(N):
-#         # Generate keys for users
-#         user_id = f"User_{i}"
-#         ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
-#         users.append({
-#             'id': user_id,
-#             'pk': pk,
-#             'sk': sk,
-#             'proof': proof
-#         })
-#         e.append(pk)  # Add public key to list
-#         print(f"   {user_id}: pk={str(pk)[:50]}...")
+    for i in range(N):
+        # Generate keys for users
+        user_id = f"User_{i}"
+        ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
+        users.append({
+            'id': user_id,
+            'pk': pk,
+            'sk': sk,
+            'proof': proof
+        })
+        e.append(pk)  # Add public key to list
+        print(f"   {user_id}: pk={str(pk)[:50]}...")
     
-#     print(f"\n2. Shuffling and anonymizing public keys...")
-#     e_prime, r_prime, ψ = GenShuffle(e) 
-#     print(f"   Permutation: {ψ}")
-#     print(f"   Original order: User_0, User_1, User_2, User_3, User_4")
-#     shuffled_order = [f"User_{ψ.index(i)}" for i in range(N)]
-#     print(f"   Shuffled order: {', '.join(shuffled_order)}")
+    print(f"\n2. Shuffling and anonymizing public keys...")
+    e_prime, r_prime, ψ = GenShuffle(e) 
+    print(f"   Permutation: {ψ}")
+    print(f"   Original order: User_0, User_1, User_2, User_3, User_4")
+    shuffled_order = [f"User_{ψ.index(i)}" for i in range(N)]
+    print(f"   Shuffled order: {', '.join(shuffled_order)}")
     
-#     print(f"\n3. Generating shuffle proof (πmix)...")
+    print(f"\n3. Generating shuffle proof (πmix)...")
 
-#     pk_for_proof = g 
-#     proof = GenProof(e, e_prime, r_prime, ψ, pk_for_proof)
-#     print(f"   Proof generated with:")
-#     print(f"   - Commitments (c): {len(proof['c'])} elements")
-#     print(f"   - Commitment chain (c_hat): {len(proof['c_hat'])} elements")
-#     print(f"   - Responses (s): 6 values")
+    pk_for_proof = g 
+    proof = GenProof(e, e_prime, r_prime, ψ, pk_for_proof)
+    print(f"   Proof generated with:")
+    print(f"   - Commitments (c): {len(proof['c'])} elements")
+    print(f"   - Commitment chain (c_hat): {len(proof['c_hat'])} elements")
+    print(f"   - Responses (s): 6 values")
     
-#     print(f"\n4. Verifying shuffle proof...")
-#     is_valid = CheckProof(proof, e, e_prime, pk_for_proof)
+    print(f"\n4. Verifying shuffle proof...")
+    is_valid = CheckProof(proof, e, e_prime, pk_for_proof)
     
-#     print(f"\n{'='*60}")
-#     print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
-#     print(f"{'='*60}")
+    print(f"\n{'='*60}")
+    print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
+    print(f"{'='*60}")
     
-#     if is_valid:
-#         print("\n Anonymization Summary:")
-#         print("   ✓ Public keys successfully shuffled and re-randomized")
-#         print("   ✓ Zero-knowledge proof verified")
-#         print("   ✓ Original identities hidden (permutation secret)")
-#         print("   ✓ Users can still use their keys with r' for operations")
+    if is_valid:
+        print("\n Anonymization Summary:")
+        print("   ✓ Public keys successfully shuffled and re-randomized")
+        print("   ✓ Zero-knowledge proof verified")
+        print("   ✓ Original identities hidden (permutation secret)")
+        print("   ✓ Users can still use their keys with r' for operations")
     
-#     print()
-#     return is_valid
+    print()
+    return is_valid
 
-# def test_integration_with_aggregator():
-#     print("\n" + "="*60)
-#     print("Testing Full Integration Flow")
-#     print("="*60)
+def test_integration_with_aggregator():
+    print("\n" + "="*60)
+    print("Testing Full Integration Flow")
+    print("="*60)
     
-#     pp = gen.pp
-#     _, g, _ = pp
-#     N = 5
+    pp = gen.pp
+    _, g, _ = pp
+    N = 5
     
-#     # print(f"\n1. Users register with aggregator...")
-#     ID_pk = []
-#     user_data = {}
+    # print(f"\n1. Users register with aggregator...")
+    ID_pk = []
+    user_data = {}
     
-#     for i in range(N):
-#         user_id = f"A{i}"
-#         ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
-#         ID_pk.append((user_id, pk))
-#         user_data[user_id] = {'pk': pk, 'sk': sk}
-#         # print(f"   {user_id} registered: pk={str(pk)[:40]}...")
+    for i in range(N):
+        user_id = f"A{i}"
+        ((id, (pk, pp_user, proof)), sk) = gen.skey_gen(user_id, pp)
+        ID_pk.append((user_id, pk))
+        user_data[user_id] = {'pk': pk, 'sk': sk}
+        # print(f"   {user_id} registered: pk={str(pk)[:40]}...")
     
-#     print(f"\n2. Aggregator mixes public keys...")
-#     # Extract just the public keys
-#     e = [pk for _, pk in ID_pk]
+    print(f"\n2. Aggregator mixes public keys...")
+    # Extract just the public keys
+    e = [pk for _, pk in ID_pk]
     
-#     # Perform shuffle
-#     e_prime, r_prime, ψ = GenShuffle(e)
+    # Perform shuffle
+    e_prime, r_prime, ψ = GenShuffle(e)
     
-#     # Generate proof
-#     πmix = GenProof(e, e_prime, r_prime, ψ, g)
+    # Generate proof
+    πmix = GenProof(e, e_prime, r_prime, ψ, g)
     
-#     # print(f"   Shuffle complete with permutation: {ψ}")
-#     # print(f"   Permutation meaning: position j gets element from position ψ[j]")
+    # print(f"   Shuffle complete with permutation: {ψ}")
+    # print(f"   Permutation meaning: position j gets element from position ψ[j]")
     
-#     r_map = {}
-#     for i, (user_id, original_pk) in enumerate(ID_pk):
-#         # User i's key was re-randomized with r_prime[i]
-#         # Then placed at position j where ψ[j] = i
-#         # Find that position j
-#         shuffled_pos = ψ.index(i)  # Find j where ψ[j] = i
+    r_map = {}
+    for i, (user_id, original_pk) in enumerate(ID_pk):
+        # User i's key was re-randomized with r_prime[i]
+        # Then placed at position j where ψ[j] = i
+        # Find that position j
+        shuffled_pos = ψ.index(i)  # Find j where ψ[j] = i
         
-#         r_map[user_id] = r_prime[i]  # User gets their own r_prime[i]
-#         # print(f"   {user_id} (original pos {i}) → shuffled pos {shuffled_pos}, r'={str(r_prime[i])[:40]}...")
+        r_map[user_id] = r_prime[i]  # User gets their own r_prime[i]
+        # print(f"   {user_id} (original pos {i}) → shuffled pos {shuffled_pos}, r'={str(r_prime[i])[:40]}...")
     
-#     print(f"\n3. Verifying shuffle proof...")
-#     is_valid = CheckProof(πmix, e, e_prime, g)
+    print(f"\n3. Verifying shuffle proof...")
+    is_valid = CheckProof(πmix, e, e_prime, g)
     
-#     print(f"\n4. Users verify they can use anonymized keys...")
-#     all_verified = True
-#     for i, (user_id, original_pk) in enumerate(ID_pk):
-#         r_val = r_map[user_id]
+    print(f"\n4. Users verify they can use anonymized keys...")
+    all_verified = True
+    for i, (user_id, original_pk) in enumerate(ID_pk):
+        r_val = r_map[user_id]
         
-#         # Find where this user's key ended up
-#         shuffled_pos = ψ.index(i)
+        # Find where this user's key ended up
+        shuffled_pos = ψ.index(i)
         
-#         # Compute expected: pk' = pk * r'
-#         expected_pk = original_pk.pt_mul(r_val)
+        # Compute expected: pk' = pk * r'
+        expected_pk = original_pk.pt_mul(r_val)
         
-#         # Check if it matches the shuffled position
-#         if expected_pk == e_prime[shuffled_pos]:
-#             print(f"   ✓ {user_id} verified: e_prime[{shuffled_pos}] = e[{i}] * r'[{i}]")
-#         else:
-#             print(f"   ✗ {user_id} FAILED verification")
-#             print(f"      Expected at pos {shuffled_pos}: {str(expected_pk)[:50]}")
-#             print(f"      Got: {str(e_prime[shuffled_pos])[:50]}")
-#             all_verified = False
+        # Check if it matches the shuffled position
+        if expected_pk == e_prime[shuffled_pos]:
+            print(f"   ✓ {user_id} verified: e_prime[{shuffled_pos}] = e[{i}] * r'[{i}]")
+        else:
+            print(f"   ✗ {user_id} FAILED verification")
+            print(f"      Expected at pos {shuffled_pos}: {str(expected_pk)[:50]}")
+            print(f"      Got: {str(e_prime[shuffled_pos])[:50]}")
+            all_verified = False
     
-#     print(f"\n{'='*60}")
-#     print(f"Shuffle Proof: {'✅ PASS' if is_valid else '❌ FAIL'}")
-#     print(f"User Verification: {'✅ PASS' if all_verified else '❌ FAIL'}")
-#     print(f"Overall: {'✅ PASS' if (is_valid and all_verified) else '❌ FAIL'}")
-#     print(f"{'='*60}\n")
+    print(f"\n{'='*60}")
+    print(f"Shuffle Proof: {'✅ PASS' if is_valid else '❌ FAIL'}")
+    print(f"User Verification: {'✅ PASS' if all_verified else '❌ FAIL'}")
+    print(f"Overall: {'✅ PASS' if (is_valid and all_verified) else '❌ FAIL'}")
+    print(f"{'='*60}\n")
     
-#     return is_valid and all_verified
+    return is_valid and all_verified
 
-# if __name__ == "__main__":
-#     # Test 1: Basic shuffle with generated keys
-#     test_basic_shuffle()
+if __name__ == "__main__":
+    # Test 1: Basic shuffle with generated keys
+    test_basic_shuffle()
     
-#     # Test 2: Full integration flow
-#     print("\n\n")
-#     test_integration_with_aggregator()
+    # Test 2: Full integration flow
+    print("\n\n")
+    test_integration_with_aggregator()

@@ -143,7 +143,7 @@ def epet(ct_sum, ct_t_i):
     π_r_i is the zero knowledge proof
     """
     
-    # fix
+    # fix fix fix
     pub_param = pub_param()
     _, g, order = pub_param
     r = order.random()
@@ -156,7 +156,7 @@ def epet(ct_sum, ct_t_i):
         # need to check if 1 is vaild to use, since g^0 equal 1, but on ec g * 0 equals 0 instead
         return enc(pub_param, dso_ek, ct_eq)
     else:
-        return ahe.e
+        return enc(pub_param, dso_ek, r)
 
     pass
 

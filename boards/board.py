@@ -1,5 +1,5 @@
 # this is both for public and private boards
-from utils.signature import schnorr_verify
+from utils.signature import schnorr_verify, schnorr_verify_list
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.dec_proof import verify_correct_decryption
 from utils.shuffle import CheckProof # TODO change name to be more specific like shuffle_verify_proof
@@ -11,35 +11,58 @@ class Board:
         # (pk, ek)
         (pk, pp, s_proof) = dso_keys[0]
         (ek, _, e_proof) = dso_keys[1]
-        
+
         if not schnorr_NIZKP_verify(pk, pp, s_proof):
             print("DSO public key proof verification failed")
         
-        # TODO: fix 
+        # Test: write in the report how the test shows how the encryption can be decrypted etc
         if not verify_correct_decryption(ek, pp, e_proof):
             print("DSO encryption key proof verification failed")
-        
+
         self.pk, self.ek = dso_keys
         
     # The DSO registers and has verified users and aggregators, then sends it to the board
     # TODO rewrite all schnorr_verify name to be schnorr_sign_verify for clarity
     # TODO REFACTOR TO WORK FOR LISTS
+    # def publish_smartmeters_and_aggregators(self, signed_lists):
+    #     self.register_smartmeter, sm_sign, self.register_aggregator, agg_sign = signed_lists
+        
+    #     if not schnorr_verify_list(self.pk[0], self.pk[1], sm_sign, self.register_smartmeter):
+    #         print("Smartmeters were not verified")
+        
+    #     if not schnorr_verify_list(self.pk[0], self.pk[1], agg_sign, self.register_aggregator):
+    #         print("Aggregators were not verified")
     def publish_smartmeters_and_aggregators(self, signed_lists):
-        self.register_smartmeter, sm_sign, self.register_aggregator, agg_sign = signed_lists
-        
-        if not schnorr_verify(self.pk[0], self.pk[1], sm_sign, self.register_smartmeter):
-            print("Smartmeters were not verified")
-        
-        if not schnorr_verify(self.pk[0], self.pk[1], agg_sign, self.register_aggregator):
-            print("Aggregators were not verified")
+        self.register_smartmeter, sm_signatures, self.register_aggregator, agg_signatures = signed_lists
 
+        sm_msg_list = [sm_id for sm_id, _ in self.register_smartmeter]
+        agg_msg_list = [agg_id for agg_id, _ in self.register_aggregator]
+        
+        sm_valid, sm_results = schnorr_verify_list(self.pk[0], self.pk[1], sm_msg_list, sm_signatures)
+        if not sm_valid:
+            print("Smartmeters were not verified")
+            for i, msg, is_valid in sm_results:
+                if not is_valid:
+                    print(f"Smartmeter ID {msg} at index {i} failed verification.")
+            return False
+        
+        agg_valid, agg_results = schnorr_verify_list(self.pk[0], self.pk[1], agg_msg_list, agg_signatures)
+        if not agg_valid:
+            print("Aggregators were not verified")
+            for i, msg, is_valid in agg_results:
+                if not is_valid:
+                    print(f"Aggregator ID {msg} at index {i} failed verification.")
+            return False
+        
+        print("All smartmeters and aggregators were successfully verified.")
+        return True
 
     def target_reduction(self, T_r):
         # the target reduction list is encrypted
         self.T_r = T_r
 
     # mix
-    def publish_anonymized_keys(self, anon_id):
+    def publish_mix_pk_and_proof(self, anon_id):
         anon_list = anon_id[0]
         πmix = anon_id[1]
         

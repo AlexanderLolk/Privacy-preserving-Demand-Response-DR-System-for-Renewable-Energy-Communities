@@ -27,16 +27,16 @@ class SmartMeter:
     def set_anon_key(self, anon_key):
         (anon_pk, signature) = anon_key
         
-        if not schnorr_verify(self, self.pp, signature):
-            print("Anonymous key signature verification failed.")
+        # if not schnorr_verify(self, self.pp, signature):
+        #     print("Anonymous key signature verification failed.")
         
         self.anon_pk = anon_pk
 
     # report
     # TODO: make sure m shouldnt be something else (placeholder right now)
-    def generate_and_send_report(self):
+    def generate_and_send_report(self, m):
         t = int(time.time())
-        return report(self.id, self.sk, self.DSO_ek, m=10, t=t, user_pk=(self.pk, self.pp))
+        return report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp))
         
 
 

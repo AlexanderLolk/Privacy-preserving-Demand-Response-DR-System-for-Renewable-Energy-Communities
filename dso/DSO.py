@@ -11,7 +11,7 @@
 
 from utils.generators import pub_param, skey_gen, ekey_gen
 from utils.NIZKP import schnorr_NIZKP_verify
-from utils.signature import schnorr_sign
+from utils.signature import schnorr_sign_list
 from utils.ec_elgamal import enc
 import random
 
@@ -20,14 +20,15 @@ class DSO:
     def __init__(self, init_id="DSO", pp=None):
         pp = pub_param()
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
-        ((self.ek, _, self.e_proof), self.dk) = ekey_gen(init_id, pp)
+        ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
+        #TypeError: ekey_gen() takes from 0 to 1 positional arguments but 2 were given
 
     # verifies every smart meter (users)
     # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
         self.registered_sm = []
         
-        for sm_id, val in sm_info.items():
+        for (sm_id, val) in sm_info:
             # val = (pk, pp, proof) 
             if schnorr_NIZKP_verify(val[0], val[1], val[2]):
                 self.registered_sm.append((sm_id, val))
@@ -42,7 +43,7 @@ class DSO:
     def verify_aggregator(self, agg_info):
         self.registered_agg = []
         
-        for agg_id, val in agg_info.items():
+        for (agg_id, val) in agg_info:
             # val = (pk, pp, proof) 
             if schnorr_NIZKP_verify(val[0], val[1], val[2]):
                 self.registered_agg.append((agg_id, val))
@@ -81,7 +82,8 @@ class DSO:
         values += [0] * zero_noise
         random.shuffle(values)
         
-        enc_TR = enc(self.pp, self.ek, values)
+        # encrypt each value in the noisy list
+        enc_TR = [enc(self.ek, self.pp, val) for val in values]
         
         return enc_TR
 
@@ -92,10 +94,20 @@ class DSO:
         return (self.ek, self.pp, self.e_proof)
     
     # TODO MAY NOT WORK FOR LISTS
+    # def sign_registered_lists(self):
+    #     sm_sign = schnorr_sign(self.sk, self.registered_sm, msg="sm_list")
+    #     agg_sign = schnorr_sign(self.sk, self.registered_agg, msg="agg_list")
+    #     return (self.registered_sm, sm_sign, self.registered_agg, agg_sign)
     def sign_registered_lists(self):
-        sm_sign = schnorr_sign(self.sk, self.registered_sm)
-        agg_sign = schnorr_sign(self.sk, self.registered_agg)
-        return (self.registered_sm, sm_sign, self.registered_agg, agg_sign)
+        sm_msg_list = [sm_id for sm_id, _ in self.registered_sm]
+        agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]
+
+        # (sk, sec_params, msg_list)
+        sm_signatures = schnorr_sign_list(self.sk, self.pp, sm_msg_list)
+        agg_signatures = schnorr_sign_list(self.sk, self.pp, agg_msg_list)
+
+        return (self.registered_sm, sm_signatures, self.registered_agg, agg_signatures)
+    
 
 
 

@@ -6,6 +6,10 @@ from utils.signature import schnorr_verify, schnorr_sign
 from utils.ec_elgamal import dec, make_table
 import utils.anonym as anonym
 
+# TODO: REMEMBER TO ASK
+# So since the sm list given to BB is not encrypted, 
+# and the r' sent to sm is also not encrypted, 
+# what is stopping someone from take the r' when sent, so they can find out how is part of the event 
 
 class Aggregator:
 
@@ -22,9 +26,6 @@ class Aggregator:
         return self.id
 
     def get_public_key(self):
-        return self.pk
-
-    def get_verfication_data(self):
         return (self.pk, self.pp, self.s_proof)
     
     def set_dso_public_keys(self, dso_pk, dso_ek):
@@ -57,18 +58,35 @@ class Aggregator:
         # TODO: sign the list? or each element?
         return (self.mix_anon_list[0], self.mix_anon_list[2])
     
-    def set_anon_key_mix(self, sm):
-        # sm = (id, pk)
+    # def set_anon_key_mix(self, sm):
+    #     # sm = (id, pk)
         
-        # TODO make the for loops more efficient
-        for r_prime in self.mix_anon_list[1]:
-            sm_pk = (sm[1] * r_prime)
+    #     # TODO make the for loops more efficient
+    #     for r_prime in self.mix_anon_list[1]:
+    #         # sm_pk = (sm[1] * r_prime)
+    #         sm_pk = (sm.pt_mul(r_prime))
              
-            for pk_prime in self.mix_anon_list[0]:
-                if sm_pk == pk_prime:
-                    sign_r_prime = schnorr_sign(self.sk, self.pp, r_prime)
-                    return (r_prime, sign_r_prime)
+    #         for pk_prime in self.mix_anon_list[0]:
+    #             if sm_pk == pk_prime:
+    #                 sign_r_prime = schnorr_sign(self.sk, self.pp, r_prime)
+    #                 return (r_prime, sign_r_prime)
         
+    #     print("Public key not found in r_prime")
+    #     return None
+    
+    def set_anon_key_mix(self, sm):
+        # sm can be either (id, pk) or just pk
+        if isinstance(sm, tuple):
+            sm_pk = sm[1]
+        else:
+            sm_pk = sm
+
+        for r_prime in self.mix_anon_list[1]:
+            anon_pk = sm_pk.pt_mul(r_prime)
+            for pk_prime in self.mix_anon_list[0]:
+                if anon_pk == pk_prime:
+                    sign_r_prime = schnorr_sign(self.sk, self.pp, str(r_prime))
+                    return (r_prime, sign_r_prime)
         print("Public key not found in r_prime")
         return None
 
