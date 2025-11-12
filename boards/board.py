@@ -62,15 +62,36 @@ class Board:
         self.T_r = T_r
 
     # mix
-    def publish_mix_pk_and_proof(self, anon_id):
-        anon_list = anon_id[0]
-        πmix = anon_id[1]
+    # def publish_mix_pk_and_proof(self, anon_id):
+    #     anon_list = anon_id[0]
+    #     πmix = anon_id[1]
         
-        # shuffle proof verification is CheckProof
-        if not CheckProof(πmix, self.register_smartmeter, anon_list, self.ek):
-            print("Mixing proof verification failed")
+    #     # shuffle proof verification is CheckProof
+    #     if not CheckProof(πmix, self.register_smartmeter, anon_list, self.ek):
+    #         print("Mixing proof verification failed")
         
-        self.anon_id = anon_id
+    #     self.anon_id = anon_id
+    # REPORT:
+    # we had an issue here where we passed the entire self.register_smartmeter list which is (id, (pk, pp, proof)) to CheckProof
+    # checkproof needs only the list of public keys (in the list e[]) to verify the shuffle proof
+    # we use self.pk[1][1] as the generator g for the proof verification.
+    # We use g because its a value both the prover and verifier agrees on, instead of a random pk from the list which may cause inconsistency
+    # TODO should it really be g? its needed for the calculcation when making the challenge for both prover and verifier
+    def publish_mix_pk_and_proof(self, mix_data):
+        pk_prime, πmix = mix_data
+        self.mix_pk = pk_prime
+        self.mix_proof = πmix
+
+        # store e list to verify
+        # Extract the list of public keys from the registered smart meters list e
+        # TODO change the name e 
+        e = [sm[1][0] for sm in self.register_smartmeter]
+        # The pk used for the proof generation should be consistent. We used the generator g.
+        # self.pk[1][1] = g
+        is_valid = CheckProof(πmix, e, pk_prime, self.pk[1][1])
+        
+        if is_valid:
+            print("Mixing proof verification succeeded")
 
     # report
     def publish_sm_reports(self, sm_reports):

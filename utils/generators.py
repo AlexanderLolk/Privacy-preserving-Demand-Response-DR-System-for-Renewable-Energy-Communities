@@ -46,6 +46,9 @@ def ekey_gen(pp=None):
 
 
 # mix shuffles a n anonymized list of pk_i
+# REPORT:
+# id_a_pk[] is a list of public keys
+# sends an anonymized list of public keys along with the proof of shuffle
 def mix_id(ID_pk):
     # ID_pk: list of tuples (id, (pk, pp, proof))
     
@@ -60,7 +63,7 @@ def mix_id(ID_pk):
 
     e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk) 
     # proof of shuffle and anonymised list of pks
-    πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk="need to remove")
+    πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk=pp[1])
 
     return (e_prime, r_prime, πmix_proof)
 

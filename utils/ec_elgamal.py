@@ -50,6 +50,7 @@ def enc(pub, params, counter):
     #   ek * r  +    g   *  m
     # b = pub.pt_mul(k).pt_add(g.pt_mul(counter))
     b = pub.pt_mul(k).pt_add(m_point)
+    # b =  counter + pub.pt_mul(k) 
     return (a, b)
 
 # elgamal encryption with skalar element for zero-knowledge proof
@@ -88,12 +89,60 @@ def dec(priv, params, table, c1):
     """Decrypt an encrypted counter"""
     _, g, o = params
     a, b = c1
-    plain = b + (-priv * a)
-    return table[plain]
+    # plain = b + (-priv * a)
+    plain = b.pt_add(a.pt_mul(-priv))
+    return plain
 
-# test for Eval() in aggregator
+def dec_int(priv, params, table, c1):
+    """Decrypt and convert to integer using the provided table. Returns None if out of table range."""
+    plain = dec(priv, params, table, c1)
+    return table.get(plain, None)
+
+def dec_dec(priv, params, table, c1):
+    C1, C2 = c1
+    shared_secret = C1.pt_mul(priv)
+    M = C2.pt_add(shared_secret.pt_neg())
+    return M
+
+# For Eval() in aggregator
 def sub(c1, c2):
     """Subtract two encrypted counters: c1 - c2"""
     a1, b1 = c1
     a2, b2 = c2
     return (a1 + (-a2), b1 + (-b2))
+    
+def demo(params, ek, dk):
+    # msg = Bn.from_binary(dk)
+    msg = Bn(3000)
+    print("Original message: ", str(msg))
+    enc_msg = enc(ek, params, msg)
+    # print("Encrypted message: ", str(enc_msg))
+    table = make_table(params)
+    dec_msg = dec_dec(dk, params, table, enc_msg)
+    print("Decrypted message: ", str(dec_msg))
+    
+    
+def elgamal_encrypt(
+    plaintext: curve.Point,
+    public_key: curve.Point,
+    rand_func: typing.Callable[[int], bytes] | None = None,
+) -> tuple[curve.Point, curve.Point]:
+    rand_func = rand_func or os.urandom
+    curve_ = public_key.curve
+
+    G = curve_.G  # Base point G
+    M = plaintext
+    k = utils.random_int_exclusive(curve_.n, rand_func)
+
+    C1 = k * G
+    C2 = M + k * public_key
+    return C1, C2
+
+
+def elgamal_decrypt(
+    private_key: int,
+    C1: curve.Point,
+    C2: curve.Point,
+) -> curve.Point:
+    M = C2 + (C1.curve.n - private_key) * C1
+    return M

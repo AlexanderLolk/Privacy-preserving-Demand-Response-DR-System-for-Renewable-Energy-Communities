@@ -3,7 +3,7 @@
 
 from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
 from utils.signature import schnorr_verify, schnorr_sign
-from utils.ec_elgamal import dec, make_table
+from utils.ec_elgamal import dec, make_table, demo
 import utils.anonym as anonym
 
 # TODO: REMEMBER TO ASK
@@ -28,23 +28,75 @@ class Aggregator:
     def get_public_key(self):
         return (self.pk, self.pp, self.s_proof)
     
-    def set_dso_public_keys(self, dso_pk, dso_ek):
-        self.dso_pk = dso_pk
-        self.dso_ek = dso_ek
+    # def set_dso_public_keys(self, dso_pk, dso_ek):
+    #     self.dso_pk = dso_pk
+    #     self.dso_ek = dso_ek
         
-    def set_dso_dk(self, ciphertext, signature):
-        # TODO make sure signature is valid and encrypted data is from DSO
+    # # def set_dso_dk(self, cipher_signature):
+    #     # TODO make sure signature is valid and encrypted data is from DSO
         
-        table = make_table(self.pp)
-        msg = dec(self.dk, self.pp, table, ciphertext)
+    #     demo(self.pp, self.ek, self.dk)
+    #     # ciphertext, signature = cipher_signature
         
-        if schnorr_verify(self.dso_pk, self.pp, msg, signature):
-            print(True)
-        else:
-            print(False)
+     
+    #     # # table = make_table(self.pp)
+    #     # msg = dec(self.dk, self.pp, ciphertext) # msg is EcPt here
+    #     # print("Decrypted DSO message: ", str(msg))
 
-        # TODO should be a ec_point (is string now) check petlib if it has something to convert it with
-        self.dso_dk = msg
+    #     # if schnorr_verify(self.dso_pk[0], self.dso_pk[1], str(msg), signature):
+    #     #     print(True)
+    #     # else:
+    #     #     print(False)
+
+    #     # TODO should be a ec_point (is string now) check petlib if it has something to convert it with
+    #     self.dso_dk = ""
+
+    def set_dso_public_keys(self, dso_pk, dso_ek):
+        # dso_pk may be either a raw public key or a tuple (pk, pp, proof)
+        if isinstance(dso_pk, tuple) or isinstance(dso_pk, list):
+            # first element is the actual verification key
+            self.dso_pk = dso_pk[0]
+        else:
+            self.dso_pk = dso_pk
+
+        # dso_ek may be either the raw encryption key or (ek, pp, proof)
+        if isinstance(dso_ek, tuple) or isinstance(dso_ek, list):
+            self.dso_ek = dso_ek[0]
+        else:
+            self.dso_ek = dso_ek
+        
+    def set_dso_dk(self, cipher_signature):
+        """Decrypt DSO's encrypted decryption key, verify signature and store it."""
+        # cipher_signature is expected to be (ciphertext, signature)
+        ciphertext, signature = cipher_signature
+
+        demo(self.pp, self.ek, self.dk)
+        # Build table for small messages (make_table maps EcPt -> int for a range)
+        table = make_table(self.pp)
+
+        # Decrypt: dec returns an EcPt (or previously returned table lookup)
+        plain_pt = dec(self.dk, self.pp, table, ciphertext)
+
+        # Try to convert the EcPt to an integer via the table, otherwise keep the EcPt
+        if plain_pt in table:
+            dk_val = table[plain_pt]
+        else:
+            dk_val = plain_pt
+
+        # Verify the DSO signature on the string form of the key
+        try:
+            valid = schnorr_verify(self.dso_pk, self.pp, str(dk_val), signature)
+        except Exception:
+            valid = False
+
+        if valid:
+            self.dso_dk = dk_val
+            print("DSO decryption key received and verified.")
+        else:
+            self.dso_dk = None
+            print("Failed to verify DSO signature.")
+
+        return self.dso_dk
 
     # MIX: create mixed anonymous pk set
     # TODO: this should be signed by the aggregator, the idea is to prove this specific aggregator did the mixing
@@ -98,7 +150,8 @@ class Aggregator:
         (pk, (t, ct, signature)) = sm_report
         
         table = make_table(self.pp)
-        msg = dec(self.dso_dk, self.pp, table, ct)
+        # self.dso_ek should be dk
+        msg = dec(self.dso_ek, self.pp, table, ct)
         
         if schnorr_verify(self.dso_pk, self.pp, msg, signature):
             print(True)
@@ -112,6 +165,9 @@ class Aggregator:
             
     def get_participants(self):
         return self.participants
+    
+    def get_agg_id_And_encryption_key(self):
+        return (self.id, self.ek)
     
     # Not implemented (see utils/anonym.py)
     def make_anonym(self):

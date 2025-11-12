@@ -51,9 +51,6 @@ if __name__ == "__main__":
     ##########
     bb = board.Board()
     bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
-    
-    # set_dso_dk
-    
     bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
     # TODO ask about if the list stays as encrypted on the board
     bb.target_reduction(dso.generate_noisy_list())                               # noisy list from DSO
@@ -70,6 +67,11 @@ if __name__ == "__main__":
     # TODO for more than one aggregator, we'd probably like some IDs as well
     for agg in aggs:
         agg.set_dso_public_keys(bb.pk, bb.ek)
+        
+    # set_dso_dk
+    dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
+    for agg in aggs:
+        agg.set_dso_dk(dso.encrypt_dk_and_send_to_agg(agg.id))
 
     ##########
     # MIX

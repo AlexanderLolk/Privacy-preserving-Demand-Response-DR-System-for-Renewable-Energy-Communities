@@ -11,7 +11,7 @@
 
 from utils.generators import pub_param, skey_gen, ekey_gen
 from utils.NIZKP import schnorr_NIZKP_verify
-from utils.signature import schnorr_sign_list
+from utils.signature import schnorr_sign_list, schnorr_sign
 from utils.ec_elgamal import enc
 import random
 
@@ -93,6 +93,33 @@ class DSO:
     def get_encryption_key(self):
         return (self.ek, self.pp, self.e_proof)
     
+    def set_agg_encryption_key(self, aggs):
+        # aggs = [(id, ek)]
+        self.agg_ek = {id: ek for (id, ek) in aggs}
+    
+    # def encrypt_dk_and_send_to_agg(self, agg_id):
+    #     ek = self.agg_ek.get(agg_id)
+    #     print("for agg id: ", agg_id)
+    #     print("DSO decrypting key: ", str(self.dk))
+    #     sign_dk = schnorr_sign(self.sk, self.pp, msg=str(self.dk))
+        
+    #     enc_dk = enc(ek, self.pp, self.dk)
+        
+    #     return (enc_dk, sign_dk)
+    def encrypt_dk_and_send_to_agg(self, agg_id):
+        ek = self.agg_ek.get(agg_id)
+        print("for agg id: ", agg_id)
+        print("DSO decrypting key: ", str(self.dk))
+
+        # Sign the point representation of dk (so verifier and signer use same canonical form)
+        # self.pp is (G, g, o) so g is self.pp[1]
+        dk_point = self.pp[1].pt_mul(self.dk)
+        sign_dk = schnorr_sign(self.sk, self.pp, msg=str(dk_point))
+        
+        enc_dk = enc(ek, self.pp, self.dk)
+        
+        return (enc_dk, sign_dk)
+
     # TODO MAY NOT WORK FOR LISTS
     # def sign_registered_lists(self):
     #     sm_sign = schnorr_sign(self.sk, self.registered_sm, msg="sm_list")
