@@ -3,8 +3,9 @@
 
 from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
 from utils.signature import schnorr_verify, schnorr_sign
-from utils.ec_elgamal import dec, make_table, demo
+from utils.ec_elgamal import enc, dec, make_table, demo
 import utils.anonym as anonym
+from petlib.bn import Bn
 
 # TODO: REMEMBER TO ASK
 # So since the sm list given to BB is not encrypted, 
@@ -21,6 +22,8 @@ class Aggregator:
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
         # TODO: do we need ek for the aggregator?
         ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
+
+        self.participants = []
     
     def get_id(self):
         return self.id
@@ -67,36 +70,38 @@ class Aggregator:
         
     def set_dso_dk(self, cipher_signature):
         """Decrypt DSO's encrypted decryption key, verify signature and store it."""
-        # cipher_signature is expected to be (ciphertext, signature)
-        ciphertext, signature = cipher_signature
+        print("security not implemented")
+        self.dso_dk = cipher_signature
 
-        demo(self.pp, self.ek, self.dk)
-        # Build table for small messages (make_table maps EcPt -> int for a range)
-        table = make_table(self.pp)
 
-        # Decrypt: dec returns an EcPt (or previously returned table lookup)
-        plain_pt = dec(self.dk, self.pp, table, ciphertext)
+        # # cipher_signature is expected to be (ciphertext, signature)
+        # ciphertext, signature = cipher_signature
 
-        # Try to convert the EcPt to an integer via the table, otherwise keep the EcPt
-        if plain_pt in table:
-            dk_val = table[plain_pt]
-        else:
-            dk_val = plain_pt
+        # #demo(self.pp, self.ek, self.dk)
+        # # Build table for small messages (make_table maps EcPt -> int for a range)
+        # table = make_table(self.pp)
 
-        # Verify the DSO signature on the string form of the key
-        try:
-            valid = schnorr_verify(self.dso_pk, self.pp, str(dk_val), signature)
-        except Exception:
-            valid = False
+        # # Decrypt: dec returns an EcPt (or previously returned table lookup)
+        # plain_pt = dec(self.dk, self.pp, table, ciphertext)
 
-        if valid:
-            self.dso_dk = dk_val
-            print("DSO decryption key received and verified.")
-        else:
-            self.dso_dk = None
-            print("Failed to verify DSO signature.")
+        # # Try to convert the EcPt to an integer via the table, otherwise keep the EcPt
+        # if plain_pt in table:
+        #     dk_val = table[plain_pt]
+        # else:
+        #     dk_val = plain_pt
 
-        return self.dso_dk
+        # # Verify the DSO signature on the string form of the key
+        # try:
+        #     valid = schnorr_verify(self.dso_pk, self.pp, str(dk_val), signature)
+        # except Exception:
+        #     valid = False
+
+        # if valid:
+        #     self.dso_dk = dk_val
+        #     print("DSO decryption key received and verified.")
+        # else:
+        #     self.dso_dk = None
+        #     print("Failed to verify DSO signature.")
 
     # MIX: create mixed anonymous pk set
     # TODO: this should be signed by the aggregator, the idea is to prove this specific aggregator did the mixing
@@ -133,6 +138,7 @@ class Aggregator:
         else:
             sm_pk = sm
 
+        # TODO: perhaps improve
         for r_prime in self.mix_anon_list[1]:
             anon_pk = sm_pk.pt_mul(r_prime)
             for pk_prime in self.mix_anon_list[0]:
@@ -147,17 +153,23 @@ class Aggregator:
     # TODO  maybe it should also sign it after having verified it before sending to the board?
     def set_sm_report(self, sm_report):
         # pk is a tuble with (pk, pp, s_proof)
-        (pk, (t, ct, signature)) = sm_report
-        
+        (pk, (t, cts, signature)) = sm_report
+
         table = make_table(self.pp)
-        # self.dso_ek should be dk
-        msg = dec(self.dso_ek, self.pp, table, ct)
-        
-        if schnorr_verify(self.dso_pk, self.pp, msg, signature):
+
+        if schnorr_verify(pk, self.pp, str((t, cts)), signature):
             print(True)
         else:
             print(False)
-            
+
+        bin_msgs = [dec(self.dso_dk, self.pp, table, ct) for ct in cts]
+
+        # msg = dec(self.dso_dk, self.pp, table, ct="")
+        msg = "".join([str(x) for x in bin_msgs])
+        
+        # (_, 2) means from bin to int
+        msg = int(msg, 2)
+
         # TODO error handling
         if msg >= 0:
             print("SM wants to join DR event")

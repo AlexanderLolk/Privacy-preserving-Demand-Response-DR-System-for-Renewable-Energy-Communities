@@ -26,7 +26,7 @@ def schnorr_sign(sk, sec_params, msg):
     R = k * g                     # ephemeral public key
     e = Hash(R, msg, order)       # challenge
     s = (k + sk * e) % order      # signature
-    return (R, s)
+    return (R, s) 
 
 # schnorr_verify verifies a Schnorr signature signature on message msg using public key pk
 def schnorr_verify(pk, sec_params, msg, signature):
@@ -45,7 +45,7 @@ def schnorr_sign_list(sk, sec_params, msg_list):
         signatures.append(sign)
     return signatures
     
-    
+# 
 def schnorr_verify_list(pk, sec_params, msg_list, signatures):
     results = []
     for i, (msg, signature) in enumerate(zip(msg_list, signatures)):

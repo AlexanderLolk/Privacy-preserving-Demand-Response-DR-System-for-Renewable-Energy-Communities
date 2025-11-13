@@ -75,6 +75,8 @@ def report(id, sk, ek, m, t, user_pk):
     pk = user_pk[0]
     pp = user_pk[1]
 
+    # print("bin m: " + bin(10))
+
     # convert message to binary in a list of bits
     mbin = [int(x) for x in bin(m)[2:]]
     
@@ -82,6 +84,7 @@ def report(id, sk, ek, m, t, user_pk):
     ct = [ahe.enc(ek[0], ek[1], m) for m in mbin]
 
     # sign (pk = (pk, pp, proof))
-    signing_σ = sig.schnorr_sign(sk, pp, str((t, ct)))
+    msg = str((t, ct))
+    signing_σ = sig.schnorr_sign(sk, pp, msg)
 
     return (pk, (t, ct, signing_σ))

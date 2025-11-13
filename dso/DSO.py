@@ -95,30 +95,26 @@ class DSO:
     
     def set_agg_encryption_key(self, aggs):
         # aggs = [(id, ek)]
-        self.agg_ek = {id: ek for (id, ek) in aggs}
-    
-    # def encrypt_dk_and_send_to_agg(self, agg_id):
-    #     ek = self.agg_ek.get(agg_id)
-    #     print("for agg id: ", agg_id)
-    #     print("DSO decrypting key: ", str(self.dk))
-    #     sign_dk = schnorr_sign(self.sk, self.pp, msg=str(self.dk))
-        
-    #     enc_dk = enc(ek, self.pp, self.dk)
-        
-    #     return (enc_dk, sign_dk)
-    def encrypt_dk_and_send_to_agg(self, agg_id):
-        ek = self.agg_ek.get(agg_id)
-        print("for agg id: ", agg_id)
-        print("DSO decrypting key: ", str(self.dk))
+        self.agg_ek = {id: ek for (id, ek) in aggs}    
 
-        # Sign the point representation of dk (so verifier and signer use same canonical form)
-        # self.pp is (G, g, o) so g is self.pp[1]
-        dk_point = self.pp[1].pt_mul(self.dk)
-        sign_dk = schnorr_sign(self.sk, self.pp, msg=str(dk_point))
+    # Report: encrypting isn't implemented
+    # (using secure channels over SSL in production)
+    def encrypt_dk_and_send_to_agg(self, agg_id):
+        print("Security not implemented")
+        return self.dk
         
-        enc_dk = enc(ek, self.pp, self.dk)
+        # ek = self.agg_ek.get(agg_id)
+        # print("for agg id: ", agg_id)
+        # print("DSO decrypting key: ", str(self.dk))
+
+        # # Sign the point representation of dk (so verifier and signer use same canonical form)
+        # # self.pp is (G, g, o) so g is self.pp[1]
+        # dk_point = self.pp[1].pt_mul(self.dk)
+        # sign_dk = schnorr_sign(self.sk, self.pp, msg=str(dk_point))
         
-        return (enc_dk, sign_dk)
+        # enc_dk = enc(ek, self.pp, self.dk)
+        
+        # return (enc_dk, sign_dk)
 
     # TODO MAY NOT WORK FOR LISTS
     # def sign_registered_lists(self):
