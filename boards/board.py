@@ -23,15 +23,6 @@ class Board:
         
     # The DSO registers and has verified users and aggregators, then sends it to the board
     # TODO rewrite all schnorr_verify name to be schnorr_sign_verify for clarity
-    # TODO REFACTOR TO WORK FOR LISTS
-    # def publish_smartmeters_and_aggregators(self, signed_lists):
-    #     self.register_smartmeter, sm_sign, self.register_aggregator, agg_sign = signed_lists
-        
-    #     if not schnorr_verify_list(self.pk[0], self.pk[1], sm_sign, self.register_smartmeter):
-    #         print("Smartmeters were not verified")
-        
-    #     if not schnorr_verify_list(self.pk[0], self.pk[1], agg_sign, self.register_aggregator):
-    #         print("Aggregators were not verified")
     def publish_smartmeters_and_aggregators(self, signed_lists):
         self.register_smartmeter, sm_signatures, self.register_aggregator, agg_signatures = signed_lists
 
@@ -62,21 +53,11 @@ class Board:
         self.T_r = T_r
 
     # mix
-    # def publish_mix_pk_and_proof(self, anon_id):
-    #     anon_list = anon_id[0]
-    #     πmix = anon_id[1]
-        
-    #     # shuffle proof verification is CheckProof
-    #     if not CheckProof(πmix, self.register_smartmeter, anon_list, self.ek):
-    #         print("Mixing proof verification failed")
-        
-    #     self.anon_id = anon_id
     # REPORT:
     # we had an issue here where we passed the entire self.register_smartmeter list which is (id, (pk, pp, proof)) to CheckProof
     # checkproof needs only the list of public keys (in the list e[]) to verify the shuffle proof
     # we use self.pk[1][1] as the generator g for the proof verification.
     # We use g because its a value both the prover and verifier agrees on, instead of a random pk from the list which may cause inconsistency
-    # TODO should it really be g? its needed for the calculcation when making the challenge for both prover and verifier
     def publish_mix_pk_and_proof(self, mix_data):
         pk_prime, πmix = mix_data
         self.mix_pk = pk_prime
@@ -86,7 +67,7 @@ class Board:
         # Extract the list of public keys from the registered smart meters list e
         # TODO change the name e 
         e = [sm[1][0] for sm in self.register_smartmeter]
-        # The pk used for the proof generation should be consistent. We used the generator g.
+        # g is used for the proof generation (for its consistancy)
         # self.pk[1][1] = g
         is_valid = CheckProof(πmix, e, pk_prime, self.pk[1][1])
         
@@ -111,67 +92,17 @@ class Board:
         # print("Published smartmeter reports:")
         # self.sm_reports = sm_reports
 
-
-
-
-
-
-
-
-
-
-# import dso.DSO as dso
-# import aggregators.aggregator as agg
-# import smartmeters.smartmeter as smartmeter
-
-# # DSO, users and aggregators with their public keys
-# def make_registered_users_and_aggregators():
-#     return dso.registration()
-
-# # Get users from DSO
-# dso_info, registered_users, registered_aggs = make_registered_users_and_aggregators()
-
-# # DR parameters and target reduction
-# def make_DRparam_and_targetreduction():
-#     return dso.calculate_DR_param_and_target_reduction()
-
-# # noisy list
-# DSO_ek, DSO_dk = dso.create_encryption_key_set() # so that it can be given to all others
-# reduction_target_list = dso.publish_reduction_target_list()
-# smartmeter.get_DSO_ek(DSO_ek)
-
-###################################################
-# MIX Aggregator sends anon mixed pk set to board #
-###################################################
-# def publish_mixed_keys(pk_mixed, πmix):
-#     print("Published mixed anonymized public keys:", pk_mixed)
-#     print("Published proof of mixing (πmix):", πmix)
-
-# # input for mixing
-# ID_pk = [(agg_id, agg_val) for agg_id, agg_val in dict(registered_users).items()]
-
-# # Use aggregator to mix and anonymize the keys
-# pk_mixed, r_map, πmix = agg.create_mixed_anon_pk_set(ID_pk)
-
-# # Board publishes the mixed keys and proof
-# publish_mixed_keys(pk_mixed, πmix)
-
-# # users get their anon keys from aggregators which is sent to the board
-# smartmeter.get_anon_key()
-
-# # get user reports and publish on board
-# reports = agg.get_report_from_users()
-
-# def publish_reports(reports):
-#     print("=======================")
-#     print("published user reports:")
-#     print("len of reports: " + str(len(reports)))
-#     for report in reports:
-#         print(report)
-
-# publish_reports(reports)
-
-# # ===========
-# # eval stuff
-# # ===========
-# ct_b = 100 # baseline report
+    def publish_anonym_reports(self, anonym_reports, agg_id):
+        hashed_reports, signature = anonym_reports
+        
+        agg_pk = None
+        
+        for id, pk in self.register_aggregator:
+            if id == agg_id:
+                agg_pk = pk
+                break
+        
+        if not schnorr_verify(agg_pk[0], agg_pk[1], hashed_reports, signature):
+            print("Anonymous key signature verification failed.")
+            
+        self.anonym = anonym_reports

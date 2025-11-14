@@ -73,6 +73,11 @@ if __name__ == "__main__":
     for agg in aggs:
         agg.set_dso_dk(dso.encrypt_dk_and_send_to_agg(agg.id))
 
+    # Give agg pk to sms
+    for sm in sms:
+        # for now they on get the first one
+        sm.set_agg_public_keys(bb.register_aggregator[0][1])
+
     ##########
     # MIX
     ##########
@@ -83,7 +88,7 @@ if __name__ == "__main__":
 
     for smartmeter in sms:
         ### some method for the smartmeter to get the anon_pk
-        smartmeter.set_anon_key(mix_agg.set_anon_key_mix(smartmeter.pk))
+        smartmeter.set_anon_key(mix_agg.set_anon_key_mix(smartmeter.get_public_key()))
         print(f"Smartmeter {smartmeter.id} got anon key mix.")
 
     ##########
@@ -109,8 +114,14 @@ if __name__ == "__main__":
     ##########
 
     anonym_agg = aggs[0]
-    anonym_agg.make_anonym()
+    anonym_bb, anonym_pbb = anonym_agg.make_anonym()
+    
+    # public board
+    bb.publish_anonym_reports(anonym_bb, anonym_agg.id)
+
+    # private board
     pbb = privateboard.PrivateBoard()
+    pbb.publish_anonym_reports(anonym_pbb)
     print("\"Anonym done\".")
 
     ##########

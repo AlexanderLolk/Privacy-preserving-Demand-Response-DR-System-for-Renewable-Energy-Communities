@@ -14,7 +14,18 @@ def key_gen(sec_params):
 def Hash(R, msg, order):
     h = hashlib.sha256()
     h.update(R.export())
-    h.update(msg.encode())
+
+    # Report: This is to ensure we convert msg to bytes from, for instance, a signature
+    if isinstance(msg, bytes):
+        msg_bytes = msg
+    elif isinstance(msg, Bn):
+        msg_bytes = msg.binary()
+    elif hasattr(msg, "export"):
+        msg_bytes = msg.export()
+    else:
+        msg_bytes = str(msg).encode()
+
+    h.update(msg_bytes)
     digest_bytes = h.digest()
     digest_bn = Bn.from_binary(digest_bytes)
     return digest_bn % order

@@ -87,4 +87,4 @@ def report(id, sk, ek, m, t, user_pk):
     msg = str((t, ct))
     signing_σ = sig.schnorr_sign(sk, pp, msg)
 
-    return (pk, (t, ct, signing_σ))
+    return (user_pk, (t, ct, signing_σ))

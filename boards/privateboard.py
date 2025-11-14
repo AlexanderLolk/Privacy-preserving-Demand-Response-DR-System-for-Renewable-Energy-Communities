@@ -4,10 +4,6 @@ class PrivateBoard:
     def __init__(self):
         pass
     
-    def publish_anonym(self, anonym_data):
-        print("Anonym not implemented")
-        
-        
     def publish_sm_reports(self, sm_reports):
         print(f"Publish anonym reports on PBB (not implemented)")
         self.sm_reports = sm_reports
@@ -23,3 +19,11 @@ class PrivateBoard:
         
         # print("Published smartmeter reports:")
         # self.sm_reports = sm_reports
+        
+        
+    def publish_anonym_reports(self, anonym_reports):
+        
+        for pk, ct, t, proof in anonym_reports:
+            print("[NOT IMP] in privateboard: check proof for anonym in PBB")
+            
+        self.anonym_reports = anonym_reports
