@@ -3,6 +3,7 @@ import smartmeters.smartmeter as sm
 import aggregators.aggregator as agg
 import boards.board as board
 import boards.privateboard as privateboard
+import utils.eval as eval
 
 # Distribution System Operators (DSOs)
 
@@ -127,3 +128,7 @@ if __name__ == "__main__":
     ##########
     # EVAL
     ##########
+    
+    # TODO fix eval
+    eval.Eval()
+    

@@ -15,7 +15,7 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
     # [(pk, (t, ct, sig))] = inputs
     # r_primes = [r´]
     
-    print("not implement: compute zero-knowledge proof of knowledge signature σ_i on (pk_i, t, ct_i) and zero-knowledge proof of knowledge ")
+    print("[NOT IMP] in anonym.Anonym: compute zero-knowledge proof of knowledge signature σ_i on (pk_i, t, ct_i) and zero-knowledge proof of knowledge ")
     # 1 step  
     published = []
     for (sm_report, r_prime) in zip(inputs, r_prime_list):

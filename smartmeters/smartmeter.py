@@ -38,4 +38,8 @@ class SmartMeter:
     def generate_and_send_report(self, m):
         t = int(time.time())
         return report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))
+
+        
+    def get_sm_comsumption(self):
+        return None
         
