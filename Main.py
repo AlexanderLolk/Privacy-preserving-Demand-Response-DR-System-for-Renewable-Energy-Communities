@@ -106,14 +106,15 @@ if __name__ == "__main__":
 
         report_data = smartmeter.generate_and_send_report(m)
         print(f"Smartmeter {smartmeter.id} sent report.") 
-        report_agg.set_sm_report(report_data)
+        report_agg.set_sm_report(smartmeter.id, report_data)
     
-    bb.publish_sm_reports(report_agg.get_participants)
+    bb.publish_sm_reports(report_agg.get_participants())
 
     ##########
     # ANONYM
     ##########
 
+    # TODO: change to dr agg
     anonym_agg = aggs[0]
     anonym_bb, anonym_pbb = anonym_agg.make_anonym()
     

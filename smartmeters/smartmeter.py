@@ -42,4 +42,7 @@ class SmartMeter:
         
     def get_sm_comsumption(self):
         return None
+    
+    def check_if_in_event(self, input):
+        self.in_event = input
         

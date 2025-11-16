@@ -36,7 +36,6 @@ class Aggregator:
         self.dso_ek = dso_ek
         
     def set_dso_dk(self, cipher_signature):
-        """Decrypt DSO's encrypted decryption key, verify signature and store it."""
         # print("(Not implemented) In agg.set_dso_dk: got un-encrypted dso dk")
         self.dso_dk = cipher_signature
 
@@ -101,7 +100,7 @@ class Aggregator:
 
     # report
     # report is decrypted and verified
-    def set_sm_report(self, sm_report):
+    def set_sm_report(self, sm_id, sm_report):
         # pk is a tuble with (pk, pp, s_proof)
         (pk, (t, cts, signature)) = sm_report
 
@@ -121,7 +120,7 @@ class Aggregator:
         # TODO error handling
         if msg >= 0:
             print("SM wants to join DR event")
-            self.participants.append(sm_report)
+            self.participants.append(sm_id)
             
     def get_participants(self):
         return self.participants

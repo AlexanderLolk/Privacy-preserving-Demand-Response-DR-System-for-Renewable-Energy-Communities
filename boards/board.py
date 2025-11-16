@@ -76,6 +76,9 @@ class Board:
 
     # report
     # Should be sent through the anonym algorithm
+    
+    
+    # IS THIS CORRECT? ISNT IT THE SAME AS publish_anonym_reports
     def publish_sm_reports(self, sm_reports):
         print(f"Publish anonym hashed reports on BB (not implemented)")
         self.sm_reports = sm_reports
@@ -92,6 +95,9 @@ class Board:
         # print("Published smartmeter reports:")
         # self.sm_reports = sm_reports
 
+    def publish_participants(self, participants):
+        self.participants = participants
+    
     def publish_anonym_reports(self, anonym_reports, agg_id):
         hashed_reports, signature = anonym_reports
         
