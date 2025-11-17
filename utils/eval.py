@@ -10,15 +10,17 @@ from petlib.ec import EcPt
 
 def Eval(BB, PBB, dk, dso_ek):
     # list of cts
+    # ct_b: baseline ciphertexts from BB
     ct_b = getattr(BB, "ct_b", None)
     if ct_b is None:
-        print("Public board missing baseline ciphertexts (ct_b). Call BB.publish_baselines(ct_b) before Eval.")
+        print("Public board missing baseline ciphertexts (ct_b).")
         return (PBB, BB)
 
+    # ct_t: consumption reports from PBB
     consumption_reports = getattr(PBB, "ct_t", None)
     if consumption_reports is None:
-        print("Private board missing consumption reports (ct_t). Ensure anonymization wrote ct_t to PBB.")
-        return (PBB, BB) # {pk': (t, ct_c, σ)}
+        print("Private board missing consumption reports (ct_t).")
+        return (PBB, BB)
 
     # print("len of ct_b: " + str(len(ct_b)))
     # print("len of consumption_reports: " + str(len(consumption_reports)))
@@ -35,7 +37,7 @@ def Eval(BB, PBB, dk, dso_ek):
 
     for pk_prime, report_data in consumption_reports.items():
         t = report_data[0]
-        ct_m = report_data[1] # ct_m is the encrypted energy consumption of a specific anonymous user (pk_prime)
+        ct_m = report_data[1] # ct_m is the encrypted energy consumption (ct_t) of a specific anonymous user (pk_prime)
 
         # step 1:ord comparison
         ct_o, ord_proof = ord_comparison(ct_b, ct_m)
@@ -107,14 +109,6 @@ def ct_reduction(ct_b, ct_m, ct_o):
     
     ct_red = (identity_point, identity_point)
     return ct_red
-
-# CT_red = {(ct_red, t, pk′)}
-# def build_reduction_set(eval_results):
-#     """
-#     Builds set CT_red = {(ct_red, t, pk′)} for all pk′ ∈ pk′.
-#     Returns: CT_red
-#     """
-#     return ""
 
 # step 4
 # ctsum ← Agg(ct_red)
