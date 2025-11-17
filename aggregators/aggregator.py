@@ -3,7 +3,7 @@
 
 from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
 from utils.signature import schnorr_verify, schnorr_sign
-from utils.ec_elgamal import enc, dec, make_table, demo
+from utils.ec_elgamal import dec, make_table
 import utils.anonym as anonym
 from petlib.bn import Bn
 
@@ -24,6 +24,7 @@ class Aggregator:
         ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
 
         self.participants = []
+        self.participants_report = []
     
     def get_id(self):
         return self.id
@@ -68,7 +69,7 @@ class Aggregator:
         #     print("Failed to verify DSO signature.")
 
     # MIX: create mixed anonymous pk set
-    # Report: this should be signed by the aggregator, the idea is to prove this specific aggregator did the mixing
+    # Report: this is signed by the aggregator, the idea is to prove this specific aggregator did the mixing
     # send (pk_prime, πmix) to board
     def create_mixed_anon_pk_set(self, ID_pk):
         # mix_anon_list = [pk_prime, r_prime, πmix_proof]
@@ -78,7 +79,6 @@ class Aggregator:
         # publish (pk_prime, πmix)
         # TODO: sign the list? or each element?
         return (self.mix_anon_list[0], self.mix_anon_list[2])
-    
     
     def set_anon_key_mix(self, sm):
         # sm can be either (id, pk) or just pk
@@ -100,7 +100,9 @@ class Aggregator:
 
     # report
     # report is decrypted and verified
-    def set_sm_report(self, sm_id, sm_report):
+    # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
+    # TODO: rename for function
+    def set_sm_report(self, sm_report):
         # pk is a tuble with (pk, pp, s_proof)
         (pk, (t, cts, signature)) = sm_report
 
@@ -117,10 +119,18 @@ class Aggregator:
         # (_, 2) means from bin to int
         msg = int(msg, 2)
 
-        # TODO error handling
+        pk_prime = None
+        for r_prime in self.mix_anon_list[1]:
+            anon_pk = pk[0].pt_mul(r_prime) # Report: This pk is the sm pk, if it was self.pk, it would be the agg pk
+            for pk_prime in self.mix_anon_list[0]:
+                if anon_pk == pk_prime:
+                    pk_prime = anon_pk
+        
+        # participants are those with the msg (the msg is set to 10)
         if msg >= 0:
             print("SM wants to join DR event")
-            self.participants.append(sm_id)
+            self.participants_report.append(sm_report)
+            self.participants.append(pk_prime)
             
     def get_participants(self):
         return self.participants
@@ -138,4 +148,4 @@ class Aggregator:
         # print(f"len of r_primes:" + str(len(self.mix_anon_list[1])))
         
         # TODO: ASK ABOUT SK
-        return anonym.Anonym(self.participants, self.mix_anon_list[1], self.sk)
+        return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)

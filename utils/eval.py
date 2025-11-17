@@ -1,70 +1,79 @@
 from utils.dec_proof import hash_to_bn
-from utils.ec_elgamal import enc, sub
-from utils.generators import pub_param 
+from utils.ec_elgamal import sub
+from utils.generators import pub_param
+from petlib.ec import EcPt
 
 #=============
 # Eval(BB, PBB, dk) → (PBB, BB)
 # TODO revise (not finished)
 #=============
 
-def Eval(BB, PBB, dk):
+def Eval(BB, PBB, dk, dso_ek):
     # list of cts
-    ct_b = BB.ct_b
-    consumption_reports = PBB.ct_t # {pk': (t, ct_c, σ)}
+    ct_b = getattr(BB, "ct_b", None)
+    if ct_b is None:
+        print("Public board missing baseline ciphertexts (ct_b). Call BB.publish_baselines(ct_b) before Eval.")
+        return (PBB, BB)
+
+    consumption_reports = getattr(PBB, "ct_t", None)
+    if consumption_reports is None:
+        print("Private board missing consumption reports (ct_t). Ensure anonymization wrote ct_t to PBB.")
+        return (PBB, BB) # {pk': (t, ct_c, σ)}
 
     # print("len of ct_b: " + str(len(ct_b)))
     # print("len of consumption_reports: " + str(len(consumption_reports)))
 
-    eval_results = []
-
-    t = []
-    pk_prime_list = []
+    try:
+        ct_T = BB.ct_T
+    except AttributeError:
+        print("No ct_T found in BB during Eval")
+        return (PBB, BB)
+    
+    # lists
+    eval_results_step1 = [] # for (ct_o, t, pk_prime, ord_proof)
+    CT_red = [] # for {(ct_red, t, pk_prime)}
 
     for pk_prime, report_data in consumption_reports.items():
         t = report_data[0]
-        ct_c = report_data[1]
+        ct_m = report_data[1] # ct_m is the encrypted energy consumption of a specific anonymous user (pk_prime)
 
         # step 1:ord comparison
-        ct_o, ord_proof = ord_comparison(ct_b, ct_c, dk)
+        ct_o, ord_proof = ord_comparison(ct_b, ct_m)
 
         # ct_o is encryption of 1 if consumption < baseline (reduction is achieved)
         # ct_o is encryption of 0 otherwise
 
-        result = (ct_o, t, pk_prime, ord_proof)
-        eval_results.append(result)
-    
-    # step 2
-    reduc_set = []
-    for i in range(len(ct_b)):
-        ct_i = ct_b[i]
-        consumption_reports_i = consumption_reports[i]
-        ct_0 = "fix"
-        
-        # diff not right
-        pk_prime = pk_prime_list[i]
-        time_stamp = t[i]
+        # store results for BB
+        eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
 
-        ct_red = ct_reduction(ct_i, consumption_reports_i, ct_0)
+        # step 2 ct reduction
+        ct_red = ct_reduction(ct_b, ct_m, ct_o) # just placeholders
 
-        #step 3
-        reduc_set.append((ct_red, time_stamp, pk_prime))
-
+        # step 3 set CT_red
+        CT_red.append((ct_red, t, pk_prime))
 
     # step 4
-    ct_sum = ct_aggregation(reduc_set)
-
+    # ct_sum <- Agg(ct_red)
+    ct_sum = ct_aggregation(CT_red)
 
     # step 5
+    # (ct_eq, πeq) <- Pet(ct_sum, ct_T)
+    ct_eq, π_eq = pet_comparison(ct_sum, ct_T, dso_ek)
+
     # step 6
+    M_set, π_dec = prove_epet_computation(ct_eq, dk)
     
-
-    # public board
-
-    BB.eval_results = eval_results
+    #####
+    # Update the boards with eval results
+    # Public board
+    BB.eval_results = eval_results_step1 
     BB.eval_status = "evaluated"
+    BB.ct_eq = ct_eq
+    BB.π_eq = π_eq
+    BB.M_set = M_set
+    BB.π_dec = π_dec
 
     # private board
-    
     PBB.eval_data = {
         "ct_b": ct_b,
         "consumption_reports": consumption_reports,
@@ -80,24 +89,32 @@ def ord_comparison(ct_b, ct_m):
     Returns: (ct_o, π_ord)
     ct_o is encryption of 1 if m < b, 0 otherwise
     """
-    return ""
+    _, g, order = pub_param()
+    identity_point = g.pt_mul(0)
+    
+    ct_o = (identity_point, identity_point)
+    ord_proof = "ord_proof"
+    return ct_o, ord_proof
 
-# whtat is ct_m
 # ctred ← Reduct(ct_b, c_tm, ct_o)
 def ct_reduction(ct_b, ct_m, ct_o):
     """
     Computes encryption of subtraction ct_red ← Diff(ct_b, ct_m) if ct_o is encryption of 1.
     Returns: ct_red
     """
-    return ""
+    _, g, order = pub_param()
+    identity_point = g.pt_mul(0)
+    
+    ct_red = (identity_point, identity_point)
+    return ct_red
 
 # CT_red = {(ct_red, t, pk′)}
-def build_reduction_set(eval_results):
-    """
-    Builds set CT_red = {(ct_red, t, pk′)} for all pk′ ∈ pk′.
-    Returns: CT_red
-    """
-    return ""
+# def build_reduction_set(eval_results):
+#     """
+#     Builds set CT_red = {(ct_red, t, pk′)} for all pk′ ∈ pk′.
+#     Returns: CT_red
+#     """
+#     return ""
 
 # step 4
 # ctsum ← Agg(ct_red)
@@ -107,17 +124,19 @@ def ct_aggregation(reduc_set):
     Transforms to ciphertext ct_sum containing integer plaintext.
     Returns: ct_sum
     """
-    ct_red = 0
-    prev = reduc_set[0]
-    for i in range(1, len(reduc_set)):
-        
-        ct_red = reduc_set[i][0] * prev
-        prev = ct_red
+    # reduc_set[0] is a tuple (ct_red, t, pk′)
+    C1_prod, C2_prod = reduc_set[0][0]
 
-    return str(ct_red)
+    for i in range(1, len(reduc_set)):
+        C1_i, C2_i = reduc_set[i][0]
+
+        C1_prod = C1_prod.pt_add(C1_i)
+        C2_prod = C2_prod.pt_add(C2_i)
+
+    return (C1_prod, C2_prod)
 
 # (cteq, πeq ) ← Pet(ctsum, ctT )
-def pet_comparison(ct_sum, ct_T):
+def pet_comparison(ct_sum, ct_T, dso_ek):
     """
     Private equality test.
     Computes (ct_eq_i, π_r_i) ← Epet(ct_sum, ct_T_i) for each ct_T_i ∈ ct_T.
@@ -128,14 +147,14 @@ def pet_comparison(ct_sum, ct_T):
     π_eq = []
 
     for ct_T_i in ct_T:
-        ct_eq_i, π_r_i = epet(ct_sum, ct_T_i)
+        ct_eq_i, π_r_i = epet(ct_sum, ct_T_i, dso_ek)
         ct_eq.append(ct_eq_i)
         π_eq.append(π_r_i)
         
     return (ct_eq, π_eq)
 
 # (ct_eq_i, π_r_i) ← Epet(ct_sum, ct_T_i)
-def epet(ct_sum, ct_t_i):
+def epet(ct_sum, ct_t_i, dso_ek):
     """
     Single equality test computation.
     Returns: (ct_eq_i, π_r_i)
@@ -143,24 +162,24 @@ def epet(ct_sum, ct_t_i):
     π_r_i is the zero knowledge proof
     """
     
-    # fix fix fix
-    pub_param = pub_param()
-    _, g, order = pub_param
+    pp = pub_param()
+    _, g, order = pp
     r = order.random()
 
     # ct_eq = ct_diff^r
     # ct_diff = ct_sum - ct_t_i
-    ct_eq = (ct)
+    ct_diff = sub(ct_sum, ct_t_i)
+    (C1_diff, C2_diff) = ct_diff
 
-    if ct_sum == ct_t_i:
-        # need to check if 1 is vaild to use, since g^0 equal 1, but on ec g * 0 equals 0 instead
-        return enc(pub_param, dso_ek, ct_eq)
-    else:
-        return enc(pub_param, dso_ek, r)
+    C1_eq = C1_diff.pt_mul(r)
+    C2_eq = C2_diff.pt_mul(r)
+    ct_eq = (C1_eq, C2_eq)
 
-    pass
+    π_r_i = proof_r(ct_sum, ct_t_i, ct_eq, r, dso_ek)
 
-def proof_r(ct1, ct2, ct_eq, r):
+    return (ct_eq, π_r_i)
+
+def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     """
     generate r proof
     """
@@ -188,7 +207,7 @@ def proof_r(ct1, ct2, ct_eq, r):
 
     return (A1, A2, response, challenge)
 
-def verify_r(ct1, ct2, ct_eq, proof):
+def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
     """
     Verify NIZK proof that ct_eq = (ct1 / ct2)^r
     Returns b ∈ {0, 1} where b = 1 if proof is valid and 0 otherwise
@@ -281,4 +300,7 @@ def prove_epet_computation(ct_eq, dk):
     Returns 1 if g^m_i = g^0, encryption of random number otherwise.
     Returns: ({M}, π_dec) where π_dec = {π_i} are zero-knowledge proofs
     """
-    return ""
+    M_set = [{"M_i": 1 }]
+    π_dec = [{"π_i": "proof"}]
+
+    return (M_set, π_dec)

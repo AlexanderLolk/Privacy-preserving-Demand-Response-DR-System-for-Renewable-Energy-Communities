@@ -11,14 +11,8 @@ import utils.eval as eval
 
 if __name__ == "__main__":
     
-    ##########
-    # STEP 1 DSO starts demand response system
-    ##########
     dso = distributer.DSO()
-    
-    ##########
-    # STEP 2 user and agg are created
-    ##########
+
     NUM_SM = 5
     NUM_AGG = 4
     sms = []
@@ -30,38 +24,26 @@ if __name__ == "__main__":
     for i in range(NUM_AGG):
         aggs.append(agg.Aggregator(init_id="agg_id_" + str(i)))
        
-    ##########
-    # STEP 3 build info for users and aggregator
     # sm_info and agg_info are dictionaries with id as key and public key (pk, pp, proof) as value
-    ##########
     # sm_info = {smartmeter.id: smartmeter.get_public_key() for smartmeter in sms}
     # agg_info = {aggregator.id: aggregator.get_public_key() for aggregator in aggs}
 
     sm_info = [(smartmeter.id, smartmeter.get_public_key()) for smartmeter in sms]
     agg_info = [(aggregator.id, aggregator.get_public_key()) for aggregator in aggs]
 
-    ##########
-    # STEP 4 users and aggregators are verified and then registered
     # TODO FUNCTION SHOULD NOT BE MADE FOR LISTS
-    ##########
     dso.verify_smartmeter(sm_info)
     dso.verify_aggregator(agg_info)
     
-    ##########
-    # STEP 5 DSO sends board to users and aggregators and a noisy encrypted target reduction list
-    ##########
+    
     bb = board.Board()
     bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
     bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
     # TODO ask about if the list stays as encrypted on the board
-    bb.target_reduction(dso.generate_noisy_list())                               # noisy list from DSO
+
+    bb.target_reduction(dso.generate_noisy_list()) # noisy list from DSO
     
-    
-    ##########
-    # STEP 6 give DSO keys to smartmeters and aggregators
     # TODO Report writing: remember we are trying not to send the full class object info but as little as we can get away with
-    # verifies the lists with schnorrs signatures
-    ##########
     for sm in sms:
         sm.set_dso_public_keys(bb.pk, bb.ek)
         
@@ -106,7 +88,7 @@ if __name__ == "__main__":
 
         report_data = smartmeter.generate_and_send_report(m)
         print(f"Smartmeter {smartmeter.id} sent report.") 
-        report_agg.set_sm_report(smartmeter.id, report_data)
+        report_agg.set_sm_report(report_data)
     
     bb.publish_sm_reports(report_agg.get_participants())
 
@@ -126,10 +108,19 @@ if __name__ == "__main__":
     pbb.publish_anonym_reports(anonym_pbb)
     print("\"Anonym done\".")
 
+    # TODO change to dr agg
+    # dr_agg = aggs[0]
+    # dr_agg.set_psudo_anonymous_iden(pbb.get_participants)
+    # dr_agg.select_random_sms()
+    # bb.publish_selected_sm(dr_agg.get_selected())
+    
     ##########
     # EVAL
     ##########
     
     # TODO fix eval
-    eval.Eval()
+    bb.publish_baselines(bb.T_r)
+    if getattr(bb, "ct_T", None) is None:
+        bb.ct_T = bb.T_r
+    eval.Eval(bb, pbb, dso.dk, dso.ek)
     

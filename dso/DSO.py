@@ -81,11 +81,12 @@ class DSO:
         values += [0] * zero_noise
         random.shuffle(values)
         
-        # encrypt each value in the noisy list
+        # encrypt each value in the noisy list and then sign the list
+        # TODO should it be each value thats signed or is signing the entire list ok?
         enc_TR = [enc(self.ek, self.pp, val) for val in values]
-        # TODO: Sign the list
-        
-        return enc_TR
+        signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
+
+        return enc_TR, signature_TR
 
     def get_public_key(self):
         return (self.pk, self.pp, self.s_proof)

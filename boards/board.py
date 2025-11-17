@@ -15,7 +15,7 @@ class Board:
         if not schnorr_NIZKP_verify(pk, pp, s_proof):
             print("DSO public key proof verification failed")
         
-        # Test: write in the report how the test shows how the encryption can be decrypted etc
+        # Report: write in the report how the test shows how the encryption can be decrypted etc
         if not verify_correct_decryption(ek, pp, e_proof):
             print("DSO encryption key proof verification failed")
 
@@ -49,8 +49,14 @@ class Board:
         return True
 
     def target_reduction(self, T_r):
-        # the target reduction list is encrypted
-        self.T_r = T_r
+        # the target reduction list is encrypted and signed by the DSO
+        
+        enc_T_r, signature = T_r
+        
+        if not schnorr_verify(self.pk[0], self.pk[1], enc_T_r, signature):
+            print("target reduction list signature verification failed.")
+            
+        self.T_r = enc_T_r
 
     # mix
     # REPORT:
@@ -65,7 +71,7 @@ class Board:
 
         # store e list to verify
         # Extract the list of public keys from the registered smart meters list e
-        # TODO change the name e 
+        # TODO change the name e to something more descriptive
         e = [sm[1][0] for sm in self.register_smartmeter]
         # g is used for the proof generation (for its consistancy)
         # self.pk[1][1] = g
@@ -74,8 +80,7 @@ class Board:
         if is_valid:
             print("Mixing proof verification succeeded")
 
-    # report
-    # Should be sent through the anonym algorithm
+    # Report: Should be sent through the anonym algorithm
     
     
     # IS THIS CORRECT? ISNT IT THE SAME AS publish_anonym_reports
@@ -97,6 +102,7 @@ class Board:
 
     def publish_participants(self, participants):
         self.participants = participants
+
     
     def publish_anonym_reports(self, anonym_reports, agg_id):
         hashed_reports, signature = anonym_reports
@@ -112,3 +118,16 @@ class Board:
             print("Anonymous key signature verification failed.")
             
         self.anonym = anonym_reports
+        
+    def publish_selected_sm(self, selected_w_sign, dr_agg_pk):
+        selected, signature = selected_w_sign
+        if not schnorr_verify(dr_agg_pk[0], dr_agg_pk[1], str(selected), signature):
+            print("DR agg signature verification failed.")
+        
+        self.selected = selected
+
+    # TODO the baseline should be gotten from report() this is only for temporary testing
+    def publish_baselines(self, ct_b):
+        self.ct_b = ct_b
+        
+        

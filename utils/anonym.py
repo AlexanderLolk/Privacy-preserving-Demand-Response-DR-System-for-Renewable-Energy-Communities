@@ -27,6 +27,7 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
         except ValueError:
             raise ValueError("Invalid input format for sm_report")
         
+        # TODO check if index is correct, normally it is done by ZKP
         pk_prime = pk_pt.pt_mul(r_prime)
         pi = "NIZKP here"
         published.append((pk_prime, cts, t, pi))
@@ -38,16 +39,13 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
         msg_bytes += _export_bytes(pk_prime)
         msg_bytes += _export_bytes(c1)
         msg_bytes += _export_bytes(c2)
-        # if isinstance(cts, (list, tuple)):
-        #     for ct in cts:
-        #         msg_bytes += _export_bytes(ct)
-        # else:
-        #     msg_bytes += _export_bytes(cts)
         msg_bytes += _export_bytes(t)
         msg_bytes += _export_bytes(pi)
 
     _, _, order = pp
-    commiment = published[0][0] # pk_prime (deterministic)
+    
+    commiment = published[0][0] # pk_prime (usage is to make sure it's deterministic)
+    # Report: hash it (step 8 sequence chart)
     ht_bn = Hash(commiment, msg_bytes, order)
 
     sign_it = schnorr_sign(secret_key_T, pp, ht_bn)

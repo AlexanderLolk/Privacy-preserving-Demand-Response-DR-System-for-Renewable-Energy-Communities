@@ -1,4 +1,8 @@
+# DR Aggregator
+# The aggregator
+import random
 from utils.generators import ekey_gen, pub_param, skey_gen
+from utils.signature import schnorr_sign
 
 
 class DR_Aggregator:
@@ -11,12 +15,21 @@ class DR_Aggregator:
         
         # TODO: do we need ek for the dr aggregator?
         ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
-
-    def set_anonym_reports(self):
-        return None
     
-    def set_psudo_anonymous_iden(self):
-        return None
+    def get_public_key(self):
+        return (self.pk, self.pp, self.s_proof)
+    
+    # anon_ids = pk_prime
+    def set_psudo_anonymous_iden(self, anon_ids):
+        self.anon_ids = anon_ids
     
     def select_random_sms(self):
+        self.selected = random.sample(self.anon_ids, n=3)
+    
+    # TODO if this need to be signed, then give pk before this function
+    def get_selected(self):
+        signature = schnorr_sign(self.sk, self.pp, str(self.selected))
+        return (self.selected, signature, self.get_public_key())
+
+    def set_anonym_reports(self):
         return None
