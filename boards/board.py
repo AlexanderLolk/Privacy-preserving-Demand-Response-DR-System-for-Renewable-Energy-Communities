@@ -98,7 +98,7 @@ class Board:
     
     # IS THIS CORRECT? ISNT IT THE SAME AS publish_anonym_reports
     def publish_sm_reports(self, sm_reports):
-        print(f"Publish anonym hashed reports on BB (not implemented)")
+        print(f"[] Publish anonym hashed reports on BB (not implemented)")
         self.sm_reports = sm_reports
         #[(pk, (t, cts, signature))] = sm_reports
         
