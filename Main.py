@@ -177,7 +177,11 @@ if __name__ == "__main__":
     # This call combines the shares posted on the board to get the
     # final result M_set.
     
-    eval.combine_decryption_shares(bb, pbb, dso.dk)
+    # debug version with dk and pbb
+    # eval.combine_decryption_shares(bb, pbb, dso.dk)
+    
+    # clean version without debug, dk, and pbb
+    eval.combine_decryption_shares(bb)
     
     print(f"Final Eval status: {getattr(bb, 'eval_status', 'Not evaluated')}")
     print(f"Final M_set result: {getattr(bb, 'M_set', 'Not computed')}")
