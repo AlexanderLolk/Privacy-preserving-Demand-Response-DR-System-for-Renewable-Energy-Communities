@@ -1,7 +1,14 @@
 from utils.dec_proof import hash_to_bn
-from utils.ec_elgamal import sub, dec, make_table # dec and make_table for debugging
+# from utils.ec_elgamal import dec, make_table # dec and make_table for debugging
 from utils.generators import pub_param
 from petlib.ec import EcPt
+
+# Helper function to calculate subtraction of two ciphertexts
+def sub(c1, c2):
+    """Subtract two encrypted counters: c1 - c2"""
+    a1, b1 = c1
+    a2, b2 = c2
+    return (a1 + (-a2), b1 + (-b2))
 
 #=============
 # Eval(BB, PBB, dk_share, agg_id, dso_ek) → (PBB, BB)

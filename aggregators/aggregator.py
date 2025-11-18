@@ -5,12 +5,6 @@ from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
 from utils.signature import schnorr_verify, schnorr_sign
 from utils.ec_elgamal import dec, make_table
 import utils.anonym as anonym
-from petlib.bn import Bn
-
-# TODO: REMEMBER TO ASK
-# So since the sm list given to BB is not encrypted, 
-# and the r' sent to sm is also not encrypted, 
-# what is stopping someone from take the r' when sent, so they can find out how is part of the event 
 
 class Aggregator:
 
@@ -101,8 +95,7 @@ class Aggregator:
     # report
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    # TODO: rename for function
-    def set_sm_report(self, sm_report):
+    def check_sm_report(self, sm_report):
         # pk is a tuble with (pk, pp, s_proof)
         (pk, (t, cts, signature)) = sm_report
 
@@ -126,7 +119,7 @@ class Aggregator:
                 if anon_pk == pk_prime:
                     pk_prime = anon_pk
         
-        # participants are those with the msg (the msg is set to 10)
+        # participants are those with the msg (the msg is currently set to 10)
         if msg >= 0:
             print("SM wants to join DR event")
             self.participants_report.append(sm_report)
@@ -140,14 +133,4 @@ class Aggregator:
     
     # Not implemented (see utils/anonym.py)
     def make_anonym(self):
-        # input = [(pk, t, ct, signature)]
-        # r_primes = [r´]
-        # mix_anon_list = [pk_prime, r_prime, πmix_proof]
-        
-        # print(f"len of participants:" + str(len(self.participants)))
-        # print(f"len of r_primes:" + str(len(self.mix_anon_list[1])))
-        
-        # TODO: ASK ABOUT SK
         return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)
-    
-    

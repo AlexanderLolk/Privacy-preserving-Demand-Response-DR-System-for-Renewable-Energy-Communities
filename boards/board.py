@@ -131,5 +131,3 @@ class Board:
     # TODO the baseline should be gotten from report() this is only for temporary testing
     def publish_baselines(self, ct_b):
         self.ct_b = ct_b
-        
-        

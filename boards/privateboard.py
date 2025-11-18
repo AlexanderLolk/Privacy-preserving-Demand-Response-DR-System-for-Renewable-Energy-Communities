@@ -1,4 +1,3 @@
-
 class PrivateBoard:
     
     def __init__(self):
@@ -20,4 +19,3 @@ class PrivateBoard:
     # pseudo-anonymous identity
     def get_participants(self):
         return self.participants
-

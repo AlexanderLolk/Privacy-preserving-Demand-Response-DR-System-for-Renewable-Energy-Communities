@@ -4,11 +4,6 @@
 # DSO public key
 # DR parameters (Demand Response)
 
-# SKeyGen(id, pp) to generate a signing key pair ((id, pk), sk) and publishes (id, pk) 
-# pk = (pk, pp, proof)
-# SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
-# send to bb = (id, pk)
-
 from utils.generators import pub_param, skey_gen, ekey_gen
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.signature import schnorr_sign_list, schnorr_sign
@@ -23,6 +18,7 @@ class DSO:
         self.registered_agg = []
         self.registered_dr = []
         
+        #  SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
         ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
 
@@ -64,6 +60,7 @@ class DSO:
         return True
     
     # DR parameters and target reductions
+    # Placeholder values for now
     def calculate_target_reduction():
         p = "1"
         phi = "0.05"

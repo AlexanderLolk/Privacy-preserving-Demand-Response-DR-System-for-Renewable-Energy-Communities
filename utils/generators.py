@@ -17,6 +17,7 @@ def pub_param(nid=713):
 pp = pub_param()
 
 # SKey_Gen(id, pp) → ((id, pk), sk)
+# SKeyGen(id, pp) to generate a signing key pair ((id, pk), sk) and publishes (id, pk) 
 # generates signature key pair (sk, pk) for identity id
 def skey_gen(id=random, pp=None):
     if pp is None:

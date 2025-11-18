@@ -4,7 +4,6 @@
 import time
 from utils.generators import pub_param, skey_gen, report
 from utils.signature import schnorr_verify
-from petlib.bn import Bn
 
 class SmartMeter:
     
@@ -24,7 +23,7 @@ class SmartMeter:
     def set_agg_public_keys(self, agg_pk):
         self.agg_pk = agg_pk
 
-    # mix
+    # Mix()
     # Report: We sign each anonymized public key to know it came from the aggregator who mixed it
     def set_anon_key(self, anon_key):
         anon_pk, signature = anon_key
@@ -35,7 +34,7 @@ class SmartMeter:
         self.anon_pk = anon_pk
         self.anon_id = self.pk.pt_mul(anon_pk)
 
-    # report
+    # Report()
     # TODO: make sure m shouldnt be something else (m is set to be 10, it's placeholder right now)
     def generate_and_send_report(self, m):
         t = int(time.time())
@@ -50,6 +49,4 @@ class SmartMeter:
                 print("SM: " + self.id + " is in the event")
                 self.in_event = True
             else:
-                # print("SM: " + self.id + " is not part of the event")
                 self.in_event = False
-        

@@ -57,24 +57,6 @@ def dec(priv, params, table, c1):
     # plain = b + (-priv * a)
     plain = b.pt_add(a.pt_mul(-priv))
     return table[plain]
-
-# For Eval() in aggregator
-def sub(c1, c2):
-    """Subtract two encrypted counters: c1 - c2"""
-    a1, b1 = c1
-    a2, b2 = c2
-    return (a1 + (-a2), b1 + (-b2))
-
-# def add(c1, c2):
-#     """Add two encrypted counters"""
-#     a1, b1 = c1
-#     a2, b2 = c2
-#     return (a1 + a2, b1 + b2)
-
-# def mul(c1, val):
-#     """Multiplies an encrypted counter by a public value"""
-#     a1, b1 = c1
-#     return (val*a1, val*b1)
     
 def demo(params, ek, dk):
     # msg = Bn.from_binary(dk)

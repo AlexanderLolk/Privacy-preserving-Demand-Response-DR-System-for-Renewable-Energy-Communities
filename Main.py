@@ -16,7 +16,7 @@ if __name__ == "__main__":
     dso = distributer.DSO()
 
     NUM_SM = 5
-    NUM_AGG = 4
+    NUM_AGG = 1
     NUM_DR_AGG = 1
     
     sms = []
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
         report_data = smartmeter.generate_and_send_report(m)
         print(f"Smartmeter {smartmeter.id} sent report.") 
-        report_agg.set_sm_report(report_data)
+        report_agg.check_sm_report(report_data)
     
     bb.publish_participants(report_agg.get_participants())
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     
     # Assign the shares to the aggregators.
     aggs[0].dk_share = dk_share_1 # Energy aggregator
-    aggs[1].dk_share = dk_share_2 # DR aggregator
+    dr_aggs[0].dk_share = dk_share_2 # DR aggregator
 
     # -------THRESHOLD KEY SETUP END
 
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     # Aggregator 2 (DR) runs Eval and posts its partial decryption
     print("Aggregator 2 (DR) running Eval...")
-    eval.Eval(bb, pbb, aggs[1].dk_share, dso.ek, aggs[1].id)
+    eval.Eval(bb, pbb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
     print(f"Aggregator 2 posted partial decryption shares.")
 
     print("Partial evaluation done by both aggregators.")

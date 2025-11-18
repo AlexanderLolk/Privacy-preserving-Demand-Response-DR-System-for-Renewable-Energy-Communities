@@ -43,7 +43,7 @@ def schnorr_sign(sk, sec_params, msg):
 def schnorr_verify(pk, sec_params, msg, signature):
     _, g, order = sec_params
     R, s = signature
-    e = Hash(R, msg, order)                # Recompute challenge
+    e = Hash(R, msg, order)                 # Recompute challenge
     expected_point = s * g                  # Elliptic curve point left side
     reconstructed_point = R + e * pk        # Elliptic curve point right side
     return expected_point == reconstructed_point
