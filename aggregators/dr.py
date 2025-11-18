@@ -33,7 +33,7 @@ class DR_Aggregator:
         self.anon_ids = anon_ids
     
     def select_random_sms(self):
-        self.selected = random.sample(self.anon_ids, n=3)
+        self.selected = random.sample(self.anon_ids, k=3)
     
     # TODO if this need to be signed, then give pk before this function
     def get_selected(self):

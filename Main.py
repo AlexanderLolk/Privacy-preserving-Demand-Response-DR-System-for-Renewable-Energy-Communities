@@ -123,7 +123,7 @@ if __name__ == "__main__":
     print("\"Anonym done\".")
 
     dr_agg = dr_aggs[0]
-    dr_agg.set_psudo_anonymous_iden(pbb.get_participants)
+    dr_agg.set_psudo_anonymous_iden(pbb.get_participants())
     dr_agg.select_random_sms()
     bb.publish_selected_sm(dr_agg.get_selected())
     

@@ -98,7 +98,7 @@ class Board:
     
     # IS THIS CORRECT? ISNT IT THE SAME AS publish_anonym_reports
     def publish_sm_reports(self, sm_reports):
-        print(f"[] Publish anonym hashed reports on BB (not implemented)")
+        print("[NOT IMP] Publish anonym hashed reports on BB with proofs")
         self.sm_reports = sm_reports
         #[(pk, (t, cts, signature))] = sm_reports
         
@@ -133,8 +133,8 @@ class Board:
         self.anonym = anonym_reports
         
     # pseudo-anonymous identities which are selected by the DR aggregator
-    def publish_selected_sm(self, selected_w_sign, dr_agg_pk):
-        selected, signature = selected_w_sign
+    def publish_selected_sm(self, selected_w_sign):
+        selected, signature, dr_agg_pk = selected_w_sign
         if not schnorr_verify(dr_agg_pk[0], dr_agg_pk[1], str(selected), signature):
             print("DR agg signature verification failed.")
         
