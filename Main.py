@@ -105,7 +105,7 @@ if __name__ == "__main__":
         print(f"Smartmeter {smartmeter.id} sent report.") 
         report_agg.set_sm_report(report_data)
     
-    bb.publish_sm_reports(report_agg.get_participants())
+    bb.publish_participants(report_agg.get_participants())
 
     ##########
     # ANONYM
@@ -127,6 +127,11 @@ if __name__ == "__main__":
     dr_agg.select_random_sms()
     bb.publish_selected_sm(dr_agg.get_selected())
     
+
+    # step 12 in seq chart
+    for sm in sms:
+        sm.check_if_in_event(bb.get_selected_sm())
+
     ##########
     # EVAL
     ##########

@@ -93,30 +93,15 @@ class Board:
         if is_valid:
             print("Mixing proof verification succeeded")
 
-    # Report: Should be sent through the anonym algorithm
-    
-    
-    # IS THIS CORRECT? ISNT IT THE SAME AS publish_anonym_reports
-    def publish_sm_reports(self, sm_reports):
-        print("[NOT IMP] Publish anonym hashed reports on BB with proofs")
-        self.sm_reports = sm_reports
-        #[(pk, (t, cts, signature))] = sm_reports
-        
-        # pks = [report[0] for report in sm_reports]
-        # msgs = [str((report[1][0], report[1][1])) for report in sm_reports]
-        # signatures = [report[1][2] for report in sm_reports]
-
-        # # pk, sec_params, msg_list, signatures
-        # if not schnorr_verify_list(self.pk[0], self.pk[1], msgs, signatures):
-        #     print("Smartmeters were not verified")
-        
-        # print("Published smartmeter reports:")
-        # self.sm_reports = sm_reports
-
+    # step 6
     def publish_participants(self, participants):
         self.participants = participants
 
+    # currently not used, since it isnt in the sequnce chart
+    def get_publish_participants(self):
+        return self.participants
     
+    # Report: Should be sent through the anonym algorithm
     def publish_anonym_reports(self, anonym_reports, agg_id):
         hashed_reports, signature = anonym_reports
         
@@ -139,6 +124,9 @@ class Board:
             print("DR agg signature verification failed.")
         
         self.selected = selected
+
+    def get_selected_sm(self):
+        return self.selected
 
     # TODO the baseline should be gotten from report() this is only for temporary testing
     def publish_baselines(self, ct_b):

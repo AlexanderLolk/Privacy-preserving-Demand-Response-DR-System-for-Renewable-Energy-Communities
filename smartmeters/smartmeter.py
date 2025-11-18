@@ -4,6 +4,7 @@
 import time
 from utils.generators import pub_param, skey_gen, report
 from utils.signature import schnorr_verify
+from petlib.bn import Bn
 
 class SmartMeter:
     
@@ -32,6 +33,7 @@ class SmartMeter:
             print("Anonymous key signature verification failed.")
         
         self.anon_pk = anon_pk
+        self.anon_id = self.pk.pt_mul(anon_pk)
 
     # report
     # TODO: make sure m shouldnt be something else (m is set to be 10, it's placeholder right now)
@@ -43,5 +45,11 @@ class SmartMeter:
         return None
     
     def check_if_in_event(self, input):
-        self.in_event = input
+        for anon_pk in input:
+            if self.anon_id == anon_pk:
+                print("SM: " + self.id + " is in the event")
+                self.in_event = True
+            else:
+                # print("SM: " + self.id + " is not part of the event")
+                self.in_event = False
         
