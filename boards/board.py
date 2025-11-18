@@ -24,10 +24,15 @@ class Board:
     # The DSO registers and has verified users and aggregators, then sends it to the board
     # TODO rewrite all schnorr_verify name to be schnorr_sign_verify for clarity
     def publish_smartmeters_and_aggregators(self, signed_lists):
-        self.register_smartmeter, sm_signatures, self.register_aggregator, agg_signatures = signed_lists
+        (
+            self.register_smartmeter, sm_signatures, 
+            self.register_aggregator, agg_signatures, 
+            self.register_dr, dr_signatures
+        ) = signed_lists
 
         sm_msg_list = [sm_id for sm_id, _ in self.register_smartmeter]
         agg_msg_list = [agg_id for agg_id, _ in self.register_aggregator]
+        dr_msg_list = [dr_id for dr_id, _ in self.register_dr]
         
         sm_valid, sm_results = schnorr_verify_list(self.pk[0], self.pk[1], sm_msg_list, sm_signatures)
         if not sm_valid:
@@ -43,6 +48,14 @@ class Board:
             for i, msg, is_valid in agg_results:
                 if not is_valid:
                     print(f"Aggregator ID {msg} at index {i} failed verification.")
+            return False
+        
+        dr_valid, dr_results =  schnorr_verify_list(self.pk[0], self.pk[1], dr_msg_list, dr_signatures)
+        if not dr_valid:
+            print("drs were not verified")
+            for i, msg, is_valid in dr_results:
+                if not is_valid:
+                    print(f"dr ID {msg} at index {i} failed verification.")
             return False
         
         print("All smartmeters and aggregators were successfully verified.")

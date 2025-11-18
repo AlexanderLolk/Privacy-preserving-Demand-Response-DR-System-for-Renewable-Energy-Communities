@@ -18,6 +18,15 @@ class DR_Aggregator:
     
     def get_public_key(self):
         return (self.pk, self.pp, self.s_proof)
+
+    def set_dso_public_keys(self, dso_pk, dso_ek):
+        self.dso_pk = dso_pk
+        self.dso_ek = dso_ek
+    
+    def set_dso_dk(self, cipher_signature):
+        # print("[NOT IMP] In dr.set_dso_dk: got un-encrypted dso dk")
+        # Some of the code what was tried on this function is in aggregator
+        self.dso_dk = cipher_signature
     
     # anon_ids = pk_prime
     def set_psudo_anonymous_iden(self, anon_ids):
