@@ -1,5 +1,5 @@
 from utils.dec_proof import hash_to_bn
-from utils.ec_elgamal import sub
+from utils.ec_elgamal import sub, dec, make_table # dec and make_table for debugging
 from utils.generators import pub_param
 from petlib.ec import EcPt
 
@@ -19,7 +19,6 @@ def Eval(BB, PBB, dk_share, dso_ek, agg_id):
         return (PBB, BB)
 
     # ct_t: consumption reports from PBB
-    # This data path is now correct per your PrivateBoard update
     consumption_reports = getattr(PBB, "ct_t", None)
     if consumption_reports is None:
         print("Private board missing consumption reports (ct_t).")
@@ -32,8 +31,8 @@ def Eval(BB, PBB, dk_share, dso_ek, agg_id):
         return (PBB, BB)
     
     # lists
-    eval_results_step1 = [] # for (ct_o, t, pk_prime, ord_proof)
-    CT_red = [] # for {(ct_red, t, pk_prime)}
+    eval_results_step1 = [] 
+    CT_red = [] 
 
     # Steps 1, 2, 3: Loop and call placeholders
     for pk_prime, report_data in consumption_reports.items():
@@ -45,34 +44,44 @@ def Eval(BB, PBB, dk_share, dso_ek, agg_id):
         eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
 
         # step 2 ct reduction
-        ct_red = ct_reduction(ct_b, ct_m, ct_o) # placeholder
+        ct_red = ct_reduction(ct_b, ct_m, ct_o) 
 
         # step 3 set CT_red
         CT_red.append((ct_red, t, pk_prime))
 
     # step 4: Aggregation
     ct_sum = ct_aggregation(CT_red)
-    # for debugging
     BB.ct_sum = ct_sum
 
-    # step 5: PET Comparison
-    # This uses the public key (dso_ek)
-    ct_eq, π_eq = pet_comparison(ct_sum, ct_T, dso_ek)
+    # STEP 5: PET COMPARISON
+    # Check if ct_eq already exists on the board.
+    # If it does, we'll use the existing one so all aggregators 
+    # decrypt the same ciphertext.
+    
+    existing_ct_eq = getattr(BB, "ct_eq", None)
+    
+    if existing_ct_eq is not None:
+        print(f"Aggregator {agg_id} using existing ct_eq from Public Board.")
+        ct_eq = existing_ct_eq
+        # verify BB.π_eq here normally
+        π_eq = getattr(BB, "π_eq", None)
+    else:
+        print(f"Aggregator {agg_id} computing new PET (ct_eq) and publishing to Board.")
+        ct_eq, π_eq = pet_comparison(ct_sum, ct_T, dso_ek)
+        
+        # Publish immediately so the next aggregator uses this one
+        BB.ct_eq = ct_eq
+        BB.π_eq = π_eq
+        BB.eval_results = eval_results_step1 
 
-    # step 6: Partial Decryption
-    # Call partial_decrypt with this agg's share
-    # This computes this agg's share of the decryption
+    # STEP 6: PARTIAL DECRYPTION
+    # Call partial_decrypt with agg's share
     M_shares_list, π_dec_share = partial_decrypt(ct_eq, dk_share)
     
     #####
     # Update the boards with eval results
-    # Public board
-    BB.eval_results = eval_results_step1 
-    BB.ct_eq = ct_eq
-    BB.π_eq = π_eq
     
     # Store the aggregators partial share on the board
-    # use dictionaries keyed by agg_id to store all shares
     if not hasattr(BB, "M_shares"):
         BB.M_shares = {}
     if not hasattr(BB, "pi_dec_shares"):
@@ -82,14 +91,13 @@ def Eval(BB, PBB, dk_share, dso_ek, agg_id):
     BB.M_shares[agg_id] = M_shares_list
     BB.pi_dec_shares[agg_id] = π_dec_share
     
-    # print the status
     BB.eval_status = "evaluated_partial_decryption"
 
     # private board
     PBB.eval_data = {
         "ct_b": ct_b,
         "consumption_reports": consumption_reports,
-        "dk_share": "hidden" # Note: don't log the actual key
+        "dk_share": "hidden" 
     }
     
     return (PBB, BB)
@@ -207,41 +215,179 @@ def partial_decrypt(ct_eq, dk_share):
     for ct_eq_i in ct_eq:
         (C1_i, C2_i) = ct_eq_i
         
-        # This is the core partial decryption operation
         # M_share_i = (C1_i)^dk_share
         M_share_i = C1_i.pt_mul(dk_share) 
         
-        # Placeholder for the ZK proof of correct partial decryption
-        # This proof shows M_share_i was correctly computed from C1_i
-        # using a dk_share corresponding to this agg's public share
         pi_i = "placeholder_proof_of_decryption_share" 
         
         M_shares_list.append(M_share_i)
         pi_dec_proofs.append(pi_i)
 
-    # Return this aggregator's shares, NOT the final result.
     return (M_shares_list, pi_dec_proofs)
 
-from utils.ec_elgamal import sub, dec, make_table
-# This function should be called after all aggregators have run Eval.
+# DEBUGGER
 # The dso's dk is purely given here for the debugging, it should not be inserted forproduction
-def combine_decryption_shares(BB, PBB=None, dso_dk=None):
-    """
-    Combines partial decryption shares stored on the Public Board.
-    This is run after a threshold of aggregators have published shares.
-    It computes the final {M} set and posts it to the board.
-    """
+# def combine_decryption_shares(BB, PBB=None, dso_dk=None):
+#     """
+#     Combines partial decryption shares stored on the Public Board.
+#     This is run after a threshold of aggregators have published shares.
+#     It computes the final {M} set and posts it to the board.
+#     """
+#     print("Attempting to combine decryption shares...")
+
+#     try:
+#         # Assuming all published shares are needed (t=n)
+#         share_lists = list(BB.M_shares.values())
+#         if not share_lists:
+#             print("No decryption shares found on board.")
+#             return
+
+#         # TODO: Add verification of all pi_dec_shares here
+        
+#         num_shares_per_agg = len(share_lists[0])
+#         ct_eq_list = BB.ct_eq
+        
+#         if len(ct_eq_list) != num_shares_per_agg:
+#             print("Mismatch between ciphertext count and share count.")
+#             return
+
+#         _, g, order = pub_param()
+#         identity_point = g.pt_mul(0) # g^0
+        
+#         M_set_final = []
+
+#         # ---------- debuggin
+#         print("\n--- Debug: Baselines on BB (raw ciphertexts) ---")
+#         for i, ct in enumerate(getattr(BB, "ct_T", [])):
+#             print(f"  baseline[{i}] = {ct}")
+
+#         if PBB is not None:
+#             print("\n--- Debug: Consumption reports on PBB (raw) ---")
+#             consumption_reports = getattr(PBB, "ct_t", {})
+#             for pk_prime, (t, ct, proof) in consumption_reports.items():
+#                 print(f"  pk_prime={pk_prime}, t={t}, ct={ct}")
+#         # ---------- end debugging
+
+#         # Go through each ciphertext that was decrypted
+#         for i in range(len(ct_eq_list)):
+#             (C1_i, C2_i) = ct_eq_list[i]
+            
+#             # Get share 'i' from each aggregator
+#             shares_for_ct_i = [share_list[i] for share_list in share_lists]
+            
+#             # Combine shares
+#             # (C1_i*dk1) + (C1_i*dk2) + ...
+#             Combined_M_share = shares_for_ct_i[0]
+#             for j in range(1, len(shares_for_ct_i)):
+#                 Combined_M_share = Combined_M_share.pt_add(shares_for_ct_i[j])
+
+#             # DEBUG: compute expected combined share from C1_i and full DSO dk (debug only)
+#             expected_combined = None
+#             if dso_dk is not None:
+#                 try:
+#                     expected_combined = C1_i.pt_mul(dso_dk)
+#                 except Exception as e:
+#                     expected_combined = f"expected computation failed: {e}"
+
+#             # Print debug info: per-agg shares, combined, expected, equality
+#             print(f"\nDEBUG index {i}:")
+#             for idx_ag, share in enumerate(shares_for_ct_i):
+#                 print(f"  agg[{idx_ag}] share: {share}")
+#             print(f"  Combined_M_share (EcPt): {Combined_M_share}")
+#             print(f"  Expected (C1_i * dso.dk): {expected_combined}")
+#             print(f"  Combined == Expected? {Combined_M_share == expected_combined}")
+            
+#             # Final decryption step and remainder of existing debug prints
+#             Plaintext_Point = C2_i.pt_add(Combined_M_share.pt_neg())
+#             print(f"  Plaintext_Point for index {i}: {Plaintext_Point}")
+#             print(f"  Expected identity_point: {identity_point}")
+
+#             # Check if result is g^0 (identity)
+#             if Plaintext_Point == identity_point:
+#                 M_set_final.append(1) # 1 = "g^0 was found"
+#             else:
+#                 M_set_final.append(0) # 0 = "random number"
+        
+#         # ---------- debuggin
+#         if dso_dk is not None:
+#             try:
+#                 expected_combined = C1_i.pt_mul(dso_dk)
+#             except Exception as e:
+#                 expected_combined = f"expected computation failed: {e}"
+
+#             # Print debug info: per-agg shares, combined, expected
+#             print(f"  Shares for index {i}:")
+#             for idx_ag, share in enumerate(shares_for_ct_i):
+#                 print(f"    agg[{idx_ag}] share: {share}")
+#             print(f"  Combined_M_share (EcPt) for index {i}: {Combined_M_share}")
+#             if dso_dk is not None:
+#                 print(f"  Expected (C1_i * dso.dk): {expected_combined}")
+
+#             print(f"  Plaintext_Point for index {i}: {Plaintext_Point}")
+#             print(f"  Expected identity_point: {identity_point}")
+
+#             # If we have dso_dk, also try to decode the Plaintext_Point (sanity)
+#             if dso_dk is not None:
+#                 try:
+#                     pp = BB.pk[1]
+#                     table = make_table(pp)
+#                     # decode what we computed from the combination
+#                     decoded_combination = None
+#                     try:
+#                         decoded_combination = dec(dso_dk, pp, table, (C1_i, C2_i))
+#                     except Exception:
+#                         decoded_combination = "<could not decode (C1_i,C2_i)>"
+#                     print(f"  dec( dso.dk, ct_eq[{i}] )  => (DEBUG) should match computed plain: {decoded_combination}")
+#                 except Exception:
+#                     pass
+#         if dso_dk is not None:
+#             try:
+#                 pp = BB.pk[1]
+#                 table = make_table(pp)
+#                 print("\n--- Decoded baselines (using DSO dk) ---")
+#                 for i, ct in enumerate(getattr(BB, "ct_T", [])):
+#                     plain = dec(dso_dk, pp, table, ct)
+#                     if plain in table:
+#                         print(f"  baseline[{i}] -> {table[plain]}")
+#                     else:
+#                         print(f"  baseline[{i}] -> {plain}")
+
+#                 if PBB is not None:
+#                     print("\n--- Decoded consumption reports (using DSO dk) ---")
+#                     for pk_prime, (t, ct_obj, proof) in consumption_reports.items():
+#                         if isinstance(ct_obj, (list, tuple)):
+#                             bits = []
+#                             for c in ct_obj:
+#                                 p = dec(dso_dk, pp, table, c)
+#                                 bits.append(table[p] if p in table else p)
+#                             print(f"  pk_prime={pk_prime} -> {bits}")
+#                         else:
+#                             plain = dec(dso_dk, pp, table, ct_obj)
+#                             print(f"  pk_prime={pk_prime} -> {table[plain] if plain in table else plain}")
+#             except Exception as e:
+#                 print(f"Decoding with DSO key failed: {e}")
+#         # ---------- end debugging
+
+#         # Publish final results to the board
+#         BB.M_set = M_set_final
+#         BB.eval_status = "evaluated_complete"
+#         print(f"Share combination complete. Final M_set: {BB.M_set}")
+
+#     except Exception as e:
+#         print(f"Error combining shares: {e}")
+#         BB.eval_status = "evaluation_failed_combination"
+
+# clean version without debug, dk, and pbb
+
+def combine_decryption_shares(BB):
     print("Attempting to combine decryption shares...")
 
     try:
-        # Assuming all published shares are needed (t=n)
         share_lists = list(BB.M_shares.values())
         if not share_lists:
             print("No decryption shares found on board.")
             return
 
-        # TODO: Add verification of all pi_dec_shares here
-        
         num_shares_per_agg = len(share_lists[0])
         ct_eq_list = BB.ct_eq
         
@@ -250,75 +396,30 @@ def combine_decryption_shares(BB, PBB=None, dso_dk=None):
             return
 
         _, g, order = pub_param()
-        identity_point = g.pt_mul(0) # g^0
+        identity_point = g.pt_mul(0) 
         
         M_set_final = []
 
-        # ---------- debuggin
-        print("\n--- Debug: Baselines on BB (raw ciphertexts) ---")
-        for i, ct in enumerate(getattr(BB, "ct_T", [])):
-            print(f"  baseline[{i}] = {ct}")
-
-        if PBB is not None:
-            print("\n--- Debug: Consumption reports on PBB (raw) ---")
-            consumption_reports = getattr(PBB, "ct_t", {})
-            for pk_prime, (t, ct, proof) in consumption_reports.items():
-                print(f"  pk_prime={pk_prime}, t={t}, ct={ct}")
-        # ---------- end debugging
-
-        # Go through each ciphertext that was decrypted
         for i in range(len(ct_eq_list)):
             (C1_i, C2_i) = ct_eq_list[i]
             
-            # Get share 'i' from each aggregator
+            # Get share i from each aggregator
             shares_for_ct_i = [share_list[i] for share_list in share_lists]
             
             # Combine shares
-            # (C1_i*dk1) + (C1_i*dk2) + ...
             Combined_M_share = shares_for_ct_i[0]
             for j in range(1, len(shares_for_ct_i)):
                 Combined_M_share = Combined_M_share.pt_add(shares_for_ct_i[j])
             
-            # Final decryption: C2_i / (Combined_M_share)
-            # In additive: C2_i - Combined_M_share
+            # Final decryption: C2_i - Combined_M_share
             Plaintext_Point = C2_i.pt_add(Combined_M_share.pt_neg())
 
             # Check if result is g^0 (identity)
             if Plaintext_Point == identity_point:
-                M_set_final.append(1) # 1 = "g^0 was found"
+                M_set_final.append(1) # "g^0 was found"
             else:
-                M_set_final.append(0) # 0 = "random number"
+                M_set_final.append(0) # "random number"
         
-        # ---------- debuggin
-        if dso_dk is not None:
-            try:
-                pp = BB.pk[1]
-                table = make_table(pp)
-                print("\n--- Decoded baselines (using DSO dk) ---")
-                for i, ct in enumerate(getattr(BB, "ct_T", [])):
-                    plain = dec(dso_dk, pp, table, ct)
-                    if plain in table:
-                        print(f"  baseline[{i}] -> {table[plain]}")
-                    else:
-                        print(f"  baseline[{i}] -> {plain}")
-
-                if PBB is not None:
-                    print("\n--- Decoded consumption reports (using DSO dk) ---")
-                    for pk_prime, (t, ct_obj, proof) in consumption_reports.items():
-                        if isinstance(ct_obj, (list, tuple)):
-                            bits = []
-                            for c in ct_obj:
-                                p = dec(dso_dk, pp, table, c)
-                                bits.append(table[p] if p in table else p)
-                            print(f"  pk_prime={pk_prime} -> {bits}")
-                        else:
-                            plain = dec(dso_dk, pp, table, ct_obj)
-                            print(f"  pk_prime={pk_prime} -> {table[plain] if plain in table else plain}")
-            except Exception as e:
-                print(f"Decoding with DSO key failed: {e}")
-        # ---------- end debugging
-
-        # Publish final results to the board
         BB.M_set = M_set_final
         BB.eval_status = "evaluated_complete"
         print(f"Share combination complete. Final M_set: {BB.M_set}")
