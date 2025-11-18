@@ -1,6 +1,7 @@
 import dso.DSO as distributer
 import smartmeters.smartmeter as sm
 import aggregators.aggregator as agg
+import aggregators.dr as dr
 import boards.board as board
 import boards.privateboard as privateboard
 import utils.eval as eval
@@ -16,14 +17,20 @@ if __name__ == "__main__":
 
     NUM_SM = 5
     NUM_AGG = 4
+    NUM_DR_AGG = 1
+    
     sms = []
     aggs = []
+    dr_aggs = []
     
     for i in range(NUM_SM):
         sms.append(sm.SmartMeter(init_id="sm_id_" + str(i)))
     
     for i in range(NUM_AGG):
         aggs.append(agg.Aggregator(init_id="agg_id_" + str(i)))
+        
+    for i in range(NUM_DR_AGG):
+        dr_aggs.append(dr.DR_Aggregator(init_id="dr_agg_id_" + str(i)))
        
     # sm_info and agg_info are dictionaries with id as key and public key (pk, pp, proof) as value
     # sm_info = {smartmeter.id: smartmeter.get_public_key() for smartmeter in sms}
@@ -31,16 +38,16 @@ if __name__ == "__main__":
 
     sm_info = [(smartmeter.id, smartmeter.get_public_key()) for smartmeter in sms]
     agg_info = [(aggregator.id, aggregator.get_public_key()) for aggregator in aggs]
+    dr_info = [(dr.id, dr.get_public_key()) for dr in dr_aggs]
 
     # TODO FUNCTION SHOULD NOT BE MADE FOR LISTS
     dso.verify_smartmeter(sm_info)
     dso.verify_aggregator(agg_info)
-    
+    dso.verify_dr_aggregator(dr_info)
     
     bb = board.Board()
     bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
     bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
-    # TODO ask about if the list stays as encrypted on the board
 
     bb.target_reduction(dso.generate_noisy_list()) # noisy list from DSO
     
@@ -52,10 +59,17 @@ if __name__ == "__main__":
     for agg in aggs:
         agg.set_dso_public_keys(bb.pk, bb.ek)
         
+    for dr in dr_aggs:
+        dr.set_dso_public_keys(bb.pk, bb.ek)
+    
+    # TODO needs to be threadshold elgamal, so that share is given instead of the whole key 
     # set_dso_dk
     dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
     for agg in aggs:
         agg.set_dso_dk(dso.encrypt_dk_and_send_to_agg(agg.id))
+    
+    for dr in dr_aggs:
+        dr.set_dso_dk(dso.encrypt_dk_and_send_to_agg(dr.id))
 
     # Give agg pk to sms
     for sm in sms:
@@ -96,10 +110,9 @@ if __name__ == "__main__":
     ##########
     # ANONYM
     ##########
-
-    # TODO: change to dr agg
     anonym_agg = aggs[0]
     anonym_bb, anonym_pbb = anonym_agg.make_anonym()
+    
     
     # public board
     bb.publish_anonym_reports(anonym_bb, anonym_agg.id)
@@ -109,11 +122,10 @@ if __name__ == "__main__":
     pbb.publish_anonym_reports(anonym_pbb)
     print("\"Anonym done\".")
 
-    # TODO change to dr agg
-    # dr_agg = aggs[0]
-    # dr_agg.set_psudo_anonymous_iden(pbb.get_participants)
-    # dr_agg.select_random_sms()
-    # bb.publish_selected_sm(dr_agg.get_selected())
+    dr_agg = dr_aggs[0]
+    dr_agg.set_psudo_anonymous_iden(pbb.get_participants)
+    dr_agg.select_random_sms()
+    bb.publish_selected_sm(dr_agg.get_selected())
     
     ##########
     # EVAL

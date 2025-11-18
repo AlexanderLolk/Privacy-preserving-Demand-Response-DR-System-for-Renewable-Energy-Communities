@@ -19,14 +19,16 @@ class DSO:
     
     def __init__(self, init_id="DSO", pp=None):
         pp = pub_param()
+        self.registered_sm = []
+        self.registered_agg = []
+        self.registered_dr = []
+        
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
         ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
 
     # verifies every smart meter (users)
     # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
-        self.registered_sm = []
-        
         for (sm_id, val) in sm_info:
             # val = (pk, pp, proof) 
             if schnorr_NIZKP_verify(val[0], val[1], val[2]):
@@ -40,13 +42,22 @@ class DSO:
     # verifies every aggregator
     # and adds it into a registered list
     def verify_aggregator(self, agg_info):
-        self.registered_agg = []
-        
         for (agg_id, val) in agg_info:
             # val = (pk, pp, proof) 
             if schnorr_NIZKP_verify(val[0], val[1], val[2]):
                 self.registered_agg.append((agg_id, val))
                 print("aggregator: " + agg_id + " is verified")
+            else:
+                print("failed to verify aggregator")
+                return False
+        return True
+    
+    def verify_dr_aggregator(self, dr_info):
+        for (dr_id, val) in dr_info:
+            # val = (pk, pp, proof) 
+            if schnorr_NIZKP_verify(val[0], val[1], val[2]):
+                self.registered_dr.append((dr_id, val))
+                print("aggregator: " + dr_id + " is verified")
             else:
                 print("failed to verify aggregator")
                 return False
@@ -120,9 +131,11 @@ class DSO:
     def sign_registered_lists(self):
         sm_msg_list = [sm_id for sm_id, _ in self.registered_sm]
         agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]
+        dr_msg_list = [dr_id for dr_id, _ in self.registered_dr]
 
         # (sk, sec_params, msg_list)
         sm_signatures = schnorr_sign_list(self.sk, self.pp, sm_msg_list)
         agg_signatures = schnorr_sign_list(self.sk, self.pp, agg_msg_list)
+        dr_signatures = schnorr_sign_list(self.sk, self.pp, dr_msg_list)
 
-        return (self.registered_sm, sm_signatures, self.registered_agg, agg_signatures)
+        return (self.registered_sm, sm_signatures, self.registered_agg, agg_signatures, self.registered_dr, dr_signatures)
