@@ -20,22 +20,17 @@ class PrivateBoard:
         # print("Published smartmeter reports:")
         # self.sm_reports = sm_reports
         
-    def publish_anonym_reports(self, anonym_reports):
+    # def publish_anonym_reports(self, anonym_reports):
         
-        self.participants = []
+    #     self.participants = []
         
-        for pk_prime, ct, t, proof in anonym_reports:
-            self.participants.append(pk_prime)
-            print("[NOT IMP] in privateboard: check proof for anonym in PBB")
+    #     for pk_prime, ct, t, proof in anonym_reports:
+    #         self.participants.append(pk_prime)
+    #         print("[NOT IMP] in privateboard: check proof for anonym in PBB")
             
-        self.anonym_reports = anonym_reports
+    #     self.anonym_reports = anonym_reports
         
-    # pseudo-anonymous identity
-    def get_participants(self):
-        return self.participants
-    
-    # TODO this is for testing eval, it should not be here
-    # TESTING EVAL
+    # Anonym user consumption reports from 
     def publish_anonym_reports(self, anonym_reports):
         
         self.participants = []
@@ -47,3 +42,8 @@ class PrivateBoard:
             print("[NOT IMP] in privateboard: check proof for anonym in PBB")
             
         self.anonym_reports = anonym_reports
+
+    # pseudo-anonymous identity
+    def get_participants(self):
+        return self.participants
+

@@ -4,6 +4,7 @@ import aggregators.aggregator as agg
 import boards.board as board
 import boards.privateboard as privateboard
 import utils.eval as eval
+from utils.generators import pub_param
 
 # Distribution System Operators (DSOs)
 
@@ -119,10 +120,66 @@ if __name__ == "__main__":
     ##########
 
     # TODO use the correct values
+    # bb.publish_baselines(bb.T_r) # get the baselines from the board
+
+    # if getattr(bb, "ct_T", None) is None:
+    #     bb.ct_T = bb.T_r
+
+    # eval.Eval(bb, pbb, dso.dk, dso.ek)
+    # print("Eval done.")
+
+    # -------THRESHOLD KEY SETUP START
+    # Need the group order for share generation
+    _, _, order = pub_param() 
+    
+    # Create first share (random)
+    dk_share_1 = order.random()
+    # Create second share (dso.dk - share1)
+    dk_share_2 = (dso.dk - dk_share_1) % order
+    
+    # Assign the shares to the aggregators.
+    aggs[0].dk_share = dk_share_1 # Energy aggregator
+    aggs[1].dk_share = dk_share_2 # DR aggregator
+
+    # -------THRESHOLD KEY SETUP END
+
+    # Publish baseline and target (UNCHANGED)
     bb.publish_baselines(bb.T_r)
     if getattr(bb, "ct_T", None) is None:
         bb.ct_T = bb.T_r
 
-    eval.Eval(bb, pbb, dso.dk, dso.ek)
-    print("Eval done.")
+    # call Eval for each aggregator
+    # Aggregator 1 (Energy) runs Eval and posts its partial decryption
+    print("Aggregator 1 (Energy) running Eval...")
+    eval.Eval(bb, pbb, aggs[0].dk_share, dso.ek, aggs[0].id)
+    print(f"Aggregator 1 posted partial decryption shares.")
+
+    # Aggregator 2 (DR) runs Eval and posts its partial decryption
+    print("Aggregator 2 (DR) running Eval...")
+    eval.Eval(bb, pbb, aggs[1].dk_share, dso.ek, aggs[1].id)
+    print(f"Aggregator 2 posted partial decryption shares.")
+
+    print("Partial evaluation done by both aggregators.")
+
+    # COMBINE SHARES
+    # This call combines the shares posted on the board to get the
+    # final result M_set.
     
+    eval.combine_decryption_shares(bb, pbb, dso.dk)
+    
+    print(f"Final Eval status: {getattr(bb, 'eval_status', 'Not evaluated')}")
+    print(f"Final M_set result: {getattr(bb, 'M_set', 'Not computed')}")
+
+    print("reports on private board:", len(getattr(pbb, "ct_t", {})))
+    print("targets on public board (len bb.ct_T):", len(getattr(bb, "ct_T", [])))
+
+    from utils.ec_elgamal import dec, make_table
+    pp = bb.pk[1]
+    table = make_table(pp)
+    if getattr(bb, "ct_sum", None) is not None:
+        try:
+            decoded_sum = dec(dso.dk, pp, table, bb.ct_sum)
+            decoded_sum_readable = table[decoded_sum] if decoded_sum in table else decoded_sum
+            print(f"Decoded ct_sum (aggregate reduction) = {decoded_sum_readable}")
+        except Exception as e:
+            print(f"Failed to decode ct_sum with DSO dk: {e}")

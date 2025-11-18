@@ -119,6 +119,7 @@ class Board:
             
         self.anonym = anonym_reports
         
+    # pseudo-anonymous identities which are selected by the DR aggregator
     def publish_selected_sm(self, selected_w_sign, dr_agg_pk):
         selected, signature = selected_w_sign
         if not schnorr_verify(dr_agg_pk[0], dr_agg_pk[1], str(selected), signature):

@@ -149,3 +149,5 @@ class Aggregator:
         
         # TODO: ASK ABOUT SK
         return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)
+    
+    
