@@ -107,7 +107,8 @@ def ord_comparison(ct_b, ct_m):
     _, g, order = pub_param()
     identity_point = g.pt_mul(0)
     ct_o = (identity_point, identity_point)
-    ord_proof = "ord_proof"
+
+    ord_proof = "ord_proof" # placeholder
     return ct_o, ord_proof
 
 # ctred ← Reduct(ct_b, c_tm, ct_o)
@@ -224,6 +225,55 @@ def partial_decrypt(ct_eq, dk_share):
         pi_dec_proofs.append(pi_i)
 
     return (M_shares_list, pi_dec_proofs)
+
+def combine_decryption_shares(BB):
+    print("Attempting to combine decryption shares...")
+
+    try:
+        share_lists = list(BB.M_shares.values())
+        if not share_lists:
+            print("No decryption shares found on board.")
+            return
+
+        num_shares_per_agg = len(share_lists[0])
+        ct_eq_list = BB.ct_eq
+        
+        if len(ct_eq_list) != num_shares_per_agg:
+            print("Mismatch between ciphertext count and share count.")
+            return
+
+        _, g, order = pub_param()
+        identity_point = g.pt_mul(0) 
+        
+        M_set_final = []
+
+        for i in range(len(ct_eq_list)):
+            (C1_i, C2_i) = ct_eq_list[i]
+            
+            # Get share i from each aggregator
+            shares_for_ct_i = [share_list[i] for share_list in share_lists]
+            
+            # Combine shares
+            Combined_M_share = shares_for_ct_i[0]
+            for j in range(1, len(shares_for_ct_i)):
+                Combined_M_share = Combined_M_share.pt_add(shares_for_ct_i[j])
+            
+            # Final decryption: C2_i - Combined_M_share
+            Plaintext_Point = C2_i.pt_add(Combined_M_share.pt_neg())
+
+            # Check if result is g^0 (identity)
+            if Plaintext_Point == identity_point:
+                M_set_final.append(1) # "g^0 was found"
+            else:
+                M_set_final.append(0) # "random number"
+        
+        BB.M_set = M_set_final
+        BB.eval_status = "evaluated_complete"
+        print(f"Share combination complete. Final M_set: {BB.M_set}")
+
+    except Exception as e:
+        print(f"Error combining shares: {e}")
+        BB.eval_status = "evaluation_failed_combination"
 
 # DEBUGGER
 # The dso's dk is purely given here for the debugging, it should not be inserted forproduction
@@ -379,59 +429,6 @@ def partial_decrypt(ct_eq, dk_share):
 
 # clean version without debug, dk, and pbb
 
-def combine_decryption_shares(BB):
-    print("Attempting to combine decryption shares...")
-
-    try:
-        share_lists = list(BB.M_shares.values())
-        if not share_lists:
-            print("No decryption shares found on board.")
-            return
-
-        num_shares_per_agg = len(share_lists[0])
-        ct_eq_list = BB.ct_eq
-        
-        if len(ct_eq_list) != num_shares_per_agg:
-            print("Mismatch between ciphertext count and share count.")
-            return
-
-        _, g, order = pub_param()
-        identity_point = g.pt_mul(0) 
-        
-        M_set_final = []
-
-        for i in range(len(ct_eq_list)):
-            (C1_i, C2_i) = ct_eq_list[i]
-            
-            # Get share i from each aggregator
-            shares_for_ct_i = [share_list[i] for share_list in share_lists]
-            
-            # Combine shares
-            Combined_M_share = shares_for_ct_i[0]
-            for j in range(1, len(shares_for_ct_i)):
-                Combined_M_share = Combined_M_share.pt_add(shares_for_ct_i[j])
-            
-            # Final decryption: C2_i - Combined_M_share
-            Plaintext_Point = C2_i.pt_add(Combined_M_share.pt_neg())
-
-            # Check if result is g^0 (identity)
-            if Plaintext_Point == identity_point:
-                M_set_final.append(1) # "g^0 was found"
-            else:
-                M_set_final.append(0) # "random number"
-        
-        BB.M_set = M_set_final
-        BB.eval_status = "evaluated_complete"
-        print(f"Share combination complete. Final M_set: {BB.M_set}")
-
-    except Exception as e:
-        print(f"Error combining shares: {e}")
-        BB.eval_status = "evaluation_failed_combination"
-
-# from utils.dec_proof import hash_to_bn
-# from utils.ec_elgamal import sub
-# from utils.generators import pub_param
-# from petlib.ec import EcPt
 
 
 # #=============
