@@ -4,17 +4,27 @@ from utils.ec_elgamal import enc, dec, make_table
 import hashlib
 
 def hash_to_bn(*points, order):
-    """Hash EC points deterministically into a scalar mod q."""
+    """Hash EC points deterministically into a scalar mod q.
+
+    :param *points: 
+    :param order: 
+
+    """
     h = hashlib.sha256()
     for P in points:
         h.update(P.export())   # serialize EC point bytes
     return Bn.from_binary(h.digest()) % order
 
 def prove_correct_decryption(ek, sec_params, M, dk):
-    """
-    Prove that M = C2 - dk * C1 (i.e., correct ElGamal decryption)
+    """Prove that M = C2 - dk * C1 (i.e., correct ElGamal decryption)
     without revealing dk.
     Returns a non-interactive proof (A1, A2, s).
+
+    :param ek: 
+    :param sec_params: 
+    :param M: 
+    :param dk: 
+
     """
     _, g, order = sec_params
     C = enc(ek, sec_params, M)
@@ -41,7 +51,13 @@ def prove_correct_decryption(ek, sec_params, M, dk):
     return (M_point, C, A1, A2, s)
 
 def verify_correct_decryption(ek, sec_params, proof):
-    """Verify a Chaum–Pedersen style NIZK proof of correct decryption."""
+    """Verify a Chaum–Pedersen style NIZK proof of correct decryption.
+
+    :param ek: 
+    :param sec_params: 
+    :param proof: 
+
+    """
     _, g, order = sec_params
     M, C, A1, A2, s = proof
     C1, C2 = C

@@ -4,6 +4,11 @@
 from utils.signature import Hash, schnorr_sign
 
 def _export_bytes(x):
+    """
+
+    :param x: 
+
+    """
     if hasattr(x, "export"):
         return x.export()
     if isinstance(x, (bytes, bytearray)):
@@ -11,6 +16,13 @@ def _export_bytes(x):
     return str(x).encode()
 
 def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
+    """
+
+    :param inputs:  (Default value = None)
+    :param r_prime_list:  (Default value = None)
+    :param secret_key_T:  (Default value = None)
+
+    """
     # TODO: ASK ABOUT SK
     # [(pk, (t, ct, sig))] = inputs
     # r_primes = [r´]

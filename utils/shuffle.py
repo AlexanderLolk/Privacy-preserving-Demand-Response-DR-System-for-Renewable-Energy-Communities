@@ -7,6 +7,7 @@ from petlib.bn import Bn
 
 # main
 def get_h_generators(N):
+    """ """
     _, g, order = gen.pp
     h_generators_local = []
     
@@ -26,6 +27,7 @@ def get_h_generators(N):
 
 # Generates a random permutation ψ ∈ Ψ_N
 def GenPermutation(N):
+    """ """
     I = list(range(N))
     j_i = list(range(N))
     for i in range(N):
@@ -38,6 +40,7 @@ def GenPermutation(N):
 # given list e of pk_i into a shuffled list e′.
 # then genshuffle anonymises the list with a random number form the curve 
 def GenShuffle(e):
+    """ """
     N = len(e)
     ψ = GenPermutation(N)
     _, _, order = gen.pp
@@ -63,6 +66,7 @@ def GenShuffle(e):
 # committing to the columns of the corresponding permutation matrix.
 # using GenCommitment() is to hide the permutation ψ in the shuffle proof
 def GenCommitment(ψ, h_gens):
+    """ """
     _, g, order = gen.pp
     N = len(ψ)
     c = []
@@ -84,6 +88,7 @@ def GenCommitment(ψ, h_gens):
     return (c, r)
 
 def GenCommitmentChain(c0, u):
+    """ """
     _, g, order = gen.pp
     N = len(u)
     c = []
@@ -111,12 +116,14 @@ def GenCommitmentChain(c0, u):
     return (c, r)
 
 def hash_to_zq(data):
+    """ """
     hasher = hashlib.sha256()
     hasher.update(str(data).encode())
     return Bn.from_binary(hasher.digest())
 
 # pk for ours is ek
 def GenProof(e, e_prime, r_prime, ψ, pk):
+    """ """
     _, g, order = gen.pp
     N = len(e)
     q = order
@@ -227,6 +234,7 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     return proof
 
 def verify_shuffle_proof(proof, e, e_prime, pk):
+    """ """
     _, g, order = gen.pp 
     N = len(e)
     
@@ -358,6 +366,7 @@ def verify_shuffle_proof(proof, e, e_prime, pk):
 
 # testing shuffle flow
 def test_basic_shuffle():
+    """ """
     print("\n" + "="*60)
     print("Testing Basic Shuffle Proof with Real Keys")
     print("="*60)
@@ -417,6 +426,7 @@ def test_basic_shuffle():
     return is_valid
 
 def test_integration_with_aggregator():
+    """ """
     print("\n" + "="*60)
     print("Testing Full Integration Flow")
     print("="*60)

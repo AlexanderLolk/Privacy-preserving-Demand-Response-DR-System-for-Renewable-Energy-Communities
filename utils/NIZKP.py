@@ -3,6 +3,11 @@ import hashlib
 
 # schnorr_challenge hashes the elements for the challenge used in Schnorrs proof
 def schnorr_NIZKP_challenge(elements):
+    """
+
+    :param elements: 
+
+    """
     elem = [len(elements)] + elements
     elem_str = map(str, elem) 
     elem_len = map(lambda x: "%s||%s" % (len(x) , x), elem_str) 
@@ -13,6 +18,14 @@ def schnorr_NIZKP_challenge(elements):
 
 # schnorr_proof creates the NIZKP of knowledge of the secret key (rewrite the explanation)
 def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
+    """
+
+    :param pk: 
+    :param sec_params: 
+    :param sk: 
+    :param msg:  (Default value = "")
+
+    """
     _, g, order = sec_params
     r = order.random()            # nonce
     W = r * g                     # commitment
@@ -29,6 +42,14 @@ def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
 
 # schnorr_NIZKP_verify verifies the NIZKP of knowledge of the secret key
 def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
+    """
+
+    :param pk: 
+    :param sec_params: 
+    :param proof: 
+    :param msg:  (Default value = "")
+
+    """
     _, g, order = sec_params
     c, s, W = proof
     # reconstruct commitment

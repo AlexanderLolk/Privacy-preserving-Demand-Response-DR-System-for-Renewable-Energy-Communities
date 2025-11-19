@@ -3,6 +3,11 @@ import hashlib
 
 # key_gen generates a private/public key pair (sk, pk)
 def key_gen(sec_params):
+    """
+
+    :param sec_params: 
+
+    """
     _, g, order = sec_params
     priv_sk = order.random()
     pub_pk = priv_sk * g
@@ -12,6 +17,13 @@ def key_gen(sec_params):
 
 # Hash hashes the commitment R and message msg to a challenge
 def Hash(R, msg, order):
+    """
+
+    :param R: 
+    :param msg: 
+    :param order: 
+
+    """
     h = hashlib.sha256()
     h.update(R.export())
 
@@ -32,6 +44,13 @@ def Hash(R, msg, order):
 
 # schnorr_sign creates a Schnorr signature on message msg using private key sk
 def schnorr_sign(sk, sec_params, msg):
+    """
+
+    :param sk: 
+    :param sec_params: 
+    :param msg: 
+
+    """
     _, g, order = sec_params
     k = order.random()            # nonce
     R = k * g                     # ephemeral public key
@@ -41,6 +60,14 @@ def schnorr_sign(sk, sec_params, msg):
 
 # schnorr_verify verifies a Schnorr signature signature on message msg using public key pk
 def schnorr_verify(pk, sec_params, msg, signature):
+    """
+
+    :param pk: 
+    :param sec_params: 
+    :param msg: 
+    :param signature: 
+
+    """
     _, g, order = sec_params
     R, s = signature
     e = Hash(R, msg, order)                 # Recompute challenge
@@ -50,6 +77,13 @@ def schnorr_verify(pk, sec_params, msg, signature):
 
 # signs lists of messages
 def schnorr_sign_list(sk, sec_params, msg_list):
+    """
+
+    :param sk: 
+    :param sec_params: 
+    :param msg_list: 
+
+    """
     signatures = []
     for msg in msg_list:
         sign = schnorr_sign(sk, sec_params, msg)
@@ -58,6 +92,14 @@ def schnorr_sign_list(sk, sec_params, msg_list):
     
 # 
 def schnorr_verify_list(pk, sec_params, msg_list, signatures):
+    """
+
+    :param pk: 
+    :param sec_params: 
+    :param msg_list: 
+    :param signatures: 
+
+    """
     results = []
     for i, (msg, signature) in enumerate(zip(msg_list, signatures)):
         is_valid = schnorr_verify(pk, sec_params, msg, signature)

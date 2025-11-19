@@ -306,6 +306,7 @@ def partial_decrypt(ct_eq, dk_share):
     return (M_shares_list, pi_dec_proofs)
 
 def combine_decryption_shares(BB):
+    """ """
     print("Attempting to combine decryption shares...")
 
     try:

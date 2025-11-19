@@ -2,7 +2,11 @@ from petlib.bn import Bn
 from petlib.ec import EcPt
 
 def key_gen(params):
-    """Generates a fresh key pair"""
+    """Generates a fresh key pair
+
+    :param params: 
+
+    """
     _, g, o = params
     priv = o.random()
     pub = priv * g
@@ -20,6 +24,13 @@ def key_gen(params):
 #     return (a, b)
 
 def enc(pub, params, counter):
+    """
+
+    :param pub: 
+    :param params: 
+    :param counter: 
+
+    """
     G, g, o = params
     # k = r
     k = o.random()
@@ -43,7 +54,11 @@ def enc(pub, params, counter):
     return (a, b)
 
 def make_table(params):
-    """Make a decryption table"""
+    """Make a decryption table
+
+    :param params: 
+
+    """
     _, g, o = params
     table = {}
     for i in range(-1000, 1000):
@@ -51,7 +66,14 @@ def make_table(params):
     return table
 
 def dec(priv, params, table, c1):
-    """Decrypt an encrypted counter""" 
+    """Decrypt an encrypted counter
+
+    :param priv: 
+    :param params: 
+    :param table: 
+    :param c1: 
+
+    """
     _, g, o = params
     a, b = c1
     # plain = b + (-priv * a)
@@ -59,6 +81,13 @@ def dec(priv, params, table, c1):
     return table[plain]
     
 def demo(params, ek, dk):
+    """
+
+    :param params: 
+    :param ek: 
+    :param dk: 
+
+    """
     # msg = Bn.from_binary(dk)
     msg = Bn(5)
     print("Original message: ", str(msg))

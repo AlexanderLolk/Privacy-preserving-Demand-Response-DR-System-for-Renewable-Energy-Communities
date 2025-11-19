@@ -7,6 +7,7 @@ import utils.shuffle as shuffle
 from utils.dec_proof import prove_correct_decryption
 
 def pub_param(nid=713):
+    """ """
     group_G = EcGroup(nid)
     # g is the base point of the curve, which is also called the generator
     g = group_G.generator()
@@ -20,6 +21,7 @@ pp = pub_param()
 # SKeyGen(id, pp) to generate a signing key pair ((id, pk), sk) and publishes (id, pk) 
 # generates signature key pair (sk, pk) for identity id
 def skey_gen(id=random, pp=None):
+    """ """
     if pp is None:
         pp = pub_param()
     sk, pk = sig.key_gen(pp)
@@ -31,6 +33,7 @@ def skey_gen(id=random, pp=None):
 # It then computes πdk ← Proofdk((pp, ek), dk), updates ek such
 # that ek contains pp along with πdk, and returns (ek, dk).
 def ekey_gen(pp=None):
+    """ """
     if pp is None:  
         pp = pub_param()
     ek, dk = ahe.key_gen(pp)
@@ -51,6 +54,7 @@ def ekey_gen(pp=None):
 # id_a_pk[] is a list of public keys
 # sends an anonymized list of public keys along with the proof of shuffle
 def mix_id(ID_pk):
+    """ """
     # ID_pk: list of tuples (id, (pk, pp, proof))
     
     if not ID_pk:
@@ -72,6 +76,7 @@ def mix_id(ID_pk):
 user_info = {}
 
 def report(id, sk, ek, m, t, user_pk):
+    """ """
     # to get pk sended back
     pk = user_pk[0]
     pp = user_pk[1]
