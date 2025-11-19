@@ -7,6 +7,7 @@ from utils.ec_elgamal import dec, make_table
 import utils.anonym as anonym
 
 class Aggregator:
+    """ """
 
     def __init__(self, init_id="agg_id", pp=None):
         
@@ -21,16 +22,29 @@ class Aggregator:
         self.participants_report = []
     
     def get_id(self):
+        """ """
         return self.id
 
     def get_public_key(self):
+        """ """
         return (self.pk, self.pp, self.s_proof)
     
     def set_dso_public_keys(self, dso_pk, dso_ek):
+        """
+
+        :param dso_pk: 
+        :param dso_ek: 
+
+        """
         self.dso_pk = dso_pk
         self.dso_ek = dso_ek
         
     def set_dso_dk(self, cipher_signature):
+        """
+
+        :param cipher_signature: 
+
+        """
         # print("(Not implemented) In agg.set_dso_dk: got un-encrypted dso dk")
         self.dso_dk = cipher_signature
 
@@ -66,15 +80,26 @@ class Aggregator:
     # Report: this is signed by the aggregator, the idea is to prove this specific aggregator did the mixing
     # send (pk_prime, πmix) to board
     def create_mixed_anon_pk_set(self, ID_pk):
+        """
+
+        :param ID_pk: 
+
+        """
         # mix_anon_list = [pk_prime, r_prime, πmix_proof]
         self.mix_anon_list = mix_id(ID_pk)   
 
     def publish_mixed_keys(self):
+        """ """
         # publish (pk_prime, πmix)
         # TODO: sign the list? or each element?
         return (self.mix_anon_list[0], self.mix_anon_list[2])
     
     def set_anon_key_mix(self, sm):
+        """
+
+        :param sm: 
+
+        """
         # sm can be either (id, pk) or just pk
         if isinstance(sm, tuple):
             sm_pk = sm[0]
@@ -96,6 +121,11 @@ class Aggregator:
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
     def check_sm_report(self, sm_report):
+        """
+
+        :param sm_report: 
+
+        """
         # pk is a tuble with (pk, pp, s_proof)
         (pk, (t, cts, signature)) = sm_report
 
@@ -126,11 +156,14 @@ class Aggregator:
             self.participants.append(pk_prime)
             
     def get_participants(self):
+        """ """
         return self.participants
     
     def get_agg_id_And_encryption_key(self):
+        """ """
         return (self.id, self.ek)
     
     # Not implemented (see utils/anonym.py)
     def make_anonym(self):
+        """ """
         return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)

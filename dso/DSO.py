@@ -11,6 +11,7 @@ from utils.ec_elgamal import enc
 import random
 
 class DSO:
+    """ """
     
     def __init__(self, init_id="DSO", pp=None):
         pp = pub_param()
@@ -25,6 +26,14 @@ class DSO:
     # verifies every smart meter (users)
     # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
+        """verifies a smartmeter by looking at schnorr's NIZKP
+        and, if true, adds it to a list of registered smartmeters
+
+        :param sm_info: id: string, (pk: EcPt, pp: (G, g, order), proof: ))
+        :returns: True or False after having checked schnorr's NIZKP
+
+        """
+
         sm_id, val = sm_info
         # val = (pk, pp, proof)
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
@@ -38,6 +47,11 @@ class DSO:
     # verifies every aggregator
     # and adds it into a registered list
     def verify_aggregator(self, agg_info):
+        """
+
+        :param agg_info: 
+
+        """
         agg_id, val = agg_info
         # val = (pk, pp, proof)
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
@@ -49,6 +63,11 @@ class DSO:
         return True
     
     def verify_dr_aggregator(self, dr_info):
+        """
+
+        :param dr_info: 
+
+        """
         dr_id, val = dr_info
         # val = (pk, pp, proof) 
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
@@ -62,6 +81,7 @@ class DSO:
     # DR parameters and target reductions
     # Placeholder values for now
     def calculate_target_reduction():
+        """ """
         p = "1"
         phi = "0.05"
         R = "3"
@@ -78,6 +98,7 @@ class DSO:
     # noisy list
     # TODO check if the noisy list is actually a mathematic implementation (this code was done as a translation of the report words)
     def generate_noisy_list(self):
+        """ """
         _, target_reduction = DSO.calculate_target_reduction()
 
         max_noise = max(1, target_reduction - 1)
@@ -97,18 +118,30 @@ class DSO:
         return enc_TR, signature_TR
 
     def get_public_key(self):
+        """ """
         return (self.pk, self.pp, self.s_proof)
     
     def get_encryption_key(self):
+        """ """
         return (self.ek, self.pp, self.e_proof)
     
     def set_agg_encryption_key(self, aggs):
+        """
+
+        :param aggs: 
+
+        """
         # aggs = [(id, ek)]
         self.agg_ek = {id: ek for (id, ek) in aggs}    
 
     # Report: encrypting isn't implemented
     # This should use secure channels over SSL in production
     def encrypt_dk_and_send_to_agg(self, agg_id):
+        """
+
+        :param agg_id: 
+
+        """
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
         return self.dk
         
@@ -126,6 +159,7 @@ class DSO:
         # return (enc_dk, sign_dk)
 
     def sign_registered_lists(self):
+        """ """
         sm_msg_list = [sm_id for sm_id, _ in self.registered_sm]
         agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]
         dr_msg_list = [dr_id for dr_id, _ in self.registered_dr]

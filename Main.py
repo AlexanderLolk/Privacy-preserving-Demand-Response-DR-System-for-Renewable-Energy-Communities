@@ -107,7 +107,8 @@ if __name__ == "__main__":
             m = 0 # non-participating user sends 0 report
 
         report_data = smartmeter.generate_and_send_report(m)
-        print(f"Smartmeter {smartmeter.id} sent report.") 
+        print(f"Smartmeter {smartmeter.id} sent report.")
+        # extracting participants
         report_agg.check_sm_report(report_data)
     
     bb.publish_participants(report_agg.get_participants())

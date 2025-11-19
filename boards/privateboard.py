@@ -1,10 +1,16 @@
 class PrivateBoard:
+    """ """
     
     def __init__(self):
         pass
         
     # Anonym user consumption reports from 
     def publish_anonym_reports(self, anonym_reports):
+        """
+
+        :param anonym_reports: 
+
+        """
         
         self.participants = []
         self.ct_t = {}  # pk' -> (t, ct_c, σ)
@@ -18,4 +24,5 @@ class PrivateBoard:
 
     # pseudo-anonymous identity
     def get_participants(self):
+        """ """
         return self.participants

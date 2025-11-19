@@ -5,8 +5,14 @@ from utils.dec_proof import verify_correct_decryption
 from utils.shuffle import verify_shuffle_proof # TODO change name to be more specific like shuffle_verify_proof
 
 class Board:
+    """ """
     
     def publish_dso_public_keys(self, dso_keys):
+        """
+
+        :param dso_keys: 
+
+        """
         
         # (pk, ek)
         (pk, pp, s_proof) = dso_keys[0]
@@ -24,6 +30,11 @@ class Board:
     # The DSO registers and has verified users and aggregators, then sends it to the board
     # TODO rewrite all schnorr_verify name to be schnorr_sign_verify for clarity
     def publish_smartmeters_and_aggregators(self, signed_lists):
+        """
+
+        :param signed_lists: 
+
+        """
         (
             self.register_smartmeter, sm_signatures, 
             self.register_aggregator, agg_signatures, 
@@ -62,6 +73,11 @@ class Board:
         return True
 
     def target_reduction(self, T_r):
+        """
+
+        :param T_r: 
+
+        """
         # the target reduction list is encrypted and signed by the DSO
         
         enc_T_r, signature = T_r
@@ -78,6 +94,11 @@ class Board:
     # we use self.pk[1][1] as the generator g for the proof verification.
     # We use g because its a value both the prover and verifier agrees on, instead of a random pk from the list which may cause inconsistency
     def publish_mix_pk_and_proof(self, mix_data):
+        """
+
+        :param mix_data: 
+
+        """
         pk_prime, πmix = mix_data
         self.mix_pk = pk_prime
         
@@ -94,14 +115,26 @@ class Board:
 
     # step 6
     def publish_participants(self, participants):
+        """
+
+        :param participants: 
+
+        """
         self.participants = participants
 
     # currently not used, since it isnt in the sequnce chart
     def get_publish_participants(self):
+        """ """
         return self.participants
     
     # Report: Should be sent through the anonym algorithm
     def publish_anonym_reports(self, anonym_reports, agg_id):
+        """
+
+        :param anonym_reports: 
+        :param agg_id: 
+
+        """
         hashed_reports, signature = anonym_reports
         
         agg_pk = None
@@ -118,6 +151,11 @@ class Board:
         
     # pseudo-anonymous identities which are selected by the DR aggregator
     def publish_selected_sm(self, selected_w_sign):
+        """
+
+        :param selected_w_sign: 
+
+        """
         selected, signature, dr_agg_pk = selected_w_sign
         if not schnorr_verify(dr_agg_pk[0], dr_agg_pk[1], str(selected), signature):
             print("DR agg signature verification failed.")
@@ -125,8 +163,14 @@ class Board:
         self.selected = selected
 
     def get_selected_sm(self):
+        """ """
         return self.selected
 
     # the baseline
     def publish_baselines(self, ct_b):
+        """
+
+        :param ct_b: 
+
+        """
         self.ct_b = ct_b
