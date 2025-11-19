@@ -40,10 +40,14 @@ if __name__ == "__main__":
     agg_info = [(aggregator.id, aggregator.get_public_key()) for aggregator in aggs]
     dr_info = [(dr.id, dr.get_public_key()) for dr in dr_aggs]
 
-    # TODO FUNCTION SHOULD NOT BE MADE FOR LISTS
-    dso.verify_smartmeter(sm_info)
-    dso.verify_aggregator(agg_info)
-    dso.verify_dr_aggregator(dr_info)
+    for sm in sm_info:
+        dso.verify_smartmeter(sm)
+    
+    for agg in agg_info:
+        dso.verify_aggregator(agg)
+    
+    for dr in dr_info:
+        dso.verify_dr_aggregator(dr)
     
     bb = board.Board()
     bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
@@ -62,7 +66,7 @@ if __name__ == "__main__":
     for dr in dr_aggs:
         dr.set_dso_public_keys(bb.pk, bb.ek)
     
-    # TODO needs to be threadshold elgamal, so that share is given instead of the whole key 
+    # TODO needs to be treshhold elgamal, so that share is given instead of the whole key 
     # set_dso_dk
     dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
     for agg in aggs:
@@ -95,8 +99,9 @@ if __name__ == "__main__":
     report_user_info = sm_info
     report_agg = aggs[0]
 
+    # TODO perhaps a different message and a better way of choosing participating vs non-participating users
     for i, smartmeter in enumerate(sms):
-        if i < NUM_SM - 1:
+        if i < NUM_SM - 3:
             m = 10
         else:
             m = 0 # non-participating user sends 0 report
@@ -160,12 +165,12 @@ if __name__ == "__main__":
     # Aggregator 1 (Energy) runs Eval and posts its partial decryption
     print("")
     print("Aggregator 1 (Energy) running Eval...")
-    eval.Eval(bb, pbb, aggs[0].dk_share, dso.ek, aggs[0].id)
+    eval.eval(bb, pbb, aggs[0].dk_share, dso.ek, aggs[0].id)
     print(f"Aggregator 1 posted partial decryption shares.")
 
     # Aggregator 2 (DR) runs Eval and posts its partial decryption
     print("Aggregator 2 (DR) running Eval...")
-    eval.Eval(bb, pbb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
+    eval.eval(bb, pbb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
     print(f"Aggregator 2 posted partial decryption shares.")
 
     print("Partial evaluation done by both aggregators.")

@@ -3,9 +3,18 @@ from utils.dec_proof import hash_to_bn
 from utils.generators import pub_param
 from petlib.ec import EcPt
 
+#####
+# Eval() outputs an evaluation and showcases which users have met the target reduction
+# example:
+# M_set = [1,0,1,1,0] means that user 0,2,3 have met the target reduction
+# user 1 and 4 have not met the target reduction
+
 # Helper function to calculate subtraction of two ciphertexts
 def sub(c1, c2):
-    """Subtract two encrypted counters: c1 - c2"""
+    """
+    Computes Enc(m1 - m2) given Enc(m1) and Enc(m2) by using the 
+    additive property of Elliptic Curve ElGamal (C1 * C2^-1)
+    """
     a1, b1 = c1
     a2, b2 = c2
     return (a1 + (-a2), b1 + (-b2))
@@ -17,7 +26,11 @@ def sub(c1, c2):
 
 # takes dk_share and agg_id instead of full dk
 # Takes this aggregator's 'dk_share' and 'agg_id' instead.
-def Eval(BB, PBB, dk_share, dso_ek, agg_id):
+def eval(BB, PBB, dk_share, dso_ek, agg_id):
+    """
+    Retrieves reports, computes individual reductions, aggregates them, 
+    and initiates the threshold decryption process to verify targets
+    """
     # list of cts
     # ct_b: baseline ciphertexts from BB
     ct_b = getattr(BB, "ct_b", None)
@@ -72,6 +85,27 @@ def Eval(BB, PBB, dk_share, dso_ek, agg_id):
         ct_eq = existing_ct_eq
         # verify BB.π_eq here normally
         π_eq = getattr(BB, "π_eq", None)
+
+        if π_eq is None or len(π_eq) != len(ct_eq):
+            print("Error: Missing proofs on board.")
+            return (PBB, BB)
+
+        # VERIFY THE PROOFS
+        # We check that ct_eq correctly represents (ct_sum - ct_T)^r
+        all_valid = True
+        for i in range(len(ct_eq)):
+            # verify_r(ct_sum, ct_target, ct_result, proof, pub_key)
+            if not verify_r(ct_sum, ct_T[i], ct_eq[i], π_eq[i], dso_ek):
+                print(f"Verification failed for target {i}")
+                all_valid = False
+                break
+        
+        if not all_valid:
+            print(f"Aggregator {agg_id} rejected the calculation.")
+            return (PBB, BB)
+            
+        print(f"Aggregator {agg_id} successfully verified all PET proofs.")
+
     else:
         print(f"Aggregator {agg_id} computing new PET (ct_eq) and publishing to Board.")
         ct_eq, π_eq = pet_comparison(ct_sum, ct_T, dso_ek)
@@ -111,22 +145,41 @@ def Eval(BB, PBB, dk_share, dso_ek, agg_id):
 
 # (cto, t, pk′, πord) ← ord(ctb, ctm)
 def ord_comparison(ct_b, ct_m):
-    _, g, order = pub_param()
+    """
+    (for step 1) Order Comparison of two ciphertexts.
+    [Intended] Should return Enc(1) if Consumption < Baseline, else Enc(0).
+    Requires NIZKP.
+    
+    [Current] Placeholder: Returns Enc(0) (Identity) and a placeholder string.
+    """
+    _, g, _ = pub_param()
     identity_point = g.pt_mul(0)
     ct_o = (identity_point, identity_point)
 
-    ord_proof = "ord_proof" # placeholder
+    ord_proof = "ord_proof not implemented" # placeholder
     return ct_o, ord_proof
 
 # ctred ← Reduct(ct_b, c_tm, ct_o)
 def ct_reduction(ct_b, ct_m, ct_o):
-    _, g, order = pub_param()
+    """
+    (for step 2) Conditional Reduction Calculation.
+    [Intended] Should compute Enc((Baseline - Consumption) * ct_o).
+    Requires homomorphic multiplication to apply the condition.
+    [Current] Placeholder: Returns Enc(0) (Identity point).
+    Does not perform subtraction; assumes 0 reduction.
+    """
+    _, g, _ = pub_param()
     identity_point = g.pt_mul(0)
     ct_red = (identity_point, identity_point)
     return ct_red
 
 # ctsum ← Agg(ct_red)
 def ct_aggregation(reduc_set):
+    """
+    (for step 4) Homomorphic Aggregation.
+    Sums all individual reductions into a single ciphertext (ct_sum).
+    Uses the additive homomorphic property (for Ec).
+    """
     C1_prod, C2_prod = reduc_set[0][0]
     for i in range(1, len(reduc_set)):
         C1_i, C2_i = reduc_set[i][0]
@@ -136,6 +189,11 @@ def ct_aggregation(reduc_set):
 
 # (cteq, πeq ) ← Pet(ctsum, ctT )
 def pet_comparison(ct_sum, ct_T, dso_ek):
+    """
+    (for step 5) Private Equality Test
+    Iterates through targets (ct_T) to compare against ct_sum (to verify reductions).
+    Calls epet for each target.
+    """
     ct_eq = []
     π_eq = []
 
@@ -148,6 +206,13 @@ def pet_comparison(ct_sum, ct_T, dso_ek):
 
 # (ct_eq_i, π_r_i) ← Epet(ct_sum, ct_T_i)
 def epet(ct_sum, ct_t_i, dso_ek):
+    """
+    Encrypted Private Equality Test (EPET) (page 19 in given report)
+    Computes Enc(r * (Sum - Target)).
+    If Sum == Target, result is Enc(0). If not, result is Enc(Random).
+    Includes generation of proof 'r'.
+    This uses the non-interactive zero-knowledge proof (NIZKP) proof_r
+    """
     pp = pub_param()
     _, g, order = pp
     r = order.random()
@@ -164,6 +229,10 @@ def epet(ct_sum, ct_t_i, dso_ek):
     return (ct_eq, π_r_i)
 
 def proof_r(ct1, ct2, ct_eq, r, dso_ek):
+    """
+    NIZKP for r used in EPET
+    Proves knowledge of the random Bn r used in EPET
+    """
     _, g, order = pub_param()
 
     C1_1, C2_1 = ct1
@@ -186,6 +255,9 @@ def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     return (A1, A2, response, challenge)
 
 def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
+    """
+    Verifies the NIZKP Proof for r
+    """
     _, g, order = pub_param()
 
     A1, A2, response, challenge = proof

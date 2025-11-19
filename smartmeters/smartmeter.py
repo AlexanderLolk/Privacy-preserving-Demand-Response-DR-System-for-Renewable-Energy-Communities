@@ -35,7 +35,7 @@ class SmartMeter:
         self.anon_id = self.pk.pt_mul(anon_pk)
 
     # Report()
-    # TODO: make sure m shouldnt be something else (m is set to be 10, it's placeholder right now)
+    # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)
     def generate_and_send_report(self, m):
         t = int(time.time())
         return report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))

@@ -25,38 +25,38 @@ class DSO:
     # verifies every smart meter (users)
     # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
-        for (sm_id, val) in sm_info:
-            # val = (pk, pp, proof) 
-            if schnorr_NIZKP_verify(val[0], val[1], val[2]):
-                self.registered_sm.append((sm_id, val))
-                print("smart meter: " + sm_id + " is verified")
-            else:
-                print("failed to verify smart meter")
-                return False
+        sm_id, val = sm_info
+        # val = (pk, pp, proof)
+        if schnorr_NIZKP_verify(val[0], val[1], val[2]):
+            self.registered_sm.append((sm_id, val))
+            print("smart meter: " + sm_id + " is verified")
+        else:
+            print("failed to verify smart meter")
+            return False
         return True
     
     # verifies every aggregator
     # and adds it into a registered list
     def verify_aggregator(self, agg_info):
-        for (agg_id, val) in agg_info:
-            # val = (pk, pp, proof) 
-            if schnorr_NIZKP_verify(val[0], val[1], val[2]):
-                self.registered_agg.append((agg_id, val))
-                print("aggregator: " + agg_id + " is verified")
-            else:
-                print("failed to verify aggregator")
-                return False
+        agg_id, val = agg_info
+        # val = (pk, pp, proof)
+        if schnorr_NIZKP_verify(val[0], val[1], val[2]):
+            self.registered_agg.append((agg_id, val))
+            print("aggregator: " + agg_id + " is verified")
+        else:
+            print("failed to verify aggregator")
+            return False
         return True
     
     def verify_dr_aggregator(self, dr_info):
-        for (dr_id, val) in dr_info:
-            # val = (pk, pp, proof) 
-            if schnorr_NIZKP_verify(val[0], val[1], val[2]):
-                self.registered_dr.append((dr_id, val))
-                print("aggregator: " + dr_id + " is verified")
-            else:
-                print("failed to verify aggregator")
-                return False
+        dr_id, val = dr_info
+        # val = (pk, pp, proof) 
+        if schnorr_NIZKP_verify(val[0], val[1], val[2]):
+            self.registered_dr.append((dr_id, val))
+            print("aggregator: " + dr_id + " is verified")
+        else:
+            print("failed to verify aggregator")
+            return False
         return True
     
     # DR parameters and target reductions
@@ -107,7 +107,7 @@ class DSO:
         self.agg_ek = {id: ek for (id, ek) in aggs}    
 
     # Report: encrypting isn't implemented
-    # (using secure channels over SSL in production)
+    # This should use secure channels over SSL in production
     def encrypt_dk_and_send_to_agg(self, agg_id):
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
         return self.dk

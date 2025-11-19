@@ -2,7 +2,7 @@
 from utils.signature import schnorr_verify, schnorr_verify_list
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.dec_proof import verify_correct_decryption
-from utils.shuffle import CheckProof # TODO change name to be more specific like shuffle_verify_proof
+from utils.shuffle import verify_shuffle_proof # TODO change name to be more specific like shuffle_verify_proof
 
 class Board:
     
@@ -80,6 +80,9 @@ class Board:
     def publish_mix_pk_and_proof(self, mix_data):
         pk_prime, πmix = mix_data
         self.mix_pk = pk_prime
+        
+        if not verify_shuffle_proof(πmix, e, pk_prime, self.pk[1][1]):
+            print("Mixing proof verification FAILED")
         self.mix_proof = πmix
 
         # store e list to verify
@@ -88,10 +91,6 @@ class Board:
         e = [sm[1][0] for sm in self.register_smartmeter]
         # g is used for the proof generation (for its consistancy)
         # self.pk[1][1] = g
-        is_valid = CheckProof(πmix, e, pk_prime, self.pk[1][1])
-        
-        if is_valid:
-            print("Mixing proof verification succeeded")
 
     # step 6
     def publish_participants(self, participants):
@@ -128,6 +127,6 @@ class Board:
     def get_selected_sm(self):
         return self.selected
 
-    # TODO the baseline should be gotten from report() this is only for temporary testing
+    # the baseline
     def publish_baselines(self, ct_b):
         self.ct_b = ct_b

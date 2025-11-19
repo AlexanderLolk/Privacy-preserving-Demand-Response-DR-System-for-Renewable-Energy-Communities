@@ -226,7 +226,7 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
 
     return proof
 
-def CheckProof(proof, e, e_prime, pk):
+def verify_shuffle_proof(proof, e, e_prime, pk):
     _, g, order = gen.pp 
     N = len(e)
     
@@ -400,7 +400,7 @@ def test_basic_shuffle():
     print(f"   - Responses (s): 6 values")
     
     print(f"\n4. Verifying shuffle proof...")
-    is_valid = CheckProof(proof, e, e_prime, pk_for_proof)
+    is_valid = verify_shuffle_proof(proof, e, e_prime, pk_for_proof)
     
     print(f"\n{'='*60}")
     print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
@@ -460,7 +460,7 @@ def test_integration_with_aggregator():
         # print(f"   {user_id} (original pos {i}) → shuffled pos {shuffled_pos}, r'={str(r_prime[i])[:40]}...")
     
     print(f"\n3. Verifying shuffle proof...")
-    is_valid = CheckProof(πmix, e, e_prime, g)
+    is_valid = verify_shuffle_proof(πmix, e, e_prime, g)
     
     print(f"\n4. Users verify they can use anonymized keys...")
     all_verified = True
