@@ -22,22 +22,32 @@ class Aggregator:
         self.participants_report = []
     
     def get_id(self):
-        """ """
+        """ 
+        return: 
+            str:
+        """
         return self.id
 
     def get_public_key(self):
-        """ """
+        """ 
+        return:
+            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+        """
         return (self.pk, self.pp, self.s_proof)
     
     def get_encryption_key(self):
-        """ """
+        """ 
+        Returns:
+            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]: 
+        """
         return (self.ek, self.pp, self.e_proof)
     
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
 
-        :param dso_pk: 
-        :param dso_ek: 
+        Args:
+          dso_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+          dso_ek: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]
 
         """
         self.dso_pk = dso_pk
@@ -46,7 +56,8 @@ class Aggregator:
     def set_dso_dk(self, cipher_signature):
         """
 
-        :param cipher_signature: 
+        Args:
+          cipher_signature: Bn
 
         """
         # print("(Not implemented) In agg.set_dso_dk: got un-encrypted dso dk")
@@ -86,14 +97,16 @@ class Aggregator:
     def create_mixed_anon_pk_set(self, ID_pk):
         """
 
-        :param ID_pk: 
-
+        Args:
+          ID_pk: list[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]
         """
         # mix_anon_list = [pk_prime, r_prime, πmix_proof]
         self.mix_anon_list = mix_id(ID_pk)   
 
     def publish_mixed_keys(self):
-        """ """
+        """ 
+        return: tuple[list[EcPt], TODO proof types]
+        """
         # publish (pk_prime, πmix)
         # TODO: sign the list? or each element?
         return (self.mix_anon_list[0], self.mix_anon_list[2])
@@ -101,7 +114,11 @@ class Aggregator:
     def set_anon_key_mix(self, sm):
         """
 
-        :param sm: 
+        Args:
+          sm:  tuple[str, tuple[EcGroup, EcPt, Bn]]
+
+        Returns:
+            tuple[Bn, tuple[Bn, Bn, EcPt]]
 
         """
         # sm can be either (id, pk) or just pk
@@ -135,7 +152,8 @@ class Aggregator:
     def check_sm_report(self, sm_report):
         """
 
-        :param sm_report: 
+        Args:
+          sm_report: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
 
         """
         # pk is a tuble with (pk, pp, s_proof)
@@ -174,14 +192,22 @@ class Aggregator:
             self.participants.append(pk_prime)
             
     def get_participants(self):
-        """ """
+        """ 
+        return:
+            list[EcPt]
+        """
         return self.participants
     
     def get_agg_id_And_encryption_key(self):
-        """ """
+        """ 
+        return:
+            tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]]
+        """
         return (self.id, self.get_encryption_key())
     
     # Not implemented (see utils/anonym.py)
     def make_anonym(self):
-        """ """
+        """ 
+            
+        """
         return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)

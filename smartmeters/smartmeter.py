@@ -15,12 +15,14 @@ class SmartMeter:
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
 
     def get_public_key(self):
-        """ """
+        """
+        return:
+            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+        """
         return (self.pk, self.pp, self.s_proof)
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
-
         Args:
           dso_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
           dso_ek: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]
@@ -46,12 +48,9 @@ class SmartMeter:
         Reconstructs the anonymous identity (pk') using pk + (r' * g).
         
         Args:
-            anon_key: tuple[,]
-
-        Returns:
+            anon_key: tuple[EcPt, tuple[EcPt, Bn]]: 
 
         """
-        anon_pk, signature = anon_key
 
         # r_prime is the randomness used in the mixing
         r_prime, signature = anon_key
@@ -76,25 +75,25 @@ class SmartMeter:
         """
 
         Args:
-          m: 
+          m: TODO
 
-        Returns:
+        Returns: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
 
         """
         t = int(time.time())
         return report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))
 
     def get_sm_comsumption(self):
-        """ """
+        """ 
+            Returns: TODO
+        """
         return None
     
     def check_if_in_event(self, input):
         """
 
         Args:
-          input: 
-
-        Returns:
+          input: [EcPt]
 
         """
         for anon_pk in input:

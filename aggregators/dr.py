@@ -24,8 +24,11 @@ class DR_Aggregator:
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
 
-        :param dso_pk: 
-        :param dso_ek: 
+        Args:
+          dso_pk: param dso_ek:
+          dso_ek: 
+
+        Returns:
 
         """
         self.dso_pk = dso_pk
@@ -34,7 +37,10 @@ class DR_Aggregator:
     def set_dso_dk(self, cipher_signature):
         """
 
-        :param cipher_signature: 
+        Args:
+          cipher_signature: 
+
+        Returns:
 
         """
         # print("[NOT IMP] In dr.set_dso_dk: got un-encrypted dso dk")
@@ -45,7 +51,10 @@ class DR_Aggregator:
     def set_psudo_anonymous_iden(self, anon_ids):
         """
 
-        :param anon_ids: 
+        Args:
+          anon_ids: 
+
+        Returns:
 
         """
         self.anon_ids = anon_ids

@@ -182,7 +182,7 @@ class DSO:
         """
 
         Args:
-            - agg_id: (str)
+            - agg_id: (str): 
 
         """
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
