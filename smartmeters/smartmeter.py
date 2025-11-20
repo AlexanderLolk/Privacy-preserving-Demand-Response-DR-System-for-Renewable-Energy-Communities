@@ -37,38 +37,29 @@ class SmartMeter:
         self.agg_pk = agg_pk
 
     # Mix()
-    # Report: We sign each anonymized public key to know it came from the aggregator who mixed it
-    # def set_anon_key(self, anon_key):
-    #     """
-
-    #     :param anon_key: 
-
-    #     """
-    #     anon_pk, signature = anon_key
-        
-    #     if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(anon_pk), signature):
-    #         print("Anonymous key signature verification failed.")
-        
-    #     self.anon_pk = anon_pk
-    #     self.anon_id = self.pk.pt_mul(anon_pk)
     def set_anon_key(self, anon_key):
         """
-        :param anon_key: tuple (r_prime, signature)
+        Receives the randomness used to mix this sm's key.
+        Reconstructs the anonymous identity (pk') using pk + (r' * g).
+        
+        :param anon_key: Tuple containing (r_prime, signature)
         """
-        # Note: anon_pk here holds r_prime (the randomness)
+        # r_prime is the randomness used in the mixing
         r_prime, signature = anon_key
         
         if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
             print("Anonymous key signature verification failed.")
         
-        self.anon_pk = r_prime # Store the randomness
+        self.r_prime = r_prime # Store the randomness
 
         _, g, _ = self.pp
 
         # Using additive to reconstruct identity
-        # Old did this: self.anon_id = self.pk.pt_mul(anon_pk)
-        blinding_factor = g.pt_mul(r_prime)
-        self.anon_id = self.pk.pt_add(blinding_factor)
+        # The blinding_factor is (r' * g). It is the vector you add to your position to hide where you started.
+        pk_prime = g.pt_mul(r_prime)
+
+        # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
+        self.anon_id = self.pk.pt_add(pk_prime)
 
     # Report()
     # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)
