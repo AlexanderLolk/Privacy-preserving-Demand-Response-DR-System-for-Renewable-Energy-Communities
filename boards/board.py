@@ -102,14 +102,15 @@ class Board:
         pk_prime, πmix = mix_data
         self.mix_pk = pk_prime
         
-        if not verify_shuffle_proof(πmix, e, pk_prime, self.pk[1][1]):
-            print("Mixing proof verification FAILED")
-        self.mix_proof = πmix
-
         # store e list to verify
         # Extract the list of public keys from the registered smart meters list e
         # TODO change the name e to something more descriptive
         e = [sm[1][0] for sm in self.register_smartmeter]
+        
+        if not verify_shuffle_proof(πmix, e, pk_prime, self.pk[1][1]):
+            print("Mixing proof verification FAILED")
+        self.mix_proof = πmix
+
         # g is used for the proof generation (for its consistancy)
         # self.pk[1][1] = g
 

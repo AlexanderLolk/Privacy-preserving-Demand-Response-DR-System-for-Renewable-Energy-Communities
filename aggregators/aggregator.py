@@ -106,13 +106,29 @@ class Aggregator:
         else:
             sm_pk = sm
 
-        # TODO: perhaps improve
+        _, g, _ = self.pp
+
+        # using additive logic (pk + r*G) ---
         for r_prime in self.mix_anon_list[1]:
-            anon_pk = sm_pk.pt_mul(r_prime)
+            # Old: anon_pk = sm_pk.pt_mul(r_prime)
+            
+            # calculate r_prime * G
+            blinding_factor = g.pt_mul(r_prime)
+            # then add r_prime to public key
+            anon_pk = sm_pk.pt_add(blinding_factor)
+            
             for pk_prime in self.mix_anon_list[0]:
                 if anon_pk == pk_prime:
                     sign_r_prime = schnorr_sign(self.sk, self.pp, str(r_prime))
                     return (r_prime, sign_r_prime)
+                
+        # # TODO: perhaps improve
+        # for r_prime in self.mix_anon_list[1]:
+        #     anon_pk = sm_pk.pt_mul(r_prime)
+        #     for pk_prime in self.mix_anon_list[0]:
+        #         if anon_pk == pk_prime:
+        #             sign_r_prime = schnorr_sign(self.sk, self.pp, str(r_prime))
+        #             return (r_prime, sign_r_prime)
         
         print("Public key not found in r_prime")
         return None
@@ -142,9 +158,22 @@ class Aggregator:
         # (_, 2) means from bin to int
         msg = int(msg, 2)
 
+        # pk_prime = None
+        # for r_prime in self.mix_anon_list[1]:
+        #     anon_pk = pk[0].pt_mul(r_prime) # Report: This pk is the sm pk, if it was self.pk, it would be the agg pk
+        #     for pk_prime in self.mix_anon_list[0]:
+        #         if anon_pk == pk_prime:
+        #             pk_prime = anon_pk
+
+        _, g, _ = self.pp
+
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
-            anon_pk = pk[0].pt_mul(r_prime) # Report: This pk is the sm pk, if it was self.pk, it would be the agg pk
+            # Using additive
+            # Old multiplied, like so anon_pk = pk[0].pt_mul(r_prime)
+            blinding_factor = g.pt_mul(r_prime)
+            anon_pk = pk[0].pt_add(blinding_factor)
+            
             for pk_prime in self.mix_anon_list[0]:
                 if anon_pk == pk_prime:
                     pk_prime = anon_pk

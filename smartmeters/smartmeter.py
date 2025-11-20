@@ -38,19 +38,37 @@ class SmartMeter:
 
     # Mix()
     # Report: We sign each anonymized public key to know it came from the aggregator who mixed it
+    # def set_anon_key(self, anon_key):
+    #     """
+
+    #     :param anon_key: 
+
+    #     """
+    #     anon_pk, signature = anon_key
+        
+    #     if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(anon_pk), signature):
+    #         print("Anonymous key signature verification failed.")
+        
+    #     self.anon_pk = anon_pk
+    #     self.anon_id = self.pk.pt_mul(anon_pk)
     def set_anon_key(self, anon_key):
         """
-
-        :param anon_key: 
-
+        :param anon_key: tuple (r_prime, signature)
         """
-        anon_pk, signature = anon_key
+        # Note: anon_pk here holds r_prime (the randomness)
+        r_prime, signature = anon_key
         
-        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(anon_pk), signature):
+        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
             print("Anonymous key signature verification failed.")
         
-        self.anon_pk = anon_pk
-        self.anon_id = self.pk.pt_mul(anon_pk)
+        self.anon_pk = r_prime # Store the randomness
+
+        _, g, _ = self.pp
+
+        # Using additive to reconstruct identity
+        # Old did this: self.anon_id = self.pk.pt_mul(anon_pk)
+        blinding_factor = g.pt_mul(r_prime)
+        self.anon_id = self.pk.pt_add(blinding_factor)
 
     # Report()
     # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)
