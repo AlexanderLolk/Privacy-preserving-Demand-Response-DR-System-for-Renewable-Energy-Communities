@@ -28,17 +28,18 @@ def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
     """
     _, g, order = sec_params
     r = order.random()            # nonce
-    W = r * g                     # commitment
+    commitment = r * g            # 
+    
     # challenge
-    challenge = schnorr_NIZKP_challenge([
+    challenge_hash = schnorr_NIZKP_challenge([
         g.export().hex(),
         pk.export().hex(),
-        W.export().hex(),
+        commitment.export().hex(),
         msg
     ])
-    c = Bn.from_binary(challenge) % order # from_binary Creates a Big Number from a byte sequence representing the number in Big-endian 8 byte atoms.
-    s = (r - c * sk) % order 
-    return (c, s, W)
+    challenge = Bn.from_binary(challenge_hash) % order # from_binary Creates a Big Number from a byte sequence representing the number in Big-endian 8 byte atoms.
+    response = (r - challenge * sk) % order 
+    return (challenge, response, commitment)
 
 # schnorr_NIZKP_verify verifies the NIZKP of knowledge of the secret key
 def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
@@ -54,6 +55,7 @@ def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
     c, s, W = proof
     # reconstruct commitment
     W_check = (s * g + c * pk)
+    
     # recompute challenge
     challenge = schnorr_NIZKP_challenge([
         g.export().hex(),   

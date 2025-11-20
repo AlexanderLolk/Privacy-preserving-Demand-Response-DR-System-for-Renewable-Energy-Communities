@@ -27,8 +27,8 @@ def prove_correct_decryption(ek, sec_params, M, dk):
 
     """
     _, g, order = sec_params
-    C = enc(ek, sec_params, M)
-    C1, C2 = C
+    CT = enc(ek, sec_params, M)
+    ct_0, ct_1 = CT
 
     if isinstance(M, EcPt):
         M_point = M
@@ -41,14 +41,15 @@ def prove_correct_decryption(ek, sec_params, M, dk):
 
     # A1 = r * g      # commitment of ciphertext 1
     # A2 = r * C1     # commitment of ciphertext 2
-    A1 = g.pt_mul(r)    # commitment of ciphertext 1
-    A2 = C1.pt_mul(r)     # commitment of ciphertext 2
-
-    c = hash_to_bn(g, ek, C1, C2, M_point, A1, A2, order=order)
+    commitment_ct_0 = g.pt_mul(r)    # commitment of ciphertext 1
+    commitment_ct_1 = ct_0.pt_mul(r)     # commitment of ciphertext 2
+    commitment_CT = (commitment_ct_0, commitment_ct_1)
+    
+    challenge = hash_to_bn(g, ek, ct_0, ct_1, M_point, commitment_ct_0, commitment_ct_1, order=order)
     # s = r + c * dk % order
-    s = (r + c * dk) % order
+    response = (r + challenge * dk) % order
 
-    return (M_point, C, A1, A2, s)
+    return (M_point, CT, commitment_CT, response)
 
 def verify_correct_decryption(ek, sec_params, proof):
     """Verify a Chaum–Pedersen style NIZK proof of correct decryption.
@@ -59,8 +60,9 @@ def verify_correct_decryption(ek, sec_params, proof):
 
     """
     _, g, order = sec_params
-    M, C, A1, A2, s = proof
-    C1, C2 = C
+    M, CT, commitment_CT, s = proof
+    ct_0, ct_1 = CT
+    commitment_ct_0, commitment_ct_1 = commitment_CT
     
     if isinstance(M, EcPt):
         M_point = M
@@ -71,7 +73,7 @@ def verify_correct_decryption(ek, sec_params, proof):
 
     # V = C2 - M         
     # V = C2.pt_add(M.pt_neg()) 
-    V = C2.pt_add(M_point.pt_neg()) 
+    V = ct_1.pt_add(M_point.pt_neg()) 
     # V = C2.pt_add(Bn(M).int_neg())
     # V = C2 + (Bn(M).int_mul(Bn(-1)))
     
@@ -81,14 +83,14 @@ def verify_correct_decryption(ek, sec_params, proof):
     # C2 - M = x * order * g
     # C2 - M = x * C1
 
-    c = hash_to_bn(g, ek, C1, C2, M_point, A1, A2, order=order)
+    c = hash_to_bn(g, ek, ct_0, ct_1, M_point, commitment_ct_0, commitment_ct_1, order=order)
 
     #  check1 = (s * g == A1 + c * ek)
-    check1 = (g.pt_mul(s) == A1.pt_add(ek.pt_mul(c)))
+    check1 = (g.pt_mul(s) == commitment_ct_0.pt_add(ek.pt_mul(c)))
 
     # check2 = (s * C1 == A2 + c * V)
     # check2 = (C1.pt_mul(s) == A2.pt_add(V.pt_mul(c)))
-    check2 = (C1.pt_mul(s) == A2.pt_add(c * V))
+    check2 = (ct_0.pt_mul(s) == commitment_ct_1.pt_add(c * V))
 
     return check1 and check2
 

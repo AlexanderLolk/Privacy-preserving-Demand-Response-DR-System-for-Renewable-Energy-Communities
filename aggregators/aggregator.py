@@ -29,6 +29,10 @@ class Aggregator:
         """ """
         return (self.pk, self.pp, self.s_proof)
     
+    def get_encryption_key(self):
+        """ """
+        return (self.ek, self.pp, self.e_proof)
+    
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
 
@@ -161,7 +165,7 @@ class Aggregator:
     
     def get_agg_id_And_encryption_key(self):
         """ """
-        return (self.id, self.ek)
+        return (self.id, self.get_encryption_key())
     
     # Not implemented (see utils/anonym.py)
     def make_anonym(self):

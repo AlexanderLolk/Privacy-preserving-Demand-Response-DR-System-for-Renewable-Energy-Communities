@@ -21,8 +21,9 @@ class SmartMeter:
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
 
-        :param dso_pk: 
-        :param dso_ek: 
+        Args:
+          dso_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+          dso_ek: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]
 
         """
         self.dso_pk = dso_pk
@@ -31,7 +32,10 @@ class SmartMeter:
     def set_agg_public_keys(self, agg_pk):
         """
 
-        :param agg_pk: 
+        Args:
+          agg_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+
+        Returns:
 
         """
         self.agg_pk = agg_pk
@@ -41,7 +45,10 @@ class SmartMeter:
     def set_anon_key(self, anon_key):
         """
 
-        :param anon_key: 
+        Args:
+          anon_key: tuple[,]
+
+        Returns:
 
         """
         anon_pk, signature = anon_key
@@ -57,7 +64,10 @@ class SmartMeter:
     def generate_and_send_report(self, m):
         """
 
-        :param m: 
+        Args:
+          m: 
+
+        Returns:
 
         """
         t = int(time.time())
@@ -70,7 +80,10 @@ class SmartMeter:
     def check_if_in_event(self, input):
         """
 
-        :param input: 
+        Args:
+          input: 
+
+        Returns:
 
         """
         for anon_pk in input:

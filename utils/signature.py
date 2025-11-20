@@ -53,10 +53,10 @@ def schnorr_sign(sk, sec_params, msg):
     """
     _, g, order = sec_params
     k = order.random()            # nonce
-    R = k * g                     # ephemeral public key
-    e = Hash(R, msg, order)       # challenge
-    s = (k + sk * e) % order      # signature
-    return (R, s) 
+    ephemeral_key = k * g                     # ephemeral public key
+    challenge_hash = Hash(ephemeral_key, msg, order)       # challenge
+    signature = (k + sk * challenge_hash) % order      # signature
+    return (ephemeral_key, signature) 
 
 # schnorr_verify verifies a Schnorr signature signature on message msg using public key pk
 def schnorr_verify(pk, sec_params, msg, signature):

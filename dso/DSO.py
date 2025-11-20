@@ -26,62 +26,91 @@ class DSO:
     # verifies every smart meter (users)
     # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
-        """verifies a smartmeter by looking at schnorr's NIZKP
-        and, if true, adds it to a list of registered smartmeters
+        """Verifies a smartmeter by checking Schnorr's NIZKP.
+        If the NIZKP is valid, the smartmeter is added to the list of registered smartmeters.
 
-        :param sm_info: id: string, (pk: EcPt, pp: (G, g, order), proof: ))
-        :returns: True or False after having checked schnorr's NIZKP
+        Args:
+            - sm_info (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]):
+                A tuple containing the smartmeter's information:
+                - sm_info[0] (str): The identity (ID) of the smartmeter.
+                - sm_info[1] (tuple): Cryptographic parameters:
+                    - sm_info[1][0] (EcPt): Public signature key (pk).
+                    - sm_info[1][1] (tuple): Public parameters (G, g, order).
+                    - sm_info[1][2] (tuple): Schnorr NIZKP proof (challenge, response, commitment)
 
+        Returns:
+            bool: False if the verification (Schnorr's NIZKP check) fails, 
+            if true then a the smartmeter to a list registered smartmeters 
         """
 
         sm_id, val = sm_info
         # val = (pk, pp, proof)
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_sm.append((sm_id, val))
-            print("smart meter: " + sm_id + " is verified")
+            # print("smart meter: " + sm_id + " is verified")
         else:
             print("failed to verify smart meter")
             return False
-        return True
     
     # verifies every aggregator
     # and adds it into a registered list
     def verify_aggregator(self, agg_info):
-        """
+        """Verifies a aggregator by checking Schnorr's NIZKP.
+        If the NIZKP is valid, the aggregator is added to the list of registered aggregators.
 
-        :param agg_info: 
+        Args:
+            - agg_info (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]):
+                A tuple containing the aggregator's information:
+                - agg_info[0] (str): The identity (ID) of the aggregator.
+                - agg_info[1] (tuple): Cryptographic parameters:
+                    - agg_info[1][0] (EcPt): Public signature key (pk).
+                    - agg_info[1][1] (tuple): Public parameters (G, g, order).
+                    - agg_info[1][2] (tuple): Schnorr NIZKP proof (challenge, response, commitment)
 
+        Returns:
+            bool: False if the verification (Schnorr's NIZKP check) fails. 
         """
         agg_id, val = agg_info
         # val = (pk, pp, proof)
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_agg.append((agg_id, val))
-            print("aggregator: " + agg_id + " is verified")
+            # print("aggregator: " + agg_id + " is verified")
         else:
             print("failed to verify aggregator")
             return False
-        return True
     
     def verify_dr_aggregator(self, dr_info):
-        """
+        """Verifies a dr aggregator by checking Schnorr's NIZKP.
+        If the NIZKP is valid, the aggregator is added to the list of registered dr aggregators.
 
-        :param dr_info: 
+        Args:
+            - agg_info (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]):
+                A tuple containing the dr aggregator's information:
+                - agg_info[0] (str): The identity (ID) of the dr aggregator.
+                - agg_info[1] (tuple): Cryptographic parameters:
+                    - agg_info[1][0] (EcPt): Public signature key (pk).
+                    - agg_info[1][1] (tuple): Public parameters (G, g, order).
+                    - agg_info[1][2] (tuple): Schnorr NIZKP proof (challenge, response, commitment)
 
+        Returns:
+            bool: False if the verification (Schnorr's NIZKP check) fails. 
         """
         dr_id, val = dr_info
         # val = (pk, pp, proof) 
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_dr.append((dr_id, val))
-            print("aggregator: " + dr_id + " is verified")
+            # print("aggregator: " + dr_id + " is verified")
         else:
             print("failed to verify aggregator")
             return False
-        return True
     
     # DR parameters and target reductions
     # Placeholder values for now
     def calculate_target_reduction():
-        """ """
+        """ 
+        Returns:
+            tuple[tuple[EcGroup, EcPt, Bn], int]: 
+        """
         p = "1"
         phi = "0.05"
         R = "3"
@@ -98,7 +127,10 @@ class DSO:
     # noisy list
     # TODO check if the noisy list is actually a mathematic implementation (this code was done as a translation of the report words)
     def generate_noisy_list(self):
-        """ """
+        """ 
+        Returns:
+            tuple[list[EcPt, EcPt], tuple[EcPt, Bn]]: some explanantion
+        """
         _, target_reduction = DSO.calculate_target_reduction()
 
         max_noise = max(1, target_reduction - 1)
@@ -118,19 +150,29 @@ class DSO:
         return enc_TR, signature_TR
 
     def get_public_key(self):
-        """ """
+        """ 
+        Returns:
+            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]:
+            some explanantion
+        """
         return (self.pk, self.pp, self.s_proof)
     
     def get_encryption_key(self):
-        """ """
+        """ 
+        Returns:
+            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]: 
+            some explanantion
+        """
         return (self.ek, self.pp, self.e_proof)
     
     def set_agg_encryption_key(self, aggs):
         """
 
-        :param aggs: 
+        Args:
+            - aggs (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]]) 
 
         """
+
         # aggs = [(id, ek)]
         self.agg_ek = {id: ek for (id, ek) in aggs}    
 
@@ -139,7 +181,8 @@ class DSO:
     def encrypt_dk_and_send_to_agg(self, agg_id):
         """
 
-        :param agg_id: 
+        Args:
+            - agg_id: (str)
 
         """
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
@@ -159,7 +202,12 @@ class DSO:
         # return (enc_dk, sign_dk)
 
     def sign_registered_lists(self):
-        """ """
+        """
+        Returns:
+            (list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
+            list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
+            list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn])
+        """
         sm_msg_list = [sm_id for sm_id, _ in self.registered_sm]
         agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]
         dr_msg_list = [dr_id for dr_id, _ in self.registered_dr]
