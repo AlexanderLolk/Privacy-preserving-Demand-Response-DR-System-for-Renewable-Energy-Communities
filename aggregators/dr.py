@@ -18,17 +18,18 @@ class DR_Aggregator:
         ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
     
     def get_public_key(self):
-        """ """
+        """ 
+        return: 
+            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+        """
         return (self.pk, self.pp, self.s_proof)
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
 
         Args:
-          dso_pk: param dso_ek:
-          dso_ek: 
-
-        Returns:
+          dso_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+          dso_ek: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]
 
         """
         self.dso_pk = dso_pk
@@ -38,10 +39,8 @@ class DR_Aggregator:
         """
 
         Args:
-          cipher_signature: 
-
-        Returns:
-
+          cipher_signature: Bn
+        
         """
         # print("[NOT IMP] In dr.set_dso_dk: got un-encrypted dso dk")
         # Some of the code what was tried on this function is in aggregator
@@ -52,23 +51,27 @@ class DR_Aggregator:
         """
 
         Args:
-          anon_ids: 
-
-        Returns:
-
+          anon_ids: list[EcPt]
         """
         self.anon_ids = anon_ids
     
     def select_random_sms(self):
-        """ """
+        """ 
+
+        """
         self.selected = random.sample(self.anon_ids, k=3)
     
     # TODO if this need to be signed, then give pk before this function
     def get_selected(self):
-        """ """
+        """ 
+        return:
+            tuple[list[EcPt], tuple[Bn, Bn, EcPt], tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]
+        """
         signature = schnorr_sign(self.sk, self.pp, str(self.selected))
         return (self.selected, signature, self.get_public_key())
 
     def set_anonym_reports(self):
-        """ """
+        """ 
+        TODO
+        """
         return None

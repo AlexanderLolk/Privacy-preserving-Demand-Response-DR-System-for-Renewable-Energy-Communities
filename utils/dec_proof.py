@@ -6,9 +6,12 @@ import hashlib
 def hash_to_bn(*points, order):
     """Hash EC points deterministically into a scalar mod q.
 
-    :param *points: 
-    :param order: 
+    Args:
+        *points (tuple[EcPt, EcPt,  EcPt, EcPt, EcPt, EcPt, EcPt, EcPt]): 
+        order (Bn):
 
+    Returns:
+        Bn:
     """
     h = hashlib.sha256()
     for P in points:
@@ -20,11 +23,18 @@ def prove_correct_decryption(ek, sec_params, M, dk):
     without revealing dk.
     Returns a non-interactive proof (A1, A2, s).
 
-    :param ek: 
-    :param sec_params: 
-    :param M: 
-    :param dk: 
+    Args:
+        ek (EcPt): ElGamal public key point (ek = x * g).
+        sec_params (tuple): Triple (EcGroup, generator g (EcPt), order (Bn)).
+        M (EcPt|Bn|int): Message encoded as an EC point or a scalar.
+        dk (Bn): Secret key scalar corresponding to `ek`.
 
+    Returns:
+        tuple: (M_point, CT, (A1, A2), s)
+            - M_point (EcPt): the message as an EC point
+            - CT (tuple): ciphertext pair (C1, C2)
+            - (A1, A2) (tuple): commitment points
+            - s (Bn): response scalar for the NIZK
     """
     _, g, order = sec_params
     CT = enc(ek, sec_params, M)
@@ -54,10 +64,13 @@ def prove_correct_decryption(ek, sec_params, M, dk):
 def verify_correct_decryption(ek, sec_params, proof):
     """Verify a Chaum–Pedersen style NIZK proof of correct decryption.
 
-    :param ek: 
-    :param sec_params: 
-    :param proof: 
+    Args:
+        ek (EcPt): ElGamal public key point.
+        sec_params (tuple): Triple (EcGroup, generator g (EcPt), order (Bn)).
+        proof (tuple): Proof returned by `prove_correct_decryption`.
 
+    Returns:
+        bool: True if the proof verifies, False otherwise.
     """
     _, g, order = sec_params
     M, CT, commitment_CT, s = proof

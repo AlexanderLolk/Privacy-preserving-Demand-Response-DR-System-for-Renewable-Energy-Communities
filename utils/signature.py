@@ -1,28 +1,36 @@
 from petlib.ec import Bn
 import hashlib
 
+
 # key_gen generates a private/public key pair (sk, pk)
 def key_gen(sec_params):
-    """
+    """Generate a Schnorr keypair.
 
-    :param sec_params: 
+    Args:
+        sec_params (tuple): (EcGroup, generator EcPt, order Bn).
 
+    Returns:
+        tuple: (sk (Bn), pk (EcPt)) where pk = sk * g.
     """
     _, g, order = sec_params
     priv_sk = order.random()
     pub_pk = priv_sk * g
-    # print("sig priv:" + str(priv_sk))
-    # print("sig pub:" + str(pub_pk))
     return (priv_sk, pub_pk)
 
 # Hash hashes the commitment R and message msg to a challenge
 def Hash(R, msg, order):
-    """
+    """Compute the challenge hash used in Schnorr signing.
 
-    :param R: 
-    :param msg: 
-    :param order: 
+    The function hashes the ephemeral commitment `R` together with the
+    message `msg` and returns a scalar reduced modulo `order`.
 
+    Args:
+        R (EcPt): ephemeral commitment point (ephemeral_key).
+        msg:
+        order (Bn): group order used to reduce the digest.
+
+    Returns:
+        Bn:
     """
     h = hashlib.sha256()
     h.update(R.export())
@@ -44,12 +52,15 @@ def Hash(R, msg, order):
 
 # schnorr_sign creates a Schnorr signature on message msg using private key sk
 def schnorr_sign(sk, sec_params, msg):
-    """
+    """Create a Schnorr signature on `msg` using secret key `sk`.
 
-    :param sk: 
-    :param sec_params: 
-    :param msg: 
+    Args:
+        sk (Bn): signing secret scalar.
+        sec_params (tuple): (EcGroup, generator EcPt, order Bn).
+        msg: message to sign (can be bytes, Bn, EcPt or convertible to str).
 
+    Returns:
+        tuple: (ephemeral_key (EcPt), signature (Bn)).
     """
     _, g, order = sec_params
     k = order.random()            # nonce
@@ -60,13 +71,16 @@ def schnorr_sign(sk, sec_params, msg):
 
 # schnorr_verify verifies a Schnorr signature signature on message msg using public key pk
 def schnorr_verify(pk, sec_params, msg, signature):
-    """
+    """Verify a Schnorr signature produced by `schnorr_sign`.
 
-    :param pk: 
-    :param sec_params: 
-    :param msg: 
-    :param signature: 
+    Args:
+        pk (EcPt): public signing key.
+        sec_params (tuple): (EcGroup, generator EcPt, order Bn).
+        msg: the signed message (must match prover's input).
+        signature (tuple): (R (EcPt), s (Bn)).
 
+    Returns:
+        bool: True if signature is valid, False otherwise.
     """
     _, g, order = sec_params
     R, s = signature
@@ -77,28 +91,39 @@ def schnorr_verify(pk, sec_params, msg, signature):
 
 # signs lists of messages
 def schnorr_sign_list(sk, sec_params, msg_list):
-    """
+    """Sign a list of messages using `schnorr_sign`.
 
-    :param sk: 
-    :param sec_params: 
-    :param msg_list: 
+    Returns a list of signature tuples corresponding to each message.
 
+    Args:
+        sk (Bn): signing secret.
+        sec_params (tuple): (EcGroup, generator EcPt, order Bn).
+        msg_list (iterable): sequence of messages to sign.
+
+    Returns:
+        list: list of signatures [(R, s), ...].
     """
     signatures = []
     for msg in msg_list:
         sign = schnorr_sign(sk, sec_params, msg)
         signatures.append(sign)
     return signatures
-    
-# 
+
+
 def schnorr_verify_list(pk, sec_params, msg_list, signatures):
-    """
+    """Verify a list of Schnorr signatures against the corresponding msgs.
 
-    :param pk: 
-    :param sec_params: 
-    :param msg_list: 
-    :param signatures: 
+    Returns a tuple (all_valid, results) where `all_valid` is True when all
+    signatures verify, and `results` contains per-message outcomes.
 
+    Args:
+        pk (EcPt): public signing key.
+        sec_params (tuple): (EcGroup, generator EcPt, order Bn).
+        msg_list (iterable): messages to verify.
+        signatures (iterable): signatures to verify.
+
+    Returns:
+        tuple: (all_valid (bool), results (list of (index, msg, bool))).
     """
     results = []
     for i, (msg, signature) in enumerate(zip(msg_list, signatures)):

@@ -772,7 +772,15 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
         'c_hat': c_hat,
         'h': h,
         'h_gens': h_gens,
-    }
+    } 
+    """ 
+    tuple[tuple[EcPt, EcPt, EcPt, EcPt, list[EcPt]], 
+        tuple[Bn, Bn, Bn, Bn, list[Bn], list[Bn]], 
+        list[EcPt],
+        list[EcPt],
+        EcPt,
+        list[EcPt]]
+    """
 
     return proof
 

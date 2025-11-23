@@ -77,7 +77,9 @@ class SmartMeter:
         Args:
           m: TODO
 
-        Returns: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
+        Returns: 
+            tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
+            (user_pk, (t, ct, signing_σ))
 
         """
         t = int(time.time())

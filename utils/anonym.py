@@ -6,7 +6,11 @@ from utils.signature import Hash, schnorr_sign
 def _export_bytes(x):
     """
 
-    :param x: 
+    Args:
+      x: 
+
+    Returns:
+        bytes: 
 
     """
     if hasattr(x, "export"):
@@ -18,10 +22,13 @@ def _export_bytes(x):
 def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
     """
 
-    :param inputs:  (Default value = None)
-    :param r_prime_list:  (Default value = None)
-    :param secret_key_T:  (Default value = None)
+    Args:
+      inputs: (list[tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]]) Default value = None)
+      r_prime_list: (list[EcPt]) Default value = None)
+      secret_key_T: (Bn) Default value = None)
 
+    Returns:
+        tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
     """
     # TODO: ASK ABOUT SK
     # [(pk, (t, ct, sig))] = inputs

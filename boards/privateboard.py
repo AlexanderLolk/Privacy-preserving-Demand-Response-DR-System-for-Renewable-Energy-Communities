@@ -8,7 +8,8 @@ class PrivateBoard:
     def publish_anonym_reports(self, anonym_reports):
         """
 
-        :param anonym_reports: 
+        Args:
+          anonym_reports: tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]
 
         """
         
@@ -24,5 +25,8 @@ class PrivateBoard:
 
     # pseudo-anonymous identity
     def get_participants(self):
-        """ """
+        """ 
+        return:
+            list[EcPt]
+        """
         return self.participants

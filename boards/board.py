@@ -10,7 +10,9 @@ class Board:
     def publish_dso_public_keys(self, dso_keys):
         """
 
-        :param dso_keys: 
+        Args:
+          dso_keys: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], 
+                    tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]]
 
         """
         
@@ -32,7 +34,13 @@ class Board:
     def publish_smartmeters_and_aggregators(self, signed_lists):
         """
 
-        :param signed_lists: 
+        Args:
+          signed_lists: tuple[list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
+                        list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
+                        list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn]]
+
+        Returns:
+            bool: TODO maybe dont need a return for this
 
         """
         (
@@ -75,7 +83,8 @@ class Board:
     def target_reduction(self, T_r):
         """
 
-        :param T_r: 
+        Args:
+          T_r: tuple[list[tuple[EcPt, EcPt]], tuple[EcPt, Bn]]
 
         """
         # the target reduction list is encrypted and signed by the DSO
@@ -96,7 +105,15 @@ class Board:
     def publish_mix_pk_and_proof(self, mix_data):
         """
 
-        :param mix_data: 
+        Args:
+          mix_data: 
+            tuple[list[EcPt], 
+            tuple[tuple[EcPt, EcPt, EcPt, EcPt, list[EcPt]], 
+                tuple[Bn, Bn, Bn, Bn, list[Bn], list[Bn]], 
+                list[EcPt],
+                list[EcPt],
+                EcPt,
+                list[EcPt]]]
 
         """
         pk_prime, πmix = mix_data
@@ -118,22 +135,26 @@ class Board:
     def publish_participants(self, participants):
         """
 
-        :param participants: 
-
+        Args:
+          participants (list[EcPt]):
         """
         self.participants = participants
 
     # currently not used, since it isnt in the sequnce chart
     def get_publish_participants(self):
-        """ """
+        """
+        return:
+            list[EcPt]
+        """
         return self.participants
     
     # Report: Should be sent through the anonym algorithm
     def publish_anonym_reports(self, anonym_reports, agg_id):
         """
 
-        :param anonym_reports: 
-        :param agg_id: 
+        Args:
+          anonym_reports: tuple[Bn, tuple[Bn, Bn, EcPt]]
+          agg_id: str
 
         """
         hashed_reports, signature = anonym_reports
@@ -154,8 +175,8 @@ class Board:
     def publish_selected_sm(self, selected_w_sign):
         """
 
-        :param selected_w_sign: 
-
+        Args:
+          selected_w_sign: (tuple[list[EcPt], tuple[EcPt, Bn]])
         """
         selected, signature, dr_agg_pk = selected_w_sign
         if not schnorr_verify(dr_agg_pk[0], dr_agg_pk[1], str(selected), signature):
@@ -164,14 +185,20 @@ class Board:
         self.selected = selected
 
     def get_selected_sm(self):
-        """ """
+        """ 
+        return:
+            list[EcPt]
+        """
         return self.selected
 
     # the baseline
     def publish_baselines(self, ct_b):
         """
 
-        :param ct_b: 
+        Args:
+          ct_b: TODO
+
+        Returns:
 
         """
         self.ct_b = ct_b

@@ -203,10 +203,10 @@ class DSO:
 
     def sign_registered_lists(self):
         """
-        Returns:
-            (list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
+        returns:
+            tuple[list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
             list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
-            list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn])
+            list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn]]
         """
         sm_msg_list = [sm_id for sm_id, _ in self.registered_sm]
         agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]

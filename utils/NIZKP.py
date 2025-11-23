@@ -3,14 +3,22 @@ import hashlib
 
 # schnorr_challenge hashes the elements for the challenge used in Schnorrs proof
 def schnorr_NIZKP_challenge(elements):
-    """
+    """Create a deterministic SHA-256 challenge from the provided elements.
 
-    :param elements: 
+    The function stringifies and length-prefixes each element, joins them
+    with a separator and returns the raw SHA-256 digest. Callers usually
+    convert the digest into a `Bn` and reduce modulo the group order.
 
+    Args:
+        elements (list): Sequence of values which will be stringified and
+                         included in the challenge hash (strings or bytes).
+
+    Returns:
+        bytes: Raw SHA-256 digest to be interpreted by the caller.
     """
     elem = [len(elements)] + elements
-    elem_str = map(str, elem) 
-    elem_len = map(lambda x: "%s||%s" % (len(x) , x), elem_str) 
+    elem_str = map(str, elem)
+    elem_len = map(lambda x: "%s||%s" % (len(x) , x), elem_str)
     state = "|".join(elem_len)
     Hash = hashlib.sha256()
     Hash.update(state.encode("utf8"))
@@ -18,18 +26,26 @@ def schnorr_NIZKP_challenge(elements):
 
 # schnorr_proof creates the NIZKP of knowledge of the secret key (rewrite the explanation)
 def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
-    """
+    """Create a Schnorr non-interactive proof of knowledge of `sk`.
 
-    :param pk: 
-    :param sec_params: 
-    :param sk: 
-    :param msg:  (Default value = "")
+    The proof demonstrates knowledge of the secret scalar `sk` such that
+    `pk = sk * g` without revealing `sk`. It returns the tuple
+    (challenge, response, commitment) where the challenge is derived via
+    `schnorr_NIZKP_challenge` (Fiat–Shamir).
 
+    Args:
+        pk (EcPt): Public key point corresponding to `sk`.
+        sec_params (tuple): (EcGroup, generator g (EcPt), order (Bn)).
+        sk (Bn): Secret scalar (private key).
+        msg (str): Optional context string included in the challenge.
+
+    Returns:
+        tuple: (challenge (Bn), response (Bn), commitment (EcPt)).
     """
     _, g, order = sec_params
     r = order.random()            # nonce
-    commitment = r * g            # 
-    
+    commitment = r * g
+
     # challenge
     challenge_hash = schnorr_NIZKP_challenge([
         g.export().hex(),
@@ -43,13 +59,21 @@ def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
 
 # schnorr_NIZKP_verify verifies the NIZKP of knowledge of the secret key
 def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
-    """
+    """Verify a Schnorr NIZKP produced by `schnorr_NIZKP_proof`.
 
-    :param pk: 
-    :param sec_params: 
-    :param proof: 
-    :param msg:  (Default value = "")
+    The verifier reconstructs the commitment from the provided response
+    and challenge, recomputes the Fiat–Shamir challenge and checks
+    consistency.
 
+    Args:
+        pk (EcPt): Public key point.
+        sec_params (tuple): (EcGroup, generator g (EcPt), order (Bn)).
+        proof (tuple): (challenge (Bn), response (Bn), commitment (EcPt)).
+        msg (str): Optional context string that must match the one used by
+                   the prover.
+
+    Returns:
+        bool: True if the proof is valid, False otherwise.
     """
     _, g, order = sec_params
     c, s, W = proof
@@ -58,7 +82,7 @@ def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
     
     # recompute challenge
     challenge = schnorr_NIZKP_challenge([
-        g.export().hex(),   
+        g.export().hex(),
         pk.export().hex(),
         W_check.export().hex(),
         msg

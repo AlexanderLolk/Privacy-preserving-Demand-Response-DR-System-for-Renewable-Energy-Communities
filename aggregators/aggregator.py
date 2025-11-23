@@ -105,7 +105,14 @@ class Aggregator:
 
     def publish_mixed_keys(self):
         """ 
-        return: tuple[list[EcPt], TODO proof types]
+        return: 
+            tuple[list[EcPt], 
+            tuple[tuple[EcPt, EcPt, EcPt, EcPt, list[EcPt]], 
+                tuple[Bn, Bn, Bn, Bn, list[Bn], list[Bn]], 
+                list[EcPt],
+                list[EcPt],
+                EcPt,
+                list[EcPt]]]
         """
         # publish (pk_prime, πmix)
         # TODO: sign the list? or each element?
@@ -208,6 +215,12 @@ class Aggregator:
     # Not implemented (see utils/anonym.py)
     def make_anonym(self):
         """ 
-            
+        return:
+            tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
         """
+
+        # list[tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]],
+        # list[EcPt],
+        # Bn
+
         return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)

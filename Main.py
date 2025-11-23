@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # -------THRESHOLD KEY SETUP END
 
     # Publish baseline and target
-    bb.publish_baselines(bb.T_r)
+    bb.publish_baselines(bb.T_r) #
     if getattr(bb, "ct_T", None) is None:
         bb.ct_T = bb.T_r
 
