@@ -7,7 +7,7 @@ def hash_to_bn(*points, order):
     """Hash EC points deterministically into a scalar mod q.
 
     Args:
-        *points (tuple[EcPt, EcPt,  EcPt, EcPt, EcPt, EcPt, EcPt, EcPt]): 
+        *points (tuple[EcPt, EcPt, EcPt, EcPt, EcPt, EcPt, EcPt, EcPt]): 
         order (Bn):
 
     Returns:
@@ -54,8 +54,11 @@ def prove_correct_decryption(ek, sec_params, M, dk):
     commitment_ct_0 = g.pt_mul(r)    # commitment of ciphertext 1
     commitment_ct_1 = ct_0.pt_mul(r)     # commitment of ciphertext 2
     commitment_CT = (commitment_ct_0, commitment_ct_1)
+
+    # V = C2 - M
+    V = ct_1.pt_add(M_point.pt_neg())
     
-    challenge = hash_to_bn(g, ek, ct_0, ct_1, M_point, commitment_ct_0, commitment_ct_1, order=order)
+    challenge = hash_to_bn(g, ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=order)
     # s = r + c * dk % order
     response = (r + challenge * dk) % order
 
@@ -96,7 +99,7 @@ def verify_correct_decryption(ek, sec_params, proof):
     # C2 - M = x * order * g
     # C2 - M = x * C1
 
-    c = hash_to_bn(g, ek, ct_0, ct_1, M_point, commitment_ct_0, commitment_ct_1, order=order)
+    c = hash_to_bn(g, ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=order)
 
     #  check1 = (s * g == A1 + c * ek)
     check1 = (g.pt_mul(s) == commitment_ct_0.pt_add(ek.pt_mul(c)))
@@ -114,6 +117,7 @@ def demo():
     g = G.generator()
     q = G.order()
     sec_param = (G, g, q)
+    print("check 1")
 
     # Generate keypair
     x = q.random()
@@ -125,6 +129,7 @@ def demo():
 
     # Encrypt
     (C1, C2) = enc(ek, sec_param, m_scalar)
+    print("check 2")
 
     # Decrypt
     # M_dec = C2 - x * C1
