@@ -67,6 +67,7 @@ if __name__ == "__main__":
         dr.set_dso_public_keys(bb.pk, bb.ek)
     
     # TODO needs to be treshhold elgamal, so that share is given instead of the whole key 
+    # TODO ALSO this is done with a ssl connection, so we have to make something up for this
     # set_dso_dk
     dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
     for agg in aggs:

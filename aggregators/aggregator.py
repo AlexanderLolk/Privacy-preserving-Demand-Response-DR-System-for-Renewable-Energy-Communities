@@ -3,7 +3,7 @@
 
 from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
 from utils.signature import schnorr_verify, schnorr_sign
-from utils.ec_elgamal import dec, make_table
+from utils.ec_elgamal import dec #, make_table
 import utils.anonym as anonym
 
 class Aggregator:
@@ -156,35 +156,43 @@ class Aggregator:
     # report
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    def check_sm_report(self, sm_report):
-        """
-
-        Args:
-          sm_report: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
-
-        """
-        # pk is a tuble with (pk, pp, s_proof)
-        (pk, (t, cts, signature)) = sm_report
-
-        table = make_table(pk[1])
-
-        if not schnorr_verify(pk[0], pk[1], str((t, cts)), signature):
-            print(False)
-            
-        bin_msgs = [dec(self.dso_dk, pk[1], table, ct) for ct in cts]
-
-        # msg = dec(self.dso_dk, self.pp, table, ct="")
-        msg = "".join([str(x) for x in bin_msgs])
+    # TODO handle threshold partial decryption for this
+    def check_sm_report(self, sm_report, dr_aggregator):
         
-        # (_, 2) means from bin to int
-        msg = int(msg, 2)
+        (pk, (t, cts, signature)) = sm_report
+        sm_pk_pt, group, _ = pk
 
-        _, g, _ = self.pp
+        if not schnorr_verify(sm_pk_pt, group, str((t, cts)), signature):
+            print("Signature verification failed.")
+            return
 
+        gen_point = group.generator()
+        identity_point = group.infinite() 
+
+        decrypted_bits = []
+
+        # 3. Iterate through ciphertexts (bits)
+        for (c1, c2) in cts:
+            share_agg = c1.pt_mul(self.sk_share)
+
+            share_dr = dr_aggregator.get_partial_decryption_share(c1)
+
+            share_total = share_agg.pt_add(share_dr)
+
+            msg_point = c2.pt_sub(share_total)
+
+            if msg_point == identity_point:
+                decrypted_bits.append("0")
+            elif msg_point == gen_point:
+                decrypted_bits.append("1")
+            else:
+                print("Decryption Error: Point matches neither 0 nor 1.")
+                return
+
+        msg_str = "".join(decrypted_bits)
+        msg_val = int(msg_str, 2)
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
-            # Using additive
-            # Old multiplied, like so anon_pk = pk[0].pt_mul(r_prime)
             blinding_factor = g.pt_mul(r_prime)
             pk_prime_check = pk[0].pt_add(blinding_factor)
             
@@ -192,11 +200,52 @@ class Aggregator:
                 if pk_prime_check == pk_prime:
                     pk_prime = pk_prime_check
         
-        # participants are those with the msg (the msg is currently set to 10)
-        if msg >= 0:
+        if msg_val >= 0:
             print("SM wants to join DR event")
             self.participants_report.append(sm_report)
             self.participants.append(pk_prime)
+
+    # def check_sm_report(self, sm_report):
+    #     """
+
+    #     Args:
+    #       sm_report: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
+
+    #     """
+    #     # pk is a tuble with (pk, pp, s_proof)
+    #     (pk, (t, cts, signature)) = sm_report
+
+    #     table = make_table(pk[1])
+
+    #     if not schnorr_verify(pk[0], pk[1], str((t, cts)), signature):
+    #         print(False)
+            
+    #     bin_msgs = [dec(self.dso_dk, pk[1], table, ct) for ct in cts]
+
+    #     # msg = dec(self.dso_dk, self.pp, table, ct="")
+    #     msg = "".join([str(x) for x in bin_msgs])
+        
+    #     # (_, 2) means from bin to int
+    #     msg = int(msg, 2)
+
+    #     _, g, _ = self.pp
+
+    #     pk_prime = None
+    #     for r_prime in self.mix_anon_list[1]:
+    #         # Using additive
+    #         # Old multiplied, like so anon_pk = pk[0].pt_mul(r_prime)
+    #         blinding_factor = g.pt_mul(r_prime)
+    #         pk_prime_check = pk[0].pt_add(blinding_factor)
+            
+    #         for pk_prime in self.mix_anon_list[0]:
+    #             if pk_prime_check == pk_prime:
+    #                 pk_prime = pk_prime_check
+        
+    #     # participants are those with the msg (the msg is currently set to 10)
+    #     if msg >= 0:
+    #         print("SM wants to join DR event")
+    #         self.participants_report.append(sm_report)
+    #         self.participants.append(pk_prime)
             
     def get_participants(self):
         """ 

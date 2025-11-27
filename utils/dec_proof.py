@@ -1,22 +1,21 @@
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
-from utils.ec_elgamal import enc, dec, make_table
+from utils.ec_elgamal import enc #, dec, make_table
 import hashlib
+import threshold_crypto as tc
 
 def hash_to_bn(*points, order):
-    """Hash EC points deterministically into a scalar mod q.
-
-    Args:
-        *points (tuple[EcPt, EcPt, EcPt, EcPt, EcPt, EcPt, EcPt, EcPt]): 
-        order (Bn):
-
-    Returns:
-        Bn:
-    """
+    """Hash EC points deterministically into a scalar mod q."""
     h = hashlib.sha256()
     for P in points:
-        h.update(P.export())   # serialize EC point bytes
-    return Bn.from_binary(h.digest()) % order
+        if hasattr(P, "point"):
+            P = P.point
+        if hasattr(P, "x") and hasattr(P, "y"):
+            h.update(int(P.x).to_bytes(32, "big"))
+            h.update(int(P.y).to_bytes(32, "big"))
+        else:
+            h.update(str(P).encode())
+    return int.from_bytes(h.digest(), "big") % order
 
 def prove_correct_decryption(ek, sec_params, M, dk):
     """Prove that M = C2 - dk * C1 (i.e., correct ElGamal decryption)
@@ -36,30 +35,39 @@ def prove_correct_decryption(ek, sec_params, M, dk):
             - (A1, A2) (tuple): commitment points
             - s (Bn): response scalar for the NIZK
     """
-    _, g, order = sec_params
+    g = sec_params.P
+    order = sec_params.order
     CT = enc(ek, sec_params, M)
-    ct_0, ct_1 = CT
+    ct_0 = CT.C1
+    ct_1 = CT.C2
 
-    if isinstance(M, EcPt):
+    if hasattr(M, "x") and hasattr(M, "y"):
         M_point = M
-    elif isinstance(M, Bn):
-        M_point = g.pt_mul(M)
+    elif isinstance(M, int):
+        M_point = g * M
     else:
-        M_point = g.pt_mul(Bn(M))
+        M_point = g * int(M)
 
-    r = order.random()       # random nonce
+    r = int(tc.number.random_in_range(1, order))       # random nonce
 
     # A1 = r * g      # commitment of ciphertext 1
     # A2 = r * C1     # commitment of ciphertext 2
-    commitment_ct_0 = g.pt_mul(r)    # commitment of ciphertext 1
-    commitment_ct_1 = ct_0.pt_mul(r)     # commitment of ciphertext 2
+    commitment_ct_0 = g * r    # commitment of ciphertext 1
+    commitment_ct_1 = ct_0 * r     # commitment of ciphertext 2
     commitment_CT = (commitment_ct_0, commitment_ct_1)
 
     # V = C2 - M
-    V = ct_1.pt_add(M_point.pt_neg())
+    V = ct_1 + (-M_point)
     
     challenge = hash_to_bn(g, ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=order)
     # s = r + c * dk % order
+    # Ensure dk is an integer
+    if isinstance(dk, list):
+        dk = dk[0]
+    if hasattr(dk, "d"):
+        dk = int(dk.d)
+    else:
+        dk = int(dk)
     response = (r + challenge * dk) % order
 
     return (M_point, CT, commitment_CT, response)
@@ -111,41 +119,41 @@ def verify_correct_decryption(ek, sec_params, proof):
     return check1 and check2
 
 
-def demo():
-    """Demo run of encryption, decryption and proof verification."""
-    G = EcGroup(713)  # 713 = NIST P-256
-    g = G.generator()
-    q = G.order()
-    sec_param = (G, g, q)
-    print("check 1")
+# def demo():
+#     """Demo run of encryption, decryption and proof verification."""
+#     G = EcGroup(713)  # 713 = NIST P-256
+#     g = G.generator()
+#     q = G.order()
+#     sec_param = (G, g, q)
+#     print("check 1")
 
-    # Generate keypair
-    x = q.random()
-    # ek = x * g 
-    ek = g.pt_mul(x)
+#     # Generate keypair
+#     x = q.random()
+#     # ek = x * g 
+#     ek = g.pt_mul(x)
 
-    # Encode message as an EC point (i.e. g * m_scalar, done as instance of in the proof)
-    m_scalar = Bn(42)
+#     # Encode message as an EC point (i.e. g * m_scalar, done as instance of in the proof)
+#     m_scalar = Bn(42)
 
-    # Encrypt
-    (C1, C2) = enc(ek, sec_param, m_scalar)
-    print("check 2")
+#     # Encrypt
+#     (C1, C2) = enc(ek, sec_param, m_scalar)
+#     print("check 2")
 
-    # Decrypt
-    # M_dec = C2 - x * C1
-    # M_dec = C2.pt_add(C1.pt_mul(x).pt_neg())
-    # assert M_dec == M
+#     # Decrypt
+#     # M_dec = C2 - x * C1
+#     # M_dec = C2.pt_add(C1.pt_mul(x).pt_neg())
+#     # assert M_dec == M
 
-    tab = make_table(sec_param)
-    print(dec(x, sec_param, tab, (C1, C2)))
+#     tab = make_table(sec_param)
+#     print(dec(x, sec_param, tab, (C1, C2)))
 
-    # Prove correct decryption
-    proof = prove_correct_decryption(ek, sec_param, m_scalar, x)
+#     # Prove correct decryption
+#     proof = prove_correct_decryption(ek, sec_param, m_scalar, x)
 
-    # Verify proof
-    ok = verify_correct_decryption(ek, sec_param, proof)
-    print("Proof verified:", ok)
+#     # Verify proof
+#     ok = verify_correct_decryption(ek, sec_param, proof)
+#     print("Proof verified:", ok)
 
 
-if __name__ == "__main__":
-    demo()
+# if __name__ == "__main__":
+#     demo()

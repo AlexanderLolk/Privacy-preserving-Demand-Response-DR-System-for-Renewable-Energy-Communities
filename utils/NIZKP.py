@@ -1,5 +1,6 @@
 from petlib.ec import Bn
 import hashlib
+import threshold_crypto as tc
 
 # schnorr_challenge hashes the elements for the challenge used in Schnorrs proof
 def schnorr_NIZKP_challenge(elements):
@@ -25,36 +26,53 @@ def schnorr_NIZKP_challenge(elements):
     return Hash.digest()
 
 # schnorr_proof creates the NIZKP of knowledge of the secret key (rewrite the explanation)
+# def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
+#     """Create a Schnorr non-interactive proof of knowledge of `sk`.
+
+#     The proof demonstrates knowledge of the secret scalar `sk` such that
+#     `pk = sk * g` without revealing `sk`. It returns the tuple
+#     (challenge, response, commitment) where the challenge is derived via
+#     `schnorr_NIZKP_challenge` (Fiat–Shamir).
+
+#     Args:
+#         pk (EcPt): Public key point corresponding to `sk`.
+#         sec_params (tuple): (EcGroup, generator g (EcPt), order (Bn)).
+#         sk (Bn): Secret scalar (private key).
+#         msg (str): Optional context string included in the challenge.
+
+#     Returns:
+#         tuple: (challenge (Bn), response (Bn), commitment (EcPt)).
+#     """
+#     _, g, order = sec_params
+#     r = order.random()            # nonce
+#     commitment = r * g
+
+#     # challenge
+#     challenge_hash = schnorr_NIZKP_challenge([
+#         g.export().hex(),
+#         pk.export().hex(),
+#         commitment.export().hex(),
+#         msg
+#     ])
+#     challenge = Bn.from_binary(challenge_hash) % order # from_binary Creates a Big Number from a byte sequence representing the number in Big-endian 8 byte atoms.
+#     response = (r - challenge * sk) % order 
+#     return (challenge, response, commitment)
+
 def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
-    """Create a Schnorr non-interactive proof of knowledge of `sk`.
-
-    The proof demonstrates knowledge of the secret scalar `sk` such that
-    `pk = sk * g` without revealing `sk`. It returns the tuple
-    (challenge, response, commitment) where the challenge is derived via
-    `schnorr_NIZKP_challenge` (Fiat–Shamir).
-
-    Args:
-        pk (EcPt): Public key point corresponding to `sk`.
-        sec_params (tuple): (EcGroup, generator g (EcPt), order (Bn)).
-        sk (Bn): Secret scalar (private key).
-        msg (str): Optional context string included in the challenge.
-
-    Returns:
-        tuple: (challenge (Bn), response (Bn), commitment (EcPt)).
-    """
-    _, g, order = sec_params
-    r = order.random()            # nonce
+    g = sec_params.P
+    order = sec_params.order
+    
+    r = tc.number.random_in_range(1, order) #nonce
     commitment = r * g
 
-    # challenge
     challenge_hash = schnorr_NIZKP_challenge([
-        g.export().hex(),
-        pk.export().hex(),
-        commitment.export().hex(),
+        str(g.x), str(g.y),
+        str(pk.x), str(pk.y),
+        str(commitment.x), str(commitment.y),
         msg
     ])
-    challenge = Bn.from_binary(challenge_hash) % order # from_binary Creates a Big Number from a byte sequence representing the number in Big-endian 8 byte atoms.
-    response = (r - challenge * sk) % order 
+    challenge = int.from_bytes(challenge_hash, "big") % order
+    response = (r - challenge * sk) % order
     return (challenge, response, commitment)
 
 # schnorr_NIZKP_verify verifies the NIZKP of knowledge of the secret key

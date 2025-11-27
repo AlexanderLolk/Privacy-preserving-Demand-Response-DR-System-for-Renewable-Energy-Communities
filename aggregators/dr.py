@@ -3,6 +3,7 @@
 import random
 from utils.generators import ekey_gen, pub_param, skey_gen
 from utils.signature import schnorr_sign
+from utils.ec_elgamal import part_dec
 
 
 class DR_Aggregator:
@@ -75,3 +76,7 @@ class DR_Aggregator:
         TODO
         """
         return None
+    
+    #partial decryption
+    def get_partial_decryption_share(self, c1_point):
+        return c1_point.pt_mul(self.sk_share)

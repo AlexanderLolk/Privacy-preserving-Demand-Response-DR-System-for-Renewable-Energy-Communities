@@ -1,7 +1,6 @@
 from utils.dec_proof import hash_to_bn
 # from utils.ec_elgamal import dec, make_table # dec and make_table for debugging
 from utils.generators import pub_param
-from petlib.ec import EcPt
 
 #####
 # Eval() outputs an evaluation and showcases which users have met the target reduction

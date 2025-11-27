@@ -5,22 +5,27 @@ import utils.NIZKP as nizkp
 import utils.ec_elgamal as ahe
 import utils.shuffle as shuffle
 from utils.dec_proof import prove_correct_decryption
+import threshold_crypto as tc
 
-def pub_param(nid=713):
-    """Create and return elliptic-curve public parameters.
+# def pub_param(nid=713):
+#     """Create and return elliptic-curve public parameters.
 
-    Args:
-        nid (int): petlib curve identifier (default 713 == NIST P-256).
+#     Args:
+#         nid (int): petlib curve identifier (default 713 == NIST P-256).
 
-    Returns:
-        tuple[EcGroup, EcPt, Bn]:
-    """
-    group_G = EcGroup(nid)
-    # g is the base point of the curve, which is also called the generator
-    g = group_G.generator()
-    order = group_G.order()
+#     Returns:
+#         tuple[EcGroup, EcPt, Bn]:
+#     """
+#     group_G = EcGroup(nid)
+#     # g is the base point of the curve, which is also called the generator
+#     g = group_G.generator()
+#     order = group_G.order()
     
-    return (group_G, g, order)
+#     return (group_G, g, order)
+
+def pub_param(curve="P-256"):
+    curve_params = tc.CurveParameters(curve)
+    return curve_params
 
 pp = pub_param()
 
@@ -73,7 +78,7 @@ def ekey_gen(pp=None):
     m_scalar = Bn(42)   # just a sample message for proof
 
     # (C1, C2) = elgamal_encrypt(pp, ek, M)
-    (C1, C2) = ahe.enc(ek, pp, m_scalar)
+    cts = ahe.enc(ek, pp, m_scalar)
 
     # Generate proof of correct decryption
     πdk = prove_correct_decryption(ek, pp, m_scalar, dk)

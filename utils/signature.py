@@ -1,19 +1,28 @@
 from petlib.ec import Bn
 import hashlib
-
+from Crypto.PublicKey import ECC
+import threshold_crypto as tc
+import random
 
 # key_gen generates a private/public key pair (sk, pk)
-def key_gen(sec_params):
-    """Generate a Schnorr keypair.
+# def key_gen(sec_params):
+#     """Generate a Schnorr keypair.
 
-    Args:
-        sec_params (tuple): (EcGroup, generator EcPt, order Bn).
+#     Args:
+#         sec_params (tuple): (EcGroup, generator EcPt, order Bn).
 
-    Returns:
-        tuple: (sk (Bn), pk (EcPt)) where pk = sk * g.
-    """
-    _, g, order = sec_params
-    priv_sk = order.random()
+#     Returns:
+#         tuple: (sk (Bn), pk (EcPt)) where pk = sk * g.
+#     """
+#     _, g, order = sec_params
+#     priv_sk = order.random()
+#     pub_pk = priv_sk * g
+#     return (priv_sk, pub_pk)
+
+def key_gen(pp):
+    g = pp.P
+    order = pp.order
+    priv_sk = tc.number.random_in_range(1, order)
     pub_pk = priv_sk * g
     return (priv_sk, pub_pk)
 

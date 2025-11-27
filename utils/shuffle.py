@@ -689,7 +689,6 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
         u_i = hash_to_zq((str(e), str(e_prime), str(c), i))
         u.append(u_i)
 
-    # --- FIX 1: Correct Permutation of Challenges ---
     # ψ maps New_Index -> Old_Index. 
     # So u_prime[j] (new) must equal u[ψ[j]] (old).
     u_prime = [u[ψ[j]] for j in range(N)]
@@ -709,7 +708,6 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     r_hat_sum = sum((r_hat[i] * v[i]) % q for i in range(N)) % q
     r_tilde = sum((r[i] * u[i]) % q for i in range(N)) % q
 
-    # --- FIX 2: Correct Randomness Sum ---
     # We need Σ(u'_i * r'_shuffled_i). 
     # Since u' and r' are both permuted by ψ, this equals Σ(u_original * r_original).
     # Your r_prime input is in original order. Your u is in original order.
@@ -727,7 +725,6 @@ def GenProof(e, e_prime, r_prime, ψ, pk):
     for i in range(N):
         t3 = t3.pt_add(h_gens[i].pt_mul(w_prime[i]))
     
-    # --- FIX 3: Correct t4 for Additive Shuffle ---
     # t4 = Σ(w'_i * e'_i) - w[3] * G
     
     # Part A: Σ(w'_i * e'_i)
@@ -855,17 +852,17 @@ def verify_shuffle_proof(proof, e, e_prime, pk):
 
     # t4_prime = Σ(s'_i * e'_i) - c * Σ(u_i * e_i) - s4 * G
 
-    # 1. Compute Σ(s'_i * e'_i)
+    # Compute Σ(s'_i * e'_i)
     sum_s_prime_e_prime = e_prime[0].pt_mul(s_prime[0])
     for i in range(1, N):
         sum_s_prime_e_prime = sum_s_prime_e_prime.pt_add(e_prime[i].pt_mul(s_prime[i]))
     
-    # 2. Compute Σ(u_i * e_i)
+    # Compute Σ(u_i * e_i)
     sum_u_e = e[0].pt_mul(u[0])
     for i in range(1, N):
         sum_u_e = sum_u_e.pt_add(e[i].pt_mul(u[i]))
 
-    # 3. Assemble
+    # Assemble
     term_challenge = sum_u_e.pt_mul(challenge)
     term_s4 = g.pt_mul(s4)
     
