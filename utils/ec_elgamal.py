@@ -20,9 +20,10 @@ class ElGamal:
         x = tc.number.random_in_range(2, self.curve.order)
         return x, x * self.curve.P
 
-    def encrypt(self, public_key, message):
+    def encrypt(self, public_key, message: int):
         """
         """
+        
         r = tc.number.random_in_range(2, self.curve.order)
 
         if isinstance(message, int):
@@ -108,7 +109,27 @@ class ElGamal:
 
         return self.check_if_zero_or_one(restored_point, expected_value)
 
-    def test_hyp_elgamal(self):
+
+    ###
+    # tests
+    ###
+    def test_int_to_bytes_enc(self):
+        msg = 200
+        binary_string = f'{msg:b}'
+        print("msg to bits: " + binary_string)
+        
+        # ek, dk = self.keygen()
+        # cipher = self.encrypt(ek, msg)
+        # message_dec_int = self.decrypt(dk, cipher, msg)
+        # assert msg == message_dec_int
+         
+        
+
+
+
+
+
+    def test_elgamal(self):
         sk, pk = self.keygen()
         print("sk is: " + str(sk))
         print("pk is: " + str(pk))
@@ -122,7 +143,7 @@ class ElGamal:
         message_dec_int = self.decrypt(sk, cipher, m)
         print("Decrypted message (integer): " + str(message_dec_int))
         
-        assert message_dec_int == 1, f"expted 1, got {message_dec_int}"
+        assert message_dec_int == 1, f"expected 1, got {message_dec_int}"
 
     def test_threshold_elgamal(self):
             
@@ -145,8 +166,9 @@ class ElGamal:
         decrypted_msg = self.threshold_decrypt(partial_decs, encrypted_msg, thresh_params, m)
         print(f"Decrypted message: {decrypted_msg}")
 
-        assert decrypted_msg == 1, f"Decryption failed: expected 1, got {decrypted_msg}"
+        assert decrypted_msg == 1, f"Expected 1, got {decrypted_msg}"
         
 el = ElGamal()
-el.test_hyp_elgamal()
-el.test_threshold_elgamal()
+el.test_int_to_bytes_enc()
+# el.test_elgamal()
+# el.test_threshold_elgamal()

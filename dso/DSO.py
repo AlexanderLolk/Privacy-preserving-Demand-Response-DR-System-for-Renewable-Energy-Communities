@@ -7,7 +7,7 @@
 from utils.generators import pub_param, skey_gen, ekey_gen
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.signature import schnorr_sign_list, schnorr_sign
-from utils.ec_elgamal import enc
+from utils.ec_elgamal import ElGamal
 import random
 
 class DSO:
@@ -144,7 +144,7 @@ class DSO:
         
         # encrypt each value in the noisy list and then sign the list
         # TODO should it be each value thats signed or is signing the entire list ok?
-        enc_TR = [enc(self.ek, self.pp, val) for val in values]
+        enc_TR = [ElGamal.encrypt(self.ek, self.pp, val) for val in values]
         signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR

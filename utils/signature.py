@@ -1,8 +1,6 @@
-from petlib.ec import Bn
 import hashlib
 from Crypto.PublicKey import ECC
 import threshold_crypto as tc
-import random
 
 # key_gen generates a private/public key pair (sk, pk)
 # def key_gen(sec_params):

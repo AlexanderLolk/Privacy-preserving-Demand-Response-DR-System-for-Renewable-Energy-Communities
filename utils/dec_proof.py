@@ -1,6 +1,6 @@
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
-from utils.ec_elgamal import enc #, dec, make_table
+from utils.ec_elgamal import ElGamal #, dec, make_table
 import hashlib
 import threshold_crypto as tc
 
@@ -37,7 +37,7 @@ def prove_correct_decryption(ek, sec_params, M, dk):
     """
     g = sec_params.P
     order = sec_params.order
-    CT = enc(ek, sec_params, M)
+    CT = ElGamal.encrypt(ek, sec_params, M)
     ct_0 = CT.C1
     ct_1 = CT.C2
 
