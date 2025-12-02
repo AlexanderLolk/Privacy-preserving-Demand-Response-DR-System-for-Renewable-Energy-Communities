@@ -1,5 +1,5 @@
 import threshold_crypto as tc
-from Crypto.PublicKey import ECC
+# from Crypto.PublicKey import ECC
 
 # params for threshold_crypto
 # G                 = ECC._curves[curve_name]
@@ -27,7 +27,7 @@ class ElGamal:
 
         if isinstance(message, int):
             message = message * self.curve.P
-            
+
         if hasattr(public_key, 'Q'):
             pk_point = public_key.Q
         else:
@@ -35,23 +35,25 @@ class ElGamal:
 
         c1 = r * self.curve.P
         c2 = (r * pk_point) + message
-        # return [r * self.curve.P, (r * public_key.Q) + (message), r,]
+        
         return [c1, c2]
     
-    def really_decrypt_message_for_real(self, message_point):
+    def check_if_zero_or_one(self, message_point, expected_value):
         """
         """
-        for i in range(1000):
-            if (i * self.curve.P) == message_point:
-                return i
+        expected_point = expected_value * self.curve.P
+        if expected_point == message_point:
+            return 1
+        else:
+            return 0
             
-    def decrypt(self, secret_key, ciphertext):
+    def decrypt(self, secret_key, ciphertext, expected_value):
         """
         """
         c1 = ciphertext[0]
         c2 = ciphertext[1]
         s = (self.curve.order + -secret_key) * c1
-        return self.really_decrypt_message_for_real(c2 + s)
+        return self.check_if_zero_or_one(c2 + s, expected_value)
            
     # threshold partial decryption
     def keygen_threshold(self, threshold=True, t=2, n=2):
@@ -70,10 +72,8 @@ class ElGamal:
         return tc.decrypt_message(partial_decryptions, encrypted_message, thres_params)
     
     def partial_decrypt(self, ciphertext, key_share: tc.KeyShare):
-        # c0 = ciphertext[0]
-        # v_y = c0 * key_share.y
-        # v_y = ciphertext * key_share.y
-        # return tc.PartialDecryption(key_share.x, v_y, self.curve)
+        """
+        """
         c0 = ciphertext[0]
         v_y = c0 * key_share.y
         return tc.PartialDecryption(key_share.x, v_y, self.curve)
@@ -83,8 +83,11 @@ class ElGamal:
         partial_decryptions: list,
         encrypted_message: list,
         threshold_params: tc.ThresholdParameters,
+        expected_value: int,
     ):
-        """Combines multiple partial decryptions to obtain the original message"""
+        """
+            Combines multiple partial decryptions to obtain the original message
+        """
         
         partial_indices = [dec.x for dec in partial_decryptions]
         lagrange_coefficients = [
@@ -103,8 +106,7 @@ class ElGamal:
         c2 = encrypted_message[1]  # Extract C2 from ciphertext
         restored_point = c2 + (-restored_kdP)
 
-        # Convert point back to integer
-        return self.really_decrypt_message_for_real(restored_point)
+        return self.check_if_zero_or_one(restored_point, expected_value)
 
     def test_hyp_elgamal(self):
         sk, pk = self.keygen()
@@ -117,10 +119,10 @@ class ElGamal:
         cipher = self.encrypt(pk, m)
         print("Encrypted message: " + str(cipher))
     
-        message_dec_int = self.decrypt(sk, cipher)
+        message_dec_int = self.decrypt(sk, cipher, m)
         print("Decrypted message (integer): " + str(message_dec_int))
         
-        assert m == message_dec_int, f"Expected {m}, got {message_dec_int}"
+        assert message_dec_int == 1, f"expted 1, got {message_dec_int}"
 
     def test_threshold_elgamal(self):
             
@@ -140,12 +142,10 @@ class ElGamal:
         print("Computed 2 partial decryptions")
 
         thresh_params = tc.ThresholdParameters(2, 2)
-        # decrypted_msg = self.decrypt_threshold(partial_decs, encrypted_msg, thresh_params)
-        decrypted_msg = self.threshold_decrypt(partial_decs, encrypted_msg, thresh_params)
+        decrypted_msg = self.threshold_decrypt(partial_decs, encrypted_msg, thresh_params, m)
         print(f"Decrypted message: {decrypted_msg}")
 
-        # assert str(m) == decrypted_msg, "Decryption failed"
-        assert m == decrypted_msg, f"Decryption failed: expected {m}, got {decrypted_msg}"
+        assert decrypted_msg == 1, f"Decryption failed: expected 1, got {decrypted_msg}"
         
 el = ElGamal()
 el.test_hyp_elgamal()
