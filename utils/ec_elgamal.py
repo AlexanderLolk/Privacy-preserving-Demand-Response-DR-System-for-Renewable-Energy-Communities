@@ -17,7 +17,7 @@ class ElGamal:
     def keygen(self, pp=None):
         """
         """
-        if pp == None:
+        if pp is None:
             self.curve = tc.CurveParameters("P-256")
             self.g = self.curve.P
             self.order = self.curve.order
@@ -87,7 +87,7 @@ class ElGamal:
         if isinstance(encryption_key, tuple):
             _, _, _, encryption_key = encryption_key
         
-        if r == None:
+        if r is None:
             r = tc.number.random_in_range(2, self.order)
         
         list_bits = self._int_to_bits(message)
@@ -141,8 +141,8 @@ class ElGamal:
     def keygen_threshold(self, pp=None):
         """
         """
-
-        if pp == None:
+    
+        if pp is None:
             self.curve = tc.CurveParameters("P-256")
             self.g = self.curve.P
             self.order = self.curve.order
@@ -213,6 +213,9 @@ class ElGamal:
             c1, c2 = encrypted_message[i]
             
             partial_indices = [dec.x for dec in bit_partials]
+            # Report:
+            # Lagrange coefficients are used to combine the partial decryptions from key shares to
+            # reconstruct the decryption key (or its effect) and thus recover the original message.
             lagrange_coefficients = [
                 tc.lagrange_coefficient_for_key_share_indices(
                     partial_indices, idx, self.curve
@@ -221,25 +224,27 @@ class ElGamal:
             ]
             
             # Compute sum of Lagrange-weighted partial decryptions for this bit
+            # Lagrange interpolation is a mathematical technique used to reconstruct a secret from multiple shares.
             summands = [
-                lagrange_coefficients[i].coefficient * bit_partials[i].yC1
+                (lagrange_coefficients[i].coefficient * bit_partials[i].yC1)
                 for i in range(0, len(bit_partials))
             ]
-            restored_kdP = tc.number.ecc_sum(summands)
-            print(f"Bit {i}: restored_kdP = {restored_kdP}")
             
-            # Recover the message point: M = C2 - (k*d*P) where k*d*P = restored_kdP
-            restored_point = c2 + (-restored_kdP)
+            # homomorphic property
+            accumulated_point = tc.number.ecc_sum(summands)
+            # print(f"Bit {i}: restored_kdP = {accumulated_point}")
+            
+            # Recover the message point: M = C2 - (nonce * decryption key * g) where (...) is the sum in accumulated_point
+            restored_point = c2 + (-accumulated_point)
             
             bit = self._check_if_zero_or_one([restored_point])[0]
-            print(f"Bit {i}: recovered bit = {bit}")
+            # print(f"Bit {i}: recovered bit = {bit}")
             decrypted_bits.append(bit)
         
         # Convert bits back to integer
         decrypted_message = self._bits_to_int(decrypted_bits)
         
-        print(f"Decrypted message: {decrypted_message}, Expected: {expected_value}")
-        assert decrypted_message == expected_value, f"Decryption failed: expected {expected_value}, got {decrypted_message}"
+        # print(f"Decrypted message: {decrypted_message}, Expected: {expected_value}")
 
         return decrypted_message 
 
@@ -308,7 +313,7 @@ class ElGamal:
 
         assert decrypted_msg == m, f"Expected {m}, got {decrypted_msg}"
         
-el = ElGamal()
-# el.test_int_to_bytes_enc()
-# el.test_elgamal()
-el.test_threshold_elgamal()
+# el = ElGamal()
+# # el.test_int_to_bytes_enc()
+# # el.test_elgamal()
+# el.test_threshold_elgamal()

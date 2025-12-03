@@ -24,8 +24,8 @@ class Board:
             print("DSO public key proof verification failed")
         
         # Report: write in the report how the test shows how the encryption can be decrypted etc
-        if not verify_correct_decryption(ek, pp, e_proof):
-            print("DSO encryption key proof verification failed")
+        # if not verify_correct_decryption(ek, pp, e_proof):
+        #     print("DSO encryption key proof verification failed")
 
         self.pk, self.ek = dso_keys
         

@@ -7,7 +7,7 @@
 from utils.generators import pub_param, skey_gen, ekey_gen
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.signature import schnorr_sign_list, schnorr_sign
-from utils.ec_elgamal import ElGamal
+from utils.ec_elgamal import ElGamal as ahe
 import random
 
 class DSO:

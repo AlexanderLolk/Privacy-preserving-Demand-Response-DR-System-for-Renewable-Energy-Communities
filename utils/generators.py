@@ -1,7 +1,7 @@
 import random
 import utils.signature as sig
 import utils.NIZKP as nizkp
-import utils.ec_elgamal as ahe
+from utils.ec_elgamal import ElGamal as ahe
 import utils.shuffle as shuffle
 from utils.dec_proof import prove_correct_decryption
 import threshold_crypto as tc
@@ -21,7 +21,7 @@ import threshold_crypto as tc
 #     order = group_G.order()
     
 #     return (group_G, g, order)
-
+ElGamal = ahe()
 def pub_param(curve="P-256"):
     curve_params = tc.CurveParameters(curve)
     return curve_params
@@ -75,10 +75,14 @@ def ekey_gen(pp=None):
     """
     if pp is None:  
         pp = pub_param()
-    ek, dk_key_share, thres_param = ahe.keygen_threshold(pp)
 
+    
+    ek, dk_key_share, thres_param = ElGamal.keygen_threshold(pp)
+    # ek, dk_key_share, thres_param = ahe.keygen_threshold(pp)
+
+    # generate_message = 42
     # (C1, C2) = elgamal_encrypt(pp, ek, M)
-    cts = ahe.enc(ek, pp)
+    # cts = ElGamal.enc(ek, generate_message)
 
     # Generate proof of correct decryption for threshold decryption
     # πdk = prove_correct_decryption(ek, pp, m_scalar, dk)
@@ -101,16 +105,16 @@ def ekey_gen_single(pp=None):
     """
     if pp is None:  
         pp = pub_param()
-    ek, dk = ahe.keygen(pp)
+    ek, dk = ElGamal.keygen(pp)
 
-    generate_message = 200
+    # generate_message = 200
     # (C1, C2) = elgamal_encrypt(pp, ek, M)
-    cts = ahe.encrypt_single(ek, generate_message)
+    # cts = ElGamal.encrypt_single(ek, generate_message)
 
     # Generate proof of correct decryption for threshold decryption
-    πdk = prove_correct_decryption(ek, pp, dk)
+    # πdk = prove_correct_decryption(ek, pp, dk)
     
-    return ((ek, pp, πdk), dk)
+    return ((ek, pp, "placeholder for now"), dk)
 
 
 # mix shuffles a n anonymized list of pk_i

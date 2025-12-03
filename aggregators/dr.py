@@ -3,7 +3,7 @@
 import random
 from utils.generators import ekey_gen_single, pub_param, skey_gen
 from utils.signature import schnorr_sign
-from utils.ec_elgamal import part_dec
+# from utils.ec_elgamal import ElGamal as ahe
 
 
 class DR_Aggregator:
