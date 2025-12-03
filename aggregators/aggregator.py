@@ -1,9 +1,9 @@
 # the DSO publishes a signed list of registered aggregators on
 # BB. The DSO can update the list of registered smart meters and aggregators dynamically
 
-from utils.generators import pub_param, skey_gen, ekey_gen, mix_id
+from utils.generators import pub_param, skey_gen, ekey_gen_single, mix_id
 from utils.signature import schnorr_verify, schnorr_sign
-from utils.ec_elgamal import dec #, make_table
+# from utils.ec_elgamal import dec #, make_table
 import utils.anonym as anonym
 
 class Aggregator:
@@ -16,7 +16,7 @@ class Aggregator:
 
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
         # TODO: do we need ek for the aggregator?
-        ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
+        ((self.ek, _, self.e_proof), self.dk) = ekey_gen_single(pp)
 
         self.participants = []
         self.participants_report = []
@@ -140,10 +140,11 @@ class Aggregator:
         for r_prime in self.mix_anon_list[1]:
 
             # calculate r_prime * G
-            blinding_factor = g.pt_mul(r_prime)
+            # blinding_factor = g.pt_mul(r_prime)
+            blinding_factor = int(r_prime) * g
             # then add r_prime to public key
             # Old: anon_pk = sm_pk.pt_mul(r_prime)
-            pk_prime_check = sm_pk.pt_add(blinding_factor)
+            pk_prime_check = sm_pk + blinding_factor
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:
@@ -160,30 +161,50 @@ class Aggregator:
     def check_sm_report(self, sm_report, dr_aggregator):
         
         (pk, (t, cts, signature)) = sm_report
-        sm_pk_pt, group, _ = pk
+        # sm_pk_pt, group, _ = pk
+        sm_pk_pt = pk[0]
+        pp = pk[1]
 
-        if not schnorr_verify(sm_pk_pt, group, str((t, cts)), signature):
+        if not schnorr_verify(sm_pk_pt, pp, str((t, cts)), signature):
             print("Signature verification failed.")
             return
 
-        gen_point = group.generator()
-        identity_point = group.infinite() 
+        # gen_point = group.generator()
+        # identity_point = group.infinite() 
+        g = pp.P
+        identity_point = 0 * g
 
         decrypted_bits = []
 
         # 3. Iterate through ciphertexts (bits)
+        # for (c1, c2) in cts:
+        #     share_agg = c1.pt_mul(self.sk_share)
+
+        #     share_dr = dr_aggregator.get_partial_decryption_share(c1)
+
+        #     share_total = share_agg.pt_add(share_dr)
+
+        #     msg_point = c2.pt_sub(share_total)
+
+        #     if msg_point == identity_point:
+        #         decrypted_bits.append("0")
+        #     elif msg_point == gen_point:
+        #         decrypted_bits.append("1")
+        #     else:
+        #         print("Decryption Error: Point matches neither 0 nor 1.")
+        #         return
         for (c1, c2) in cts:
-            share_agg = c1.pt_mul(self.sk_share)
+            share_agg = int(self.dk_share) * c1
 
             share_dr = dr_aggregator.get_partial_decryption_share(c1)
 
-            share_total = share_agg.pt_add(share_dr)
+            share_total = share_agg + share_dr
 
-            msg_point = c2.pt_sub(share_total)
+            msg_point = c2 + (-share_total)
 
             if msg_point == identity_point:
                 decrypted_bits.append("0")
-            elif msg_point == gen_point:
+            elif msg_point == g:
                 decrypted_bits.append("1")
             else:
                 print("Decryption Error: Point matches neither 0 nor 1.")
@@ -191,10 +212,13 @@ class Aggregator:
 
         msg_str = "".join(decrypted_bits)
         msg_val = int(msg_str, 2)
+
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
-            blinding_factor = g.pt_mul(r_prime)
-            pk_prime_check = pk[0].pt_add(blinding_factor)
+            # blinding_factor = g.pt_mul(r_prime)
+            # pk_prime_check = pk[0].pt_add(blinding_factor)
+            blinding_factor = int(r_prime) * g
+            pk_prime_check = pk[0] + blinding_factor
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:

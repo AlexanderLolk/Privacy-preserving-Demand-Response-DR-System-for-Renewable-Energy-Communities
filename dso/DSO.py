@@ -21,7 +21,8 @@ class DSO:
         
         #  SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
-        ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
+        ((self.ek, _, self.e_proof), self.key_shares) = ekey_gen(pp)
+        self.i = 0
 
     # verifies every smart meter (users)
     # and adds it into a registered list
@@ -144,7 +145,7 @@ class DSO:
         
         # encrypt each value in the noisy list and then sign the list
         # TODO should it be each value thats signed or is signing the entire list ok?
-        enc_TR = [ElGamal.encrypt(self.ek, self.pp, val) for val in values]
+        enc_TR = [ElGamal.enc(self.ek, self.pp, val) for val in values]
         signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR
@@ -186,7 +187,10 @@ class DSO:
 
         """
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
-        return self.dk
+        #TODO kinda stupid, make better
+        key_share = self.key_shares[self.i]
+        self.i = self.i + 1
+        return key_share
         
         # ek = self.agg_ek.get(agg_id)
         # print("for agg id: ", agg_id)

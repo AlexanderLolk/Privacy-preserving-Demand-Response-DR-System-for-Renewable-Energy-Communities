@@ -2,7 +2,6 @@ import hashlib
 from Crypto.PublicKey import ECC
 import threshold_crypto as tc
 
-
 def key_gen(curve_name="P-256"):
     key = ECC.generate(curve=curve_name)
     return key, key.public_key()
@@ -64,8 +63,8 @@ def schnorr_verify(pk, pp, msg, signature):
 
     return expected_point == reconstructed_point
 
+#
 def schnorr_sign_list(sk, pp, msg_list):
-
     signatures = []
     for msg in msg_list:
         sign = schnorr_sign(sk, pp, msg)

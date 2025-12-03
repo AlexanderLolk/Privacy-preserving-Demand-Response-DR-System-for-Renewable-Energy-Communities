@@ -1,4 +1,3 @@
-from petlib.ec import EcGroup, Bn
 import random
 import utils.signature as sig
 import utils.NIZKP as nizkp
@@ -47,7 +46,11 @@ def skey_gen(id=random, pp=None):
     """
     if pp is None:
         pp = pub_param()
-    sk, pk = sig.key_gen(pp)
+
+    sk_key, _ = sig.key_gen("P-256")
+    sk = sk_key.d
+    pk = sk * pp.P
+
     proof =  nizkp.schnorr_NIZKP_proof(pk, pp, sk)
     return ((id, (pk, pp, proof)), sk)
 
@@ -72,16 +75,41 @@ def ekey_gen(pp=None):
     """
     if pp is None:  
         pp = pub_param()
-    ek, dk = ahe.key_gen(pp)
-
-    # TODO maybe change this to something random
-    m_scalar = Bn(42)   # just a sample message for proof
+    ek, dk_key_share, thres_param = ahe.keygen_threshold(pp)
 
     # (C1, C2) = elgamal_encrypt(pp, ek, M)
-    cts = ahe.enc(ek, pp, m_scalar)
+    cts = ahe.enc(ek, pp)
 
-    # Generate proof of correct decryption
-    πdk = prove_correct_decryption(ek, pp, m_scalar, dk)
+    # Generate proof of correct decryption for threshold decryption
+    # πdk = prove_correct_decryption(ek, pp, m_scalar, dk)
+    return ((ek, pp, "place holder proof"), dk_key_share)
+
+def ekey_gen_single(pp=None):
+    """Generate an ElGamal encryption keypair and a sample decryption proof.
+
+    This function also computes a short non-interactive proof for a sample
+    message to allow verifiers to check that the secret key can decrypt
+    correctly.
+
+    Args:
+        pp (tuple[EcGroup, EcPt, Bn]): 
+
+    Returns:
+        tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]], Bn]: 
+        where `ek` is the public encryption key,
+        πdk` is the produced proof, and `dk` is the secret key.
+    """
+    if pp is None:  
+        pp = pub_param()
+    ek, dk = ahe.keygen(pp)
+
+    generate_message = 200
+    # (C1, C2) = elgamal_encrypt(pp, ek, M)
+    cts = ahe.encrypt_single(ek, generate_message)
+
+    # Generate proof of correct decryption for threshold decryption
+    πdk = prove_correct_decryption(ek, pp, dk)
+    
     return ((ek, pp, πdk), dk)
 
 

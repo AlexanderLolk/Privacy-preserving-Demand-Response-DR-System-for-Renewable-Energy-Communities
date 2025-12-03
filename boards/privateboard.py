@@ -16,11 +16,17 @@ class PrivateBoard:
         self.participants = []
         self.ct_t = {}  # pk' -> (t, ct_c, σ)
         
+        # for pk_prime, ct, t, proof in anonym_reports:
+        #     self.participants.append(pk_prime)
+        #     self.ct_t[pk_prime] = (t, ct, proof)
+        #     print("[NOT IMP] in privateboard: check proof for anonym in PBB")
         for pk_prime, ct, t, proof in anonym_reports:
             self.participants.append(pk_prime)
-            self.ct_t[pk_prime] = (t, ct, proof)
-            print("[NOT IMP] in privateboard: check proof for anonym in PBB")
             
+            pk_key = str((pk_prime.x, pk_prime.y))
+            self.ct_t[pk_key] = (t, ct, proof)
+            print("[NOT IMP] in privateboard: check proof for anonym in PBB")
+
         self.anonym_reports = anonym_reports
 
     # pseudo-anonymous identity

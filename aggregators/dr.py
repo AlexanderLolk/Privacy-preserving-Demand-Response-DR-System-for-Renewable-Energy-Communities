@@ -1,7 +1,7 @@
 # DR Aggregator
 # The aggregator
 import random
-from utils.generators import ekey_gen, pub_param, skey_gen
+from utils.generators import ekey_gen_single, pub_param, skey_gen
 from utils.signature import schnorr_sign
 from utils.ec_elgamal import part_dec
 
@@ -16,7 +16,7 @@ class DR_Aggregator:
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
         
         # TODO: do we need ek for the dr aggregator?
-        ((self.ek, _, self.e_proof), self.dk) = ekey_gen(pp)
+        ((self.ek, _, self.e_proof), self.dk) = ekey_gen_single(pp)
     
     def get_public_key(self):
         """ 
@@ -80,3 +80,5 @@ class DR_Aggregator:
     #partial decryption
     def get_partial_decryption_share(self, c1_point):
         return c1_point.pt_mul(self.sk_share)
+    
+    
