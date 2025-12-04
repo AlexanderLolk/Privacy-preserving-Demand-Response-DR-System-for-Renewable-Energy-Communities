@@ -161,7 +161,9 @@ class DSO:
         
         # encrypt each value in the noisy list and then sign the list
         # TODO should it be each value thats signed or is signing the entire list ok?
-        enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
+        # enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
+        # enc_TR = [self.pro.ahe.enc(self.ek, val)[0] for val in values]
+        enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
         signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR

@@ -21,6 +21,27 @@ class Shuffle:
             h_generators_local.append(h_i_point)
         
         return h_generators_local
+    
+    def _serialize(self, data):
+        """Recursively serialize data to a canonical string format """
+        if isinstance(data, list) or isinstance(data, tuple):
+            return "[" + ",".join(self._serialize(x) for x in data) + "]"
+        elif hasattr(data, 'x') and hasattr(data, 'y'):
+            # It's an EccPoint (or similar), serialize coordinates
+            return f"({int(data.x)},{int(data.y)})"
+        else:
+            # Integers, strings, etc.
+            return str(data)
+        
+    def hash_to_zq(self, data):
+        """ """
+        # Use canonical serialization
+        serialized_data = self._serialize(data)
+        
+        hasher = hashlib.sha256()
+        hasher.update(serialized_data.encode())
+        digest = hasher.digest()
+        return int.from_bytes(digest, "big")   
 
     # Generates a random permutation ψ ∈ Ψ_N
     def GenPermutation(self, N):
@@ -105,13 +126,6 @@ class Shuffle:
         
         return (c, r)
 
-    def hash_to_zq(self, data):
-        """ """
-        hasher = hashlib.sha256()
-        hasher.update(str(data).encode())
-        digest = hasher.digest()
-        return int.from_bytes(digest, "big")
-
     # pk for ours is ek
     def GenProof(self, e, e_prime, r_prime, ψ, pk):
         """ """
@@ -127,7 +141,9 @@ class Shuffle:
         # Step 2-7: Generate challenges
         u = []
         for i in range(N):
-            u_i = self.hash_to_zq((str(e), str(e_prime), str(c), i))
+            # u_i = self.hash_to_zq((str(e), str(e_prime), str(c), i))
+            # u.append(u_i)
+            u_i = self.hash_to_zq((e, e_prime, c, i)) 
             u.append(u_i)
 
         u_prime = [u[ψ[j]] for j in range(N)]
@@ -180,8 +196,11 @@ class Shuffle:
             t_hat.append(hat_t_i)
         
         # Step 26-27: Compute challenge
-        y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
-        t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
+        # y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
+        # t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
+        # challenge = self.hash_to_zq((y, t))
+        y = (e, e_prime, c, c_hat, pk)
+        t = (t1, t2, t3, t4, t_hat)
         challenge = self.hash_to_zq((y, t))
 
         # Step 28-33: Compute responses
@@ -219,7 +238,9 @@ class Shuffle:
         # Recompute challenges u
         u = []
         for i in range(N):
-            u_i = self.hash_to_zq((str(e), str(e_prime), str(c), i))
+            # u_i = self.hash_to_zq((str(e), str(e_prime), str(c), i))
+            # u.append(u_i)
+            u_i = self.hash_to_zq((e, e_prime, c, i))
             u.append(u_i)
         
         # c_bar = Σc_i - Σh_i
@@ -247,8 +268,11 @@ class Shuffle:
             c_tilde = c_tilde + (int(u[i]) * c[i])
         
         # Recompute challenge
-        y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
-        t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
+        # y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
+        # t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
+        # challenge = self.hash_to_zq((y, t))
+        y = (e, e_prime, c, c_hat, pk)
+        t = (t1, t2, t3, t4, t_hat)
         challenge = self.hash_to_zq((y, t))
         
         # Verify t1 = -challenge*c_bar + s1*g

@@ -14,21 +14,39 @@ import threshold_crypto as tc
 # user 1 and 4 have not met the target reduction
 
 # Helper function to calculate subtraction of two ciphertexts
+# def sub(c1, c2):
+#     """
+#     Computes Enc(m1 - m2) given Enc(m1) and Enc(m2) by using the 
+#     additive property of Elliptic Curve ElGamal (C1 * C2^-1)
+#     """
+#     # print("c1 xy: " + str(c1.pointQ().xy))
+#     # print("c1: " + str(c1))
+#     # print("c2: " + str(c2))
+#     # print("c1 x: " + str(c1.x))
+#     # if isinstance(c1[0], tuple):
+#     #     c1 = c1[0]
+#     # if isinstance(c2[0], tuple):
+#     #     c2 = c2[0]
+#     if isinstance(c2, list) and len(c2) > 0:
+#         c2 = c2[0]
+
+#     a1, b1 = c1
+#     a2, b2 = c2
+#     return (a1 + (-a2), b1 + (-b2))
 def sub(c1, c2):
     """
-    Computes Enc(m1 - m2) given Enc(m1) and Enc(m2) by using the 
-    additive property of Elliptic Curve ElGamal (C1 * C2^-1)
+    Computes Enc(m1 - m2) given Enc(m1) and Enc(m2)
     """
-    # print("c1 xy: " + str(c1.pointQ().xy))
-    # print("c1: " + str(c1))
-    # print("c2: " + str(c2))
-    # print("c1 x: " + str(c1.x))
-    # if isinstance(c1[0], tuple):
-    #     c1 = c1[0]
-    # if isinstance(c2[0], tuple):
-    #     c2 = c2[0]
+    
+    if isinstance(c2, list):
+        # Input is [(P1, P2)], extract tuple inside list
+        if len(c2) > 0 and isinstance(c2[0], (list, tuple)):
+            c2 = c2[0]
+
+    # c1 and c2 are unpackable (they are tuples or lists of 2 points)
     a1, b1 = c1
-    a2, b2 = c2[0]
+    a2, b2 = c2
+    
     return (a1 + (-a2), b1 + (-b2))
 
 #=============
@@ -58,7 +76,7 @@ def eval(BB, PBB, dk_share, dso_ek, agg_id):
 
     try:
         ct_T = BB.ct_T
-        print("\n----> ct_T :" + str(ct_T) + "\n")
+        print("\n----> ct_T :" + str(ct_T) + "")
     except AttributeError:
         print("No ct_T found in BB during Eval")
         return (PBB, BB)
@@ -261,7 +279,7 @@ def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     order = pp[2]
 
     C1_1, C2_1 = ct1
-    C1_2, C2_2 = ct2[0]
+    C1_2, C2_2 = ct2
 
     C1_eq, C2_eq = ct_eq
 
@@ -351,59 +369,34 @@ def combine_decryption_shares(BB, thresh_params):
             print("No decryption shares found on board.")
             return
 
-        num_shares_per_agg = len(share_lists[0])
         ct_eq_list = BB.ct_eq
         
-        if len(ct_eq_list) != num_shares_per_agg:
-            print("Mismatch between ciphertext count and share count.")
-            return
-
         pro = Procedures()
         pp = pro.pub_param()
         g = pp[1]
+        
+        # Define Identity Point (0*G)
         identity_point = 0 * g
         
         M_set_final = []
-
         num_aggs = len(share_lists)
-
-        # for i in range(len(ct_eq_list)):
-        #     (C1_i, C2_i) = ct_eq_list[i]
-            
-        #     # Get share i from each aggregator
-        #     shares_for_ct_i = [share_list[i] for share_list in share_lists]
-            
-        #     # Combine shares
-        #     Combined_M_share = shares_for_ct_i[0]
-        #     for j in range(1, len(shares_for_ct_i)):
-        #         Combined_M_share = Combined_M_share + shares_for_ct_i[j]
-            
-        #     # Final decryption: C2_i - Combined_M_share
-        #     Plaintext_Point = C2_i + (-Combined_M_share)
-
-        #     # Check if result is g^0 (identity)
-        #     if Plaintext_Point == identity_point:
-        #         M_set_final.append(1) # "g^0 was found"
-        #     else:
-        #         M_set_final.append(0) # "random number"
 
         for i in range(len(ct_eq_list)):
             # Get partial decryptions for ciphertext i from all aggregators
             partials_for_ct_i = [share_lists[agg_idx][i] for agg_idx in range(num_aggs)]
             
-            # Use threshold decryption to combine
-            plaintext = pro.ahe.threshold_decrypt(
+            # using point decryption, not int
+            plaintext_point = pro.ahe.threshold_decrypt_point(
                 partials_for_ct_i,
-                [ct_eq_list[i]],  # Single ciphertext as list
-                thresh_params,
-                expected_value=0
+                ct_eq_list[i],  # Pass tuple (C1, C2) directly
+                thresh_params
             )
 
-            # Check if result is 0 (target met) or non-zero (target not met)
-            if plaintext == 0:
-                M_set_final.append(1)  # Target met
+            # Check if result is Identity (Target met) or Random (Target not met)
+            if plaintext_point == identity_point:
+                M_set_final.append(1)  # Target met (Diff == 0)
             else:
-                M_set_final.append(0)  # Target not met
+                M_set_final.append(0)  # Target not met (Diff != 0)
         
         BB.M_set = M_set_final
         BB.eval_status = "evaluated_complete"
@@ -411,4 +404,292 @@ def combine_decryption_shares(BB, thresh_params):
 
     except Exception as e:
         print(f"Error combining shares: {e}")
+        import traceback
+        traceback.print_exc()
         BB.eval_status = "evaluation_failed_combination"
+
+
+def test_sub():
+    """Test the subtraction of two ciphertexts."""
+    print("=== Testing sub() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    curve = pp[0]
+    g = pp[1]
+    order = pp[2]
+    
+    # Create two simple ciphertexts
+    r1 = tc.number.random_in_range(1, order)
+    r2 = tc.number.random_in_range(1, order)
+    
+    c1 = (int(r1) * g, int(r1) * g)
+    c2 = (int(r2) * g, int(r2) * g)
+    
+    result = sub(c1, c2)
+    print(f"Subtraction successful: {result}")
+    
+    # Verify result structure
+    assert isinstance(result, tuple) and len(result) == 2
+    print("✓ sub() test passed\n")
+
+
+def test_ord_comparison():
+    """Test order comparison placeholder."""
+    print("=== Testing ord_comparison() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    g = pp[1]
+    identity = 0 * g
+    
+    ct_b = (identity, identity)
+    ct_m = (identity, identity)
+    
+    ct_o, proof = ord_comparison(ct_b, ct_m)
+    print(f"ord_comparison returned: ct_o={ct_o}, proof={proof}")
+    
+    assert ct_o == (identity, identity)
+    print("✓ ord_comparison() test passed\n")
+
+
+def test_ct_reduction():
+    """Test ciphertext reduction placeholder."""
+    print("=== Testing ct_reduction() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    g = pp[1]
+    identity = 0 * g
+    
+    ct_b = (identity, identity)
+    ct_m = (identity, identity)
+    ct_o = (identity, identity)
+    
+    ct_red = ct_reduction(ct_b, ct_m, ct_o)
+    print(f"ct_reduction returned: {ct_red}")
+    
+    assert ct_red == (identity, identity)
+    print("✓ ct_reduction() test passed\n")
+
+
+def test_ct_aggregation():
+    """Test homomorphic aggregation of ciphertexts."""
+    print("=== Testing ct_aggregation() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    g = pp[1]
+    order = pp[2]
+    
+    # Create some reduction ciphertexts
+    reduc_set = []
+    for i in range(3):
+        r = tc.number.random_in_range(1, order)
+        ct_red = (int(r) * g, int(r) * g)
+        reduc_set.append((ct_red, i, f"pk_prime_{i}"))
+    
+    ct_sum = ct_aggregation(reduc_set)
+    print(f"Aggregated ciphertext: {ct_sum}")
+    
+    assert isinstance(ct_sum, tuple) and len(ct_sum) == 2
+    print("✓ ct_aggregation() test passed\n")
+
+
+def test_epet_and_proofs():
+    """Test EPET with proof generation and verification."""
+    print("=== Testing epet(), proof_r(), and verify_r() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    curve = pp[0]
+    g = pp[1]
+    order = pp[2]
+    
+    # Generate encryption key
+    sk = tc.number.random_in_range(1, order)
+    ek = int(sk) * g
+    
+    # Create ct_sum (encrypted value)
+    ahe = pro.ahe
+    msg1 = 5
+    ct_sum = ahe.enc(ek, msg1)[0]  # Take first ciphertext
+    
+    # Create ct_T (target - same value, should result in Enc(0))
+    msg2 = 5
+    ct_T_same = ahe.enc(ek, msg2)[0]
+    
+    # Create ct_T (different value, should result in Enc(random))
+    msg3 = 7
+    ct_T_diff = ahe.enc(ek, msg3)[0]
+    
+    print("\n--- Test 1: Same values (should produce Enc(0)) ---")
+    ct_eq_same, proof_same = epet(ct_sum, [ct_T_same], ek)
+    print(f"Generated ct_eq and proof")
+    
+    # Verify the proof
+    is_valid_same = verify_r(ct_sum, [ct_T_same], ct_eq_same, proof_same, ek)
+    print(f"Proof verification (same values): {is_valid_same}")
+    assert is_valid_same, "Proof verification failed for same values!"
+    
+    print("\n--- Test 2: Different values (should produce Enc(random)) ---")
+    ct_eq_diff, proof_diff = epet(ct_sum, [ct_T_diff], ek)
+    print(f"Generated ct_eq and proof")
+    
+    # Verify the proof
+    is_valid_diff = verify_r(ct_sum, [ct_T_diff], ct_eq_diff, proof_diff, ek)
+    print(f"Proof verification (different values): {is_valid_diff}")
+    assert is_valid_diff, "Proof verification failed for different values!"
+    
+    print("\n--- Test 3: Tampered proof (should fail) ---")
+    A1, A2, response, challenge = proof_diff
+    tampered_proof = (A1, A2, response + 1, challenge)  # Tamper with response
+    is_valid_tampered = verify_r(ct_sum, [ct_T_diff], ct_eq_diff, tampered_proof, ek)
+    print(f"Proof verification (tampered): {is_valid_tampered}")
+    assert not is_valid_tampered, "Tampered proof should not verify!"
+    
+    print("✓ EPET and proof tests passed\n")
+
+
+def test_pet_comparison():
+    """Test PET comparison with multiple targets."""
+    print("=== Testing pet_comparison() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    g = pp[1]
+    order = pp[2]
+    
+    # Generate encryption key
+    sk = tc.number.random_in_range(1, order)
+    ek = int(sk) * g
+    
+    # Create ct_sum
+    ahe = pro.ahe
+    msg_sum = 10
+    ct_sum = ahe.enc(ek, msg_sum)[0]
+    
+    # Create multiple targets
+    ct_T = []
+    for target_val in [5, 10, 15]:
+        ct_target = ahe.enc(ek, target_val)
+        ct_T.append(ct_target)
+    
+    ct_eq, π_eq = pet_comparison(ct_sum, ct_T, ek)
+    
+    print(f"Generated {len(ct_eq)} equality ciphertexts")
+    print(f"Generated {len(π_eq)} proofs")
+    
+    assert len(ct_eq) == 3
+    assert len(π_eq) == 3
+    
+    # Verify all proofs
+    for i in range(len(ct_eq)):
+        is_valid = verify_r(ct_sum, ct_T[i], ct_eq[i], π_eq[i], ek)
+        print(f"Target {i} proof valid: {is_valid}")
+        assert is_valid, f"Proof {i} verification failed!"
+    
+    print("✓ pet_comparison() test passed\n")
+
+
+def test_partial_decrypt():
+    """Test partial decryption with key shares."""
+    print("=== Testing partial_decrypt() ===")
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    
+    # Generate threshold keys
+    ek, key_shares, thresh_params = pro.ahe.keygen_threshold(pp)
+    
+    # Encrypt some values
+    ct_eq = []
+    for val in [0, 5, 10]:
+        cts = pro.ahe.enc(ek, val)
+        ct_eq.append(cts[0])  # Take first ciphertext of each
+    
+    # Get partial decryption from first key share
+    M_shares, proofs = partial_decrypt(ct_eq, key_shares[0])
+    
+    print(f"Generated {len(M_shares)} partial decryptions")
+    print(f"Generated {len(proofs)} proofs")
+    
+    assert len(M_shares) == 3
+    assert len(proofs) == 3
+    
+    print("✓ partial_decrypt() test passed\n")
+
+
+def test_combine_decryption_shares():
+    """Test combining partial decryption shares."""
+    print("=== Testing combine_decryption_shares() ===")
+    
+    # Create mock board
+    class MockBoard:
+        pass
+    
+    BB = MockBoard()
+    
+    pro = Procedures()
+    pp = pro.pub_param()
+    
+    # Generate threshold keys (2-of-2)
+    ek, key_shares, thresh_params = pro.ahe.keygen_threshold(pp)
+    
+    # Encrypt test values
+    test_values = [0, 5, 10]
+    ct_eq = []
+    for val in test_values:
+        cts = pro.ahe.enc(ek, val)
+        ct_eq.append(cts[0])
+    
+    BB.ct_eq = ct_eq
+    
+    # Get partial decryptions from both aggregators
+    M_shares_agg1, _ = partial_decrypt(ct_eq, key_shares[0])
+    M_shares_agg2, _ = partial_decrypt(ct_eq, key_shares[1])
+    
+    BB.M_shares = {
+        "agg1": M_shares_agg1,
+        "agg2": M_shares_agg2
+    }
+    
+    # Combine shares
+    combine_decryption_shares(BB, thresh_params)
+    
+    print(f"Final M_set: {BB.M_set}")
+    print(f"Eval status: {BB.eval_status}")
+    
+    assert hasattr(BB, "M_set")
+    assert BB.eval_status == "evaluated_complete"
+    assert len(BB.M_set) == 3
+    
+    # First value is 0, so should be 1 (target met)
+    # Other values are non-zero, so should be 0 (target not met)
+    assert BB.M_set[0] == 1, "Value 0 should result in target met"
+    
+    print("✓ combine_decryption_shares() test passed\n")
+
+
+def run_all_eval_tests():
+    """Run all eval tests."""
+    print("\n" + "="*60)
+    print("RUNNING ALL EVAL TESTS")
+    print("="*60 + "\n")
+    
+    test_sub()
+    test_ord_comparison()
+    test_ct_reduction()
+    test_ct_aggregation()
+    test_epet_and_proofs()
+    test_pet_comparison()
+    test_partial_decrypt()
+    test_combine_decryption_shares()
+    
+    print("="*60)
+    print("ALL EVAL TESTS PASSED! ✓")
+    print("="*60 + "\n")
+
+
+if __name__ == "__main__":
+    run_all_eval_tests()

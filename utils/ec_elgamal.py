@@ -1,4 +1,3 @@
-from email import message
 import threshold_crypto as tc
 from Crypto.PublicKey import ECC
 
@@ -253,6 +252,41 @@ class ElGamal:
         # print(f"Decrypted message: {decrypted_message}, Expected: {expected_value}")
 
         return decrypted_message 
+    
+    def threshold_decrypt_point(
+        self,
+        partial_decryptions: list,
+        ciphertext: tuple,
+        threshold_params: tc.ThresholdParameters
+    ):
+        """
+        reconstructs the shared secret point and returns the raw plaintext point.
+        Used for PET where the result is Identity (0) or Random, not a bit.
+        """
+        c1, c2 = ciphertext
+        
+        # Extract indices and partials
+        # Assuming partial_decryptions is a list of PartialDecryption objects
+        partial_indices = [dec.x for dec in partial_decryptions]
+        
+        lagrange_coefficients = [
+            tc.lagrange_coefficient_for_key_share_indices(
+                partial_indices, idx, self.curve
+            )
+            for idx in partial_indices
+        ]
+        
+        summands = [
+            (lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1)
+            for i in range(len(partial_decryptions))
+        ]
+        
+        accumulated_point = tc.number.ecc_sum(summands)
+        
+        # M = C2 - S
+        restored_point = c2 + (-accumulated_point)
+        
+        return restored_point
 
 
     ###

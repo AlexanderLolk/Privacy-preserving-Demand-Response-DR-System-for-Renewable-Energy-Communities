@@ -56,8 +56,9 @@ if __name__ == "__main__":
     bb = board.Board()
     bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
     bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
-
-    bb.target_reduction(dso.generate_noisy_list()) # noisy list from DSO
+    nois = dso.generate_noisy_list()
+    bb.target_reduction(nois) # noisy list from DSO
+    print("\ntarget_reduction from main: \n" + str(nois) + "\n")
     
     # TODO Report writing: remember we are trying not to send the full class object info but as little as we can get away with
     for sm in sms:
