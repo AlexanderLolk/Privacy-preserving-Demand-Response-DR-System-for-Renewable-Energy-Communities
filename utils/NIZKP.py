@@ -23,7 +23,7 @@ def schnorr_NIZKP_challenge(elements):
     Hash.update(state.encode("utf8"))
     return Hash.digest()
 
-def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
+def schnorr_NIZKP_proof(pk, pp, sk, msg=""):
     """Create a Schnorr non-interactive proof of knowledge of `sk`.
 
     The proof demonstrates knowledge of the secret scalar `sk` such that
@@ -40,8 +40,8 @@ def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
     Returns:
         tuple: (challenge (int), response (int), commitment (ECC Point)).
     """
-    g = sec_params.P
-    order = sec_params.order
+    g = pp[1]
+    order = pp[2]
     
     r = tc.number.random_in_range(1, order)  # nonce
     commitment = int(r) * g
@@ -57,7 +57,7 @@ def schnorr_NIZKP_proof(pk, sec_params, sk, msg=""):
     response = (int(r) - int(challenge) * int(sk)) % int(order)
     return (challenge, response, commitment)
 
-def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
+def schnorr_NIZKP_verify(pk, pp, proof, msg=""):
     """Verify a Schnorr NIZKP produced by `schnorr_NIZKP_proof`.
 
     The verifier reconstructs the commitment from the provided response
@@ -74,8 +74,8 @@ def schnorr_NIZKP_verify(pk, sec_params, proof, msg=""):
     Returns:
         bool: True if the proof is valid, False otherwise.
     """
-    g = sec_params.P
-    order = sec_params.order
+    g = pp[1]
+    order = pp[2]
     c, s, W = proof
     
     # Reconstruct commitment: W_check = s * g + c * pk
@@ -98,12 +98,15 @@ def test_schnorr_NIZKP():
     print("=== Testing Schnorr NIZKP ===")
     
     # Setup
-    pp = tc.CurveParameters("P-256")
+    curve = tc.CurveParameters("P-256")
+    g = curve.P
+    order = curve.order
+    pp = (curve, g, order)
     
     # Generate keypair
     print("1. Generating keypair...")
-    sk = tc.number.random_in_range(1, pp.order)
-    pk = sk * pp.P
+    sk = tc.number.random_in_range(2, order)
+    pk = sk * g
     print(f"   Private key: {sk}")
     print(f"   Public key: {pk}")
     

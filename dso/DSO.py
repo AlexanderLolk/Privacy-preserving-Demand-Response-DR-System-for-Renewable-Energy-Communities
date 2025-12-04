@@ -4,26 +4,31 @@
 # DSO public key
 # DR parameters (Demand Response)
 
-from utils.generators import pub_param, skey_gen, ekey_gen
+from utils.procedures import Procedures
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.signature import schnorr_sign_list, schnorr_sign
-from utils.ec_elgamal import ElGamal as ahe
+from utils.ec_elgamal import ElGamal
 import random
 
 class DSO:
     """ """
     
     def __init__(self, init_id="DSO", pp=None):
-        pp = pub_param()
+        self.pro = Procedures()
+        pp = self.pro.pub_param()
         self.registered_sm = []
         self.registered_agg = []
         self.registered_dr = []
         
         #  SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
-        ((self.ek, _, self.e_proof), self.key_shares) = ekey_gen(pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        ((self.ek, self.thresh_params, self.e_proof), self.key_shares) = self.pro.ekey_gen(pp)
         self.i = 0
 
+    def get_threshold_params(self):
+        """Return the threshold parameters for decryption."""
+        return self.thresh_params
+    
     # verifies every smart meter (users)
     # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
@@ -142,10 +147,16 @@ class DSO:
         values.append(target_reduction) 
         values += [0] * zero_noise
         random.shuffle(values)
+
+        # ek is a tuple: (curve, g, order, pk_point), extract pk_point
+        # if isinstance(self.ek, tuple):
+        #     _, _, _, pk_point = self.ek
+        # else:
+        #     pk_point = self.ek
         
         # encrypt each value in the noisy list and then sign the list
         # TODO should it be each value thats signed or is signing the entire list ok?
-        enc_TR = [ElGamal.enc(self.ek, self.pp, val) for val in values]
+        enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
         signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR

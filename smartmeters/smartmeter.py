@@ -1,18 +1,18 @@
-# participating user
-# non-participating user
-
 import time
-from utils.generators import pub_param, skey_gen, report
 from utils.signature import schnorr_verify
+from utils.procedures import Procedures
+
 
 class SmartMeter:
     """ """
     
     def __init__(self, init_id="sm_id", pp=None):
+        self.pro = Procedures()
+        
         if pp is None:
-           pp = pub_param()
+           pp = self.pro.pub_param()
 
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
 
     def get_public_key(self):
         """
@@ -64,10 +64,10 @@ class SmartMeter:
 
         # Using additive to reconstruct identity
         # The blinding_factor is (r' * g). It is the vector you add to your position to hide where you started.
-        pk_prime = g.pt_mul(r_prime)
+        pk_prime = r_prime * g
 
         # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
-        self.anon_id = self.pk.pt_add(pk_prime)
+        self.anon_id = self.pk + pk_prime
 
     # Report()
     # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)
@@ -83,7 +83,7 @@ class SmartMeter:
 
         """
         t = int(time.time())
-        return report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))
+        return self.pro.report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))
 
     def get_sm_comsumption(self):
         """ 

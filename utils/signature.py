@@ -41,8 +41,9 @@ def Hash(R, msg, order):
     return digest_int % order
 
 def schnorr_sign(sk, pp, msg):
-    g = pp.P
-    order = pp.order
+    
+    g = pp[1]
+    order = pp[2]
     
     k = tc.number.random_in_range(1, order)
     ephemeral_key = k * g
@@ -52,8 +53,8 @@ def schnorr_sign(sk, pp, msg):
     return (ephemeral_key, signature)
 
 def schnorr_verify(pk, pp, msg, signature):
-    g = pp.P
-    order = pp.order
+    g = pp[1]
+    order = pp[2]
     R, s = signature
     
     e = Hash(R, msg, order)
@@ -88,7 +89,10 @@ def test_schnorr_signature():
     print("=== Testing Schnorr Signature ===")
     
     # Setup
-    pp = tc.CurveParameters("P-256")
+    curve = tc.CurveParameters("P-256")
+    g = curve.P
+    order = curve.order
+    pp = (curve, g, order)
     
     # Generate keypair
     print("1. Generating keypair...")
@@ -97,7 +101,7 @@ def test_schnorr_signature():
     # Extract scalar from private key for signing
     sk = sk_key.d
     # Convert public key point to threshold_crypto point
-    pk_point = sk * pp.P
+    pk_point = sk * g
     
     print(f"   Private key (scalar): {sk}")
     print(f"   Public key (point): {pk_point}")

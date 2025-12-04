@@ -1,36 +1,52 @@
+from email import message
 import threshold_crypto as tc
-# from Crypto.PublicKey import ECC
+from Crypto.PublicKey import ECC
 
 # params for threshold_crypto
 # G                 = ECC._curves[curve_name]
 # g                 = curve_params.P 
-# order             = curve_params.order
+# order             = curve_par ams.order
 # order.random()    = number.random_in_range(1, curve_params.order) AKA d
 # pk                = Q
 # sk                = d
 
 class ElGamal:
 
-    # def __init__(self, curve_name="P-256"):
-    #     self.curve = tc.CurveParameters(curve_name)
+    def __init__(self, curve="P-256"):
+        if isinstance(curve, str):
+            self.curve = tc.CurveParameters(curve)
+            g = self.curve.P
+            order = self.curve.order
+            self.pp = (self.curve, g, order)
+        else:
+            self.curve = curve[0]
+            # g = curve.P
+            # order = curve.order
+            self.pp = (curve[0], curve[1], curve[2])
+            
         
     def keygen(self, pp=None):
         """
-        """
-        if pp is None:
-            self.curve = tc.CurveParameters("P-256")
-            self.g = self.curve.P
-            self.order = self.curve.order
-        else:
-            self.curve = pp
-            self.g = pp.P
-            self.order = pp.order
+        # """
+        # if pp is None:
+        #     curve = self.curve
+        #     g = curve.P
+        #     order = curve.order
+        #     self.pp = (curve, g, order)
+        # else:
+        #     self.pp = pp
         
-        x = tc.number.random_in_range(2, self.order)
-        return ((self.curve, self.g, self.order, x * self.g) , x) 
+        x = tc.number.random_in_range(2, self.pp[2])
+        ek = x * self.pp[1]
+        dk = x
+        return ((ek, self.pp), dk) 
 
     def _int_to_bits(self, message: int):
+        if message == 0:
+            return [0]
+
         length = message.bit_length()
+        print("bit_length for message: " + str(length))
         list_bits = []
 
         # Extracts the bit at position i
@@ -62,40 +78,34 @@ class ElGamal:
         return message
 
 
-    def encrypt_single(self, public_key, message: int):
+    def encrypt_single(self, encryption_key: ECC.EccPoint, message: int):
         """
         """
         
-        r = tc.number.random_in_range(2, self.curve.order)
-        
+        r = tc.number.random_in_range(2, self.pp[2])
+    
         if isinstance(message, int):
-            message = message * self.curve.P
+            message = message * self.pp[1]
 
-        if hasattr(public_key, 'Q'):
-            pk_point = public_key.Q
-        else:
-            pk_point = public_key
 
-        c1 = r * self.curve.P
-        c2 = (r * pk_point) + message
+        c1 = r * self.pp[1]
+        c2 = (r * encryption_key) + message
         
         return [c1, c2]
     
     def enc(self, encryption_key, message: int, r=None):
         """
         """
-        if isinstance(encryption_key, tuple):
-            _, _, _, encryption_key = encryption_key
         
         if r is None:
-            r = tc.number.random_in_range(2, self.order)
+            r = tc.number.random_in_range(2, self.pp[2])
         
         list_bits = self._int_to_bits(message)
 
         encryptions = []
         for bit in list_bits:
-            bit_point = bit * self.g
-            c1 = r * self.g
+            bit_point = bit * self.pp[1]
+            c1 = r * self.pp[1]
             c2 = (r * encryption_key) + bit_point
             encryptions.append((c1, c2))
             
@@ -104,7 +114,7 @@ class ElGamal:
     def _check_if_zero_or_one(self, message_points: list):
         """
         """
-        one_point = 1 * self.g
+        one_point = 1 * self.pp[1]
         message_bits = []
         for point in  message_points:
             if point == one_point:
@@ -119,9 +129,9 @@ class ElGamal:
         """
         c1 = ciphertext[0]
         c2 = ciphertext[1]
-        s = (self.curve.order + -secret_key) * c1
+        s = (self.pp[2] + -secret_key) * c1
         s2 = c2 + s
-        return self._check_if_zero_or_one(c2 + s)
+        return self._check_if_zero_or_one(s2)
     
     def dec(self, secret_key, ciphertexts):
         """
@@ -130,9 +140,11 @@ class ElGamal:
         for ciphertext in ciphertexts:
             c1 = ciphertext[0]
             c2 = ciphertext[1]
-            mol_inv = self.curve.order + -secret_key
+            
+            mol_inv = self.pp[2] + -secret_key
             s = mol_inv * c1
             message_point = c2 + s
+            
             point_messages.append(message_point)
         list_bits = self._check_if_zero_or_one(point_messages)
         return self._bits_to_int(list_bits)
@@ -141,21 +153,14 @@ class ElGamal:
     def keygen_threshold(self, pp=None):
         """
         """
-    
-        if pp is None:
-            self.curve = tc.CurveParameters("P-256")
-            self.g = self.curve.P
-            self.order = self.curve.order
-        else:
-            self.curve = pp
-            self.g = pp.P
-            self.order = pp.order
         
         thresh_params = tc.ThresholdParameters(2, 2)
-        public_key, key_shares = tc.create_public_key_and_shares_centralized(self.curve, thresh_params)
+        encryption_key, key_shares = tc.create_public_key_and_shares_centralized(self.pp[0], thresh_params)
         
         self.thresh_params = thresh_params
-        return public_key.Q, key_shares, thresh_params
+        
+        # encryption_key.Q = ek
+        return encryption_key.Q, key_shares, thresh_params
     
     # def partial_threshold_decrypt(self, encrypted_message, key_share):
     #     encrypted_message = tc.EncryptedMessage(encrypted_message[0], encrypted_message[0], bytes(1))
@@ -191,6 +196,7 @@ class ElGamal:
         """
         
         num_bits = len(encrypted_message)
+        # print("num_bit: " + str(num_bits))
         num_shares = len(partial_decryptions) // num_bits
         print(f"Number of bits: {num_bits}, Number of shares: {num_shares}")
         
@@ -253,16 +259,17 @@ class ElGamal:
     # tests
     ###
     def test_int_to_bytes_enc(self):
-        msg = 12732423
+        msg = 0
         # binary_string = f'{msg:b}'
         # print("msg to bits: " + binary_string)
 
         # self.int_to_bits(msg)
         ek, dk = self.keygen()
+        # ek, dks = self.keygen_threshold()
         encryptions = self.enc(ek, msg)
         # print(str(encryptions))
         message = self.dec(dk, encryptions)
-        # print("decrypted message: " + str(message))
+        print("decrypted message: " + str(message))
         # ek, dk = self.keygen()
         # cipher = self.encrypt(ek, msg)
         # message_dec_int = self.decrypt(dk, cipher, msg)
@@ -270,7 +277,7 @@ class ElGamal:
          
 
     def test_elgamal(self):
-        ek, dk = self.keygen()
+        (ek, _), dk = self.keygen()
         print("sk is: " + str(dk))
         print("pk is: " + str(ek))
         
@@ -291,7 +298,7 @@ class ElGamal:
         pub_key, key_shares, thresh_params = self.keygen_threshold()
         # print("Generated 2-of-2 threshold keys")
 
-        m = 127
+        m = 0
         # print(f"Original message: {m}")
 
         encrypted_msg = self.enc(pub_key, m)
@@ -313,7 +320,7 @@ class ElGamal:
 
         assert decrypted_msg == m, f"Expected {m}, got {decrypted_msg}"
         
-# el = ElGamal()
-# # el.test_int_to_bytes_enc()
-# # el.test_elgamal()
-# el.test_threshold_elgamal()
+el = ElGamal()
+# el.test_int_to_bytes_enc()
+# el.test_elgamal()
+el.test_threshold_elgamal()

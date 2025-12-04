@@ -1,6 +1,9 @@
 from utils.dec_proof import hash_to_bn
-from utils.generators import pub_param
+# from utils.generators import pub_param
+from utils.procedures import Procedures
 import threshold_crypto as tc
+
+# TODO make calls to pp, g, order modularly
 
 #####
 # Eval() outputs an evaluation and showcases which users have met the target reduction
@@ -151,7 +154,7 @@ def ord_comparison(ct_b, ct_m):
     
     [Current] Placeholder: Returns Enc(0) (Identity) and a placeholder string.
     """
-    pp = pub_param()
+    pp = pro.pub_param()
     g = pp.P
     identity_point = 0 * g
     ct_o = (identity_point, identity_point)
@@ -168,7 +171,7 @@ def ct_reduction(ct_b, ct_m, ct_o):
     [Current] Placeholder: Returns Enc(0) (Identity point).
     Does not perform subtraction; assumes 0 reduction.
     """
-    pp = pub_param()
+    pp = pro.pub_param()
     g = pp.P
     identity_point = 0 * g
     ct_red = (identity_point, identity_point)
@@ -214,7 +217,7 @@ def epet(ct_sum, ct_t_i, dso_ek):
     Includes generation of proof 'r'.
     This uses the non-interactive zero-knowledge proof (NIZKP) proof_r
     """
-    pp = pub_param()
+    pp = pro.pub_param()
     g = pp.P
     order = pp.order
     
@@ -236,7 +239,7 @@ def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     NIZKP for r used in EPET
     Proves knowledge of the random Bn r used in EPET
     """
-    pp = pub_param()
+    pp = pro.pub_param()
     g = pp.P
     order = pp.order
 
@@ -263,7 +266,7 @@ def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
     """
     Verifies the NIZKP Proof for r
     """
-    pp = pub_param()
+    pp = pro.pub_param()
     g = pp.P
     order = pp.order
 
@@ -328,7 +331,7 @@ def combine_decryption_shares(BB):
             print("Mismatch between ciphertext count and share count.")
             return
 
-        pp = pub_param()
+        pp = pro.pub_param()
         g = pp.P
         identity_point = 0 * g
         

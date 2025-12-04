@@ -2,7 +2,6 @@
 # computes (ct_i, t, π_i) corresponding to the pseudo-identity pk′
 # This is where the anonym function was supposed to be implemented, with its proof and verifications.
 from utils.signature import Hash, schnorr_sign
-import utils.generators as gen
 
 def _export_bytes(x):
     """
@@ -60,12 +59,10 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
         msg_bytes += _export_bytes(t)
         msg_bytes += _export_bytes(pi)
 
-    pp = gen.pp
-    order = pp.order
     
     commiment = published[0][0] # pk_prime (usage is to make sure it's deterministic)
     # Report: hash it (step 8 sequence chart)
-    ht_bn = Hash(commiment, msg_bytes, order)
+    ht_bn = Hash(commiment, msg_bytes, pp[2])
 
     sign_it = schnorr_sign(secret_key_T, pp, ht_bn)
     

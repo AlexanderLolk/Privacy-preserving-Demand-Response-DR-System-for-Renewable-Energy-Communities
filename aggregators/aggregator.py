@@ -1,7 +1,7 @@
 # the DSO publishes a signed list of registered aggregators on
 # BB. The DSO can update the list of registered smart meters and aggregators dynamically
 
-from utils.generators import pub_param, skey_gen, ekey_gen_single, mix_id
+from utils.procedures import Procedures
 from utils.signature import schnorr_verify, schnorr_sign
 # from utils.ec_elgamal import dec #, make_table
 import utils.anonym as anonym
@@ -10,13 +10,14 @@ class Aggregator:
     """ """
 
     def __init__(self, init_id="agg_id", pp=None):
-        
+        self.pro = Procedures()
         if pp is None:
-           pp = pub_param()
+           pp = self.pro.pub_param()
 
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = skey_gen(init_id, pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        
         # TODO: do we need ek for the aggregator?
-        ((self.ek, _, self.e_proof), self.dk) = ekey_gen_single(pp)
+        ((self.ek, _, self.e_proof), self.dk) = self.pro.ekey_gen_single(pp)
 
         self.participants = []
         self.participants_report = []
@@ -101,7 +102,7 @@ class Aggregator:
           ID_pk: list[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]
         """
         # mix_anon_list = [pk_prime, r_prime, πmix_proof]
-        self.mix_anon_list = mix_id(ID_pk)   
+        self.mix_anon_list = self.pro.mix_id(ID_pk)   
 
     def publish_mixed_keys(self):
         """ 
@@ -171,47 +172,49 @@ class Aggregator:
 
         # gen_point = group.generator()
         # identity_point = group.infinite() 
-        g = pp.P
-        identity_point = 0 * g
+        g = pp[1]
 
-        decrypted_bits = []
+        partial_from_agg = self.pro.ahe.partial_decrypt(cts, self.dk_share)
+        partial_from_dr = dr_aggregator.get_partial_decryption_share(cts)
+        
+        partial_combined = partial_from_agg + partial_from_dr
 
-        # 3. Iterate through ciphertexts (bits)
+        print(f"combined length is {len(partial_combined)} of the partial decryptions")
+
+        msg_val = self.pro.ahe.threshold_decrypt(
+            partial_combined,
+            cts,
+            self.thresh_params,
+            expected_value=0
+        )
+
+        print(f" decrypted msg value: {msg_val}")
+
+        # identity_point = 0 * g
+
+        # decrypted_bits = []
+
         # for (c1, c2) in cts:
-        #     share_agg = c1.pt_mul(self.sk_share)
+        #     # print(self.dk_share)
+        #     share_agg_scalar = int(self.dk_share.x)
+        #     share_agg = share_agg_scalar * c1
 
         #     share_dr = dr_aggregator.get_partial_decryption_share(c1)
 
-        #     share_total = share_agg.pt_add(share_dr)
+        #     share_total = share_agg + share_dr
 
-        #     msg_point = c2.pt_sub(share_total)
+        #     msg_point = c2 + (-share_total)
 
         #     if msg_point == identity_point:
         #         decrypted_bits.append("0")
-        #     elif msg_point == gen_point:
+        #     elif msg_point == g:
         #         decrypted_bits.append("1")
         #     else:
         #         print("Decryption Error: Point matches neither 0 nor 1.")
         #         return
-        for (c1, c2) in cts:
-            share_agg = int(self.dk_share) * c1
 
-            share_dr = dr_aggregator.get_partial_decryption_share(c1)
-
-            share_total = share_agg + share_dr
-
-            msg_point = c2 + (-share_total)
-
-            if msg_point == identity_point:
-                decrypted_bits.append("0")
-            elif msg_point == g:
-                decrypted_bits.append("1")
-            else:
-                print("Decryption Error: Point matches neither 0 nor 1.")
-                return
-
-        msg_str = "".join(decrypted_bits)
-        msg_val = int(msg_str, 2)
+        # msg_str = "".join(decrypted_bits)
+        # msg_val = int(msg_str, 2)
 
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
@@ -220,56 +223,14 @@ class Aggregator:
             blinding_factor = int(r_prime) * g
             pk_prime_check = pk[0] + blinding_factor
             
-            for pk_prime in self.mix_anon_list[0]:
-                if pk_prime_check == pk_prime:
+            for pk_prime_candidate in self.mix_anon_list[0]:
+                if pk_prime_check == pk_prime_candidate:
                     pk_prime = pk_prime_check
         
         if msg_val >= 0:
             print("SM wants to join DR event")
             self.participants_report.append(sm_report)
             self.participants.append(pk_prime)
-
-    # def check_sm_report(self, sm_report):
-    #     """
-
-    #     Args:
-    #       sm_report: tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
-
-    #     """
-    #     # pk is a tuble with (pk, pp, s_proof)
-    #     (pk, (t, cts, signature)) = sm_report
-
-    #     table = make_table(pk[1])
-
-    #     if not schnorr_verify(pk[0], pk[1], str((t, cts)), signature):
-    #         print(False)
-            
-    #     bin_msgs = [dec(self.dso_dk, pk[1], table, ct) for ct in cts]
-
-    #     # msg = dec(self.dso_dk, self.pp, table, ct="")
-    #     msg = "".join([str(x) for x in bin_msgs])
-        
-    #     # (_, 2) means from bin to int
-    #     msg = int(msg, 2)
-
-    #     _, g, _ = self.pp
-
-    #     pk_prime = None
-    #     for r_prime in self.mix_anon_list[1]:
-    #         # Using additive
-    #         # Old multiplied, like so anon_pk = pk[0].pt_mul(r_prime)
-    #         blinding_factor = g.pt_mul(r_prime)
-    #         pk_prime_check = pk[0].pt_add(blinding_factor)
-            
-    #         for pk_prime in self.mix_anon_list[0]:
-    #             if pk_prime_check == pk_prime:
-    #                 pk_prime = pk_prime_check
-        
-    #     # participants are those with the msg (the msg is currently set to 10)
-    #     if msg >= 0:
-    #         print("SM wants to join DR event")
-    #         self.participants_report.append(sm_report)
-    #         self.participants.append(pk_prime)
             
     def get_participants(self):
         """ 

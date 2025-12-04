@@ -2,7 +2,7 @@
 from utils.signature import schnorr_verify, schnorr_verify_list
 from utils.NIZKP import schnorr_NIZKP_verify
 from utils.dec_proof import verify_correct_decryption
-from utils.shuffle import verify_shuffle_proof # TODO change name to be more specific like shuffle_verify_proof
+from utils.shuffle import Shuffle
 
 class Board:
     """ """
@@ -117,14 +117,17 @@ class Board:
 
         """
         pk_prime, πmix = mix_data
+        print(pk_prime)
         self.mix_pk = pk_prime
+        
+        shuffle = Shuffle(self.pk[1])
         
         # store e list to verify
         # Extract the list of public keys from the registered smart meters list e
         # TODO change the name e to something more descriptive
         e = [sm[1][0] for sm in self.register_smartmeter]
         
-        if not verify_shuffle_proof(πmix, e, pk_prime, self.pk[1][1]):
+        if not shuffle.verify_shuffle_proof(πmix, e, pk_prime, self.pk[1][1]):
             print("Mixing proof verification FAILED")
         self.mix_proof = πmix
 

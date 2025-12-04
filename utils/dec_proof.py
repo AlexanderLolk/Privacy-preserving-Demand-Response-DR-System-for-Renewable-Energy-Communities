@@ -133,7 +133,7 @@ def hash_to_bn(*points, order):
             h.update(str(P).encode())
     return int.from_bytes(h.digest(), "big") % int(order)
 
-def prove_correct_decryption(ek, sec_params, M, dk, ciphertext):
+def prove_correct_decryption(ek, pp, M, dk, ciphertext):
     """Prove that M = C2 - dk * C1 (i.e., correct ElGamal decryption)
     without revealing dk.
     Returns a non-interactive proof (A1, A2, s).
@@ -152,43 +152,41 @@ def prove_correct_decryption(ek, sec_params, M, dk, ciphertext):
             - (A1, A2) (tuple): commitment points
             - s (int): response scalar for the NIZK
     """
-    g = sec_params.P
-    order = sec_params.order
     
     # Extract ciphertext components
     ct_0, ct_1 = ciphertext
 
     # Convert message to point
     if isinstance(M, int):
-        M_point = int(M) * g
+        M_point = int(M) * pp[1]
     else:
         M_point = M
 
-    r = tc.number.random_in_range(1, order)  # random nonce
+    r = tc.number.random_in_range(1, pp[2])  # random nonce
 
     # A1 = r * g, A2 = r * C1
-    commitment_ct_0 = int(r) * g
+    commitment_ct_0 = int(r) * pp[1]
     commitment_ct_1 = int(r) * ct_0
     commitment_CT = (commitment_ct_0, commitment_ct_1)
 
     # V = C2 - M
     V = ct_1 + (-M_point)
     
-    challenge = hash_to_bn(g, ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=order)
+    challenge = hash_to_bn(pp[1], ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=pp[2])
     
     # Ensure dk is an integer
     if isinstance(dk, list):
         dk = dk[0]
-    if hasattr(dk, "d"):
-        dk = int(dk.d)
+    # if hasattr(dk, "d"):
+    #     dk = int(dk.d)
     else:
         dk = int(dk)
     
-    response = (int(r) + int(challenge) * int(dk)) % int(order)
+    response = (int(r) + int(challenge) * dk) % pp[2]
 
     return (M_point, ciphertext, commitment_CT, response)
 
-def verify_correct_decryption(ek, sec_params, proof):
+def verify_correct_decryption(ek, pp, proof):
     """Verify a Chaum–Pedersen style NIZK proof of correct decryption.
 
     Args:
@@ -199,8 +197,6 @@ def verify_correct_decryption(ek, sec_params, proof):
     Returns:
         bool: True if the proof verifies, False otherwise.
     """
-    g = sec_params.P
-    order = sec_params.order
     
     M, CT, commitment_CT, s = proof
     ct_0, ct_1 = CT
@@ -208,17 +204,17 @@ def verify_correct_decryption(ek, sec_params, proof):
     
     # Convert M to point if needed
     if isinstance(M, int):
-        M_point = int(M) * g
+        M_point = int(M) * pp[1]
     else:
         M_point = M
 
     # V = C2 - M
     V = ct_1 + (-M_point)
     
-    c = hash_to_bn(g, ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=order)
+    c = hash_to_bn(pp[1], ek, ct_0, ct_1, M_point, V, commitment_ct_0, commitment_ct_1, order=pp[2])
 
     # check1: s * g == A1 + c * ek
-    check1 = (int(s) * g == commitment_ct_0 + (int(c) * ek))
+    check1 = (int(s) * pp[1] == commitment_ct_0 + (int(c) * ek))
 
     # check2: s * C1 == A2 + c * V
     check2 = (int(s) * ct_0 == commitment_ct_1 + (int(c) * V))
@@ -231,12 +227,11 @@ def test_dec_proof():
     print("=== Testing Decryption Proof ===")
     
     # Setup
-    pp = tc.CurveParameters("P-256")
     elgamal = ElGamal("P-256")
     
     # Generate keypair
     print("1. Generating ElGamal keypair...")
-    dk, ek = elgamal.keygen()
+    (ek, pp), dk = elgamal.keygen()
     print(f"   Secret key: {dk}")
     print(f"   Public key: {ek}")
     
@@ -244,7 +239,7 @@ def test_dec_proof():
     print("\n2. Encrypting message...")
     m = 42
     print(f"   Message: {m}")
-    ciphertext = elgamal.encrypt(ek, m)
+    ciphertext = elgamal.encrypt_single(ek, m)
     print(f"   Ciphertext: {ciphertext}")
     
     # Generate proof
