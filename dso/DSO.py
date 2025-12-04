@@ -144,9 +144,14 @@ class DSO:
         zero_noise = random.randint(1, max_noise)
 
         values = [random.randint(0, target_reduction-1) for _ in range(noise_count)]
+        # print("\n ")
+        # print("noisy list before tr insert: " + str(values) + "\n")
         values.append(target_reduction) 
+        # print("noisy list -> appended tr: " + str(values) + "\n")
         values += [0] * zero_noise
+        # print("noisy list -> after adding zero_noise tr: " + str(values) + "\n")
         random.shuffle(values)
+        # print("noisy list -> after shuffle: " + str(values) + "\n")
 
         # ek is a tuple: (curve, g, order, pk_point), extract pk_point
         # if isinstance(self.ek, tuple):

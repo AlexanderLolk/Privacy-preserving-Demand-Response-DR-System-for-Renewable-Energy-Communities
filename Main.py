@@ -80,23 +80,11 @@ if __name__ == "__main__":
     for dr in dr_aggs:
         dr.set_dso_dk(dso.encrypt_dk_and_send_to_agg(dr.id))
 
-    # -------THRESHOLD KEY SETUP START (MOVE THIS HERE)
-    # Need the group order for share generation
-    # pp = pub_param()
-    # order = pp.order
-    
-    # # Create first share (random)
-    # dk_share_1 = tc.number.random_in_range(1, order)
-    # # Create second share (dso.dk - share1)
-    # dk_share_2 = (int(dso.dk) - int(dk_share_1)) % int(order)
-    
-    # # Assign the shares to the aggregators.
-    # aggs[0].dk_share = dk_share_1 # Energy aggregator
-    # dr_aggs[0].dk_share = dk_share_2 # DR aggregator
-    aggs[0].dk_share = dso.key_shares[0]      # Energy aggregator
-    aggs[0].thresh_params = dso.thresh_params  # Add threshold params
-    dr_aggs[0].dk_share = dso.key_shares[1]   # DR aggregator
-    dr_aggs[0].thresh_params = dso.thresh_params  # Add threshold params
+    # -------THRESHOLD KEY SETUP START
+    aggs[0].dk_share            = dso.key_shares[0]         # Energy aggregator
+    aggs[0].thresh_params       = dso.thresh_params       
+    dr_aggs[0].dk_share         = dso.key_shares[1]         # DR aggregator
+    dr_aggs[0].thresh_params    = dso.thresh_params    
     # -------THRESHOLD KEY SETUP END
 
     # Give agg pk to sms
@@ -183,4 +171,4 @@ if __name__ == "__main__":
     print("Partial evaluation done by both aggregators.")
 
     # COMBINE SHARES
-    eval.combine_decryption_shares(bb)
+    eval.combine_decryption_shares(bb, dso.get_threshold_params())

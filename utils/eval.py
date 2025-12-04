@@ -4,6 +4,8 @@ from utils.procedures import Procedures
 import threshold_crypto as tc
 
 # TODO make calls to pp, g, order modularly
+#[
+
 
 #####
 # Eval() outputs an evaluation and showcases which users have met the target reduction
@@ -17,8 +19,16 @@ def sub(c1, c2):
     Computes Enc(m1 - m2) given Enc(m1) and Enc(m2) by using the 
     additive property of Elliptic Curve ElGamal (C1 * C2^-1)
     """
+    # print("c1 xy: " + str(c1.pointQ().xy))
+    # print("c1: " + str(c1))
+    # print("c2: " + str(c2))
+    # print("c1 x: " + str(c1.x))
+    # if isinstance(c1[0], tuple):
+    #     c1 = c1[0]
+    # if isinstance(c2[0], tuple):
+    #     c2 = c2[0]
     a1, b1 = c1
-    a2, b2 = c2
+    a2, b2 = c2[0]
     return (a1 + (-a2), b1 + (-b2))
 
 #=============
@@ -48,6 +58,7 @@ def eval(BB, PBB, dk_share, dso_ek, agg_id):
 
     try:
         ct_T = BB.ct_T
+        print("\n----> ct_T :" + str(ct_T) + "\n")
     except AttributeError:
         print("No ct_T found in BB during Eval")
         return (PBB, BB)
@@ -154,8 +165,9 @@ def ord_comparison(ct_b, ct_m):
     
     [Current] Placeholder: Returns Enc(0) (Identity) and a placeholder string.
     """
+    pro = Procedures()
     pp = pro.pub_param()
-    g = pp.P
+    g = pp[1]
     identity_point = 0 * g
     ct_o = (identity_point, identity_point)
 
@@ -171,8 +183,9 @@ def ct_reduction(ct_b, ct_m, ct_o):
     [Current] Placeholder: Returns Enc(0) (Identity point).
     Does not perform subtraction; assumes 0 reduction.
     """
+    pro = Procedures()
     pp = pro.pub_param()
-    g = pp.P
+    g = pp[1]
     identity_point = 0 * g
     ct_red = (identity_point, identity_point)
     return ct_red
@@ -200,7 +213,7 @@ def pet_comparison(ct_sum, ct_T, dso_ek):
     """
     ct_eq = []
     π_eq = []
-
+    print("pet_comparison -> ct_T: " + str(ct_T))
     for ct_T_i in ct_T:
         ct_eq_i, π_r_i = epet(ct_sum, ct_T_i, dso_ek)
         ct_eq.append(ct_eq_i)
@@ -217,18 +230,21 @@ def epet(ct_sum, ct_t_i, dso_ek):
     Includes generation of proof 'r'.
     This uses the non-interactive zero-knowledge proof (NIZKP) proof_r
     """
+    pro = Procedures()
     pp = pro.pub_param()
-    g = pp.P
-    order = pp.order
+    g = pp[1]
+    order = pp[2]
     
     r = tc.number.random_in_range(1, order)
-
+    # print("ct_sum: " + str(ct_sum))
     ct_diff = sub(ct_sum, ct_t_i)
     (C1_diff, C2_diff) = ct_diff
 
     C1_eq = int(r) * C1_diff
     C2_eq = int(r) * C2_diff
     ct_eq = (C1_eq, C2_eq)
+
+    print("ct_t_i before proof: " + str(ct_t_i))
 
     π_r_i = proof_r(ct_sum, ct_t_i, ct_eq, r, dso_ek)
 
@@ -239,12 +255,13 @@ def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     NIZKP for r used in EPET
     Proves knowledge of the random Bn r used in EPET
     """
+    pro = Procedures()
     pp = pro.pub_param()
-    g = pp.P
-    order = pp.order
+    g = pp[1]
+    order = pp[2]
 
     C1_1, C2_1 = ct1
-    C1_2, C2_2 = ct2
+    C1_2, C2_2 = ct2[0]
 
     C1_eq, C2_eq = ct_eq
 
@@ -266,9 +283,10 @@ def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
     """
     Verifies the NIZKP Proof for r
     """
+    pro = Procedures()
     pp = pro.pub_param()
-    g = pp.P
-    order = pp.order
+    g = pp[1]
+    order = pp[2]
 
     A1, A2, response, challenge = proof
 
@@ -298,23 +316,32 @@ def partial_decrypt(ct_eq, dk_share):
     this aggregator's secret key share.
     Returns: (M_shares_list, pi_dec_proofs)
     """
-    M_shares_list = []
-    pi_dec_proofs = []
+    # M_shares_list = []
+    # pi_dec_proofs = []
 
-    for ct_eq_i in ct_eq:
-        (C1_i, C2_i) = ct_eq_i
+    # for ct_eq_i in ct_eq:
+    #     (C1_i, C2_i) = ct_eq_i
         
-        # M_share_i = (C1_i)^dk_share
-        M_share_i = int(dk_share) * C1_i
+    #     # M_share_i = (C1_i)^dk_share
+    #     M_share_i = int(dk_share) * C1_i
         
-        pi_i = "placeholder_proof_of_decryption_share" 
+    #     pi_i = "placeholder_proof_of_decryption_share" 
         
-        M_shares_list.append(M_share_i)
-        pi_dec_proofs.append(pi_i)
+    #     M_shares_list.append(M_share_i)
+    #     pi_dec_proofs.append(pi_i)
+
+    # return (M_shares_list, pi_dec_proofs)
+    pro = Procedures()
+    
+    # Use the ElGamal partial_decrypt method
+    M_shares_list = pro.ahe.partial_decrypt(ct_eq, dk_share)
+    
+    # Placeholder proofs - in production, generate actual NIZKP
+    pi_dec_proofs = ["placeholder_proof_of_decryption_share"] * len(ct_eq)
 
     return (M_shares_list, pi_dec_proofs)
 
-def combine_decryption_shares(BB):
+def combine_decryption_shares(BB, thresh_params):
     """Combine threshold decryption shares from multiple aggregators."""
     print("Attempting to combine decryption shares...")
 
@@ -331,31 +358,52 @@ def combine_decryption_shares(BB):
             print("Mismatch between ciphertext count and share count.")
             return
 
+        pro = Procedures()
         pp = pro.pub_param()
-        g = pp.P
+        g = pp[1]
         identity_point = 0 * g
         
         M_set_final = []
 
-        for i in range(len(ct_eq_list)):
-            (C1_i, C2_i) = ct_eq_list[i]
-            
-            # Get share i from each aggregator
-            shares_for_ct_i = [share_list[i] for share_list in share_lists]
-            
-            # Combine shares
-            Combined_M_share = shares_for_ct_i[0]
-            for j in range(1, len(shares_for_ct_i)):
-                Combined_M_share = Combined_M_share + shares_for_ct_i[j]
-            
-            # Final decryption: C2_i - Combined_M_share
-            Plaintext_Point = C2_i + (-Combined_M_share)
+        num_aggs = len(share_lists)
 
-            # Check if result is g^0 (identity)
-            if Plaintext_Point == identity_point:
-                M_set_final.append(1) # "g^0 was found"
+        # for i in range(len(ct_eq_list)):
+        #     (C1_i, C2_i) = ct_eq_list[i]
+            
+        #     # Get share i from each aggregator
+        #     shares_for_ct_i = [share_list[i] for share_list in share_lists]
+            
+        #     # Combine shares
+        #     Combined_M_share = shares_for_ct_i[0]
+        #     for j in range(1, len(shares_for_ct_i)):
+        #         Combined_M_share = Combined_M_share + shares_for_ct_i[j]
+            
+        #     # Final decryption: C2_i - Combined_M_share
+        #     Plaintext_Point = C2_i + (-Combined_M_share)
+
+        #     # Check if result is g^0 (identity)
+        #     if Plaintext_Point == identity_point:
+        #         M_set_final.append(1) # "g^0 was found"
+        #     else:
+        #         M_set_final.append(0) # "random number"
+
+        for i in range(len(ct_eq_list)):
+            # Get partial decryptions for ciphertext i from all aggregators
+            partials_for_ct_i = [share_lists[agg_idx][i] for agg_idx in range(num_aggs)]
+            
+            # Use threshold decryption to combine
+            plaintext = pro.ahe.threshold_decrypt(
+                partials_for_ct_i,
+                [ct_eq_list[i]],  # Single ciphertext as list
+                thresh_params,
+                expected_value=0
+            )
+
+            # Check if result is 0 (target met) or non-zero (target not met)
+            if plaintext == 0:
+                M_set_final.append(1)  # Target met
             else:
-                M_set_final.append(0) # "random number"
+                M_set_final.append(0)  # Target not met
         
         BB.M_set = M_set_final
         BB.eval_status = "evaluated_complete"
