@@ -121,7 +121,7 @@ class Aggregator:
     # report
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    def check_sm_report(self, sm_report):
+    def check_sm_report(self, sm_report, consumption=False):
         
         (pk, (t, cts, signature)) = sm_report
         # sm_pk_pt, group, _ = pk
@@ -159,10 +159,12 @@ class Aggregator:
                 if pk_prime_check == pk_prime_candidate:
                     pk_prime = pk_prime_check
         
-        if  cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
+        if not consumption and cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
             # print(f"{self.id} wants to join DR event \n")
             self.participants_baseline_report.append(sm_report)
             self.participants.append(pk_prime)
+        elif consumption:
+            self.participants_consumption_report.append(sm_report)
 
 
             
@@ -199,4 +201,5 @@ class Aggregator:
         if not consumption:
             return anonym.Anonym(self.get_participants_baseline(), self.mix_anon_list[1], self.sk)
         
+        # print("in agg, consumtions: " + str(self.get_participants_consumption()))
         return anonym.Anonym(self.get_participants_consumption(), self.mix_anon_list[1], self.sk)

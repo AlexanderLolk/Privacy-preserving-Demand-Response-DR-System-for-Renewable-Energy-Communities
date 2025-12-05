@@ -179,7 +179,7 @@ if __name__ == "__main__":
     for smartmeter in sms:
         comsumption_report = smartmeter.get_sm_comsumption()
         print(f"Smartmeter {smartmeter.id} sent comsuption.")
-        anonym_agg.check_sm_report(report_data)
+        anonym_agg.check_sm_report(report_data, True)
 
     _, consumption_anonym_pbb = anonym_agg.make_anonym(True)
     bb.publish_sm_comsumption_PBB(consumption_anonym_pbb)

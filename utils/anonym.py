@@ -59,6 +59,7 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
         msg_bytes += _export_bytes(t)
         msg_bytes += _export_bytes(pi)
 
+    # print("in anonym: " + str(published))
     
     commiment = published[0][0] # pk_prime (usage is to make sure it's deterministic)
     # Report: hash it (step 8 sequence chart)
