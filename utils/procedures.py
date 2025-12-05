@@ -148,7 +148,7 @@ class Procedures:
     # Report(id, sk, ek, m, t) → (pk, (t, ct, σ))
     user_info = {}
 
-    def report(self, id, sk, ek, m, t, user_pk):
+    def report(self, id, sm_sk, dso_ek, m, t, sm_pk):
         """Create a report by encrypting a message and signing the tuple.
 
         The message `m` is converted to binary and each bit is encrypted with
@@ -167,55 +167,38 @@ class Procedures:
             tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]:
                 (user_pk, (t, ct, signing_σ))
         """
-        # to get pk sended back
-        pk = user_pk[0]
-        pp = user_pk[1]
         
         # encrypt
         # the message is already bits since enc took care of converting it to bits
         if m > 0:
-            cts = self.ahe.enc(ek[0], m)
+            cts = self.ahe.enc(dso_ek[0], m)
         else:
             # deterministic encryption of 0
-            cts = self.ahe.enc(ek[0], m, 1)
+            cts = self.ahe.enc(dso_ek[0], m, 1)
 
         # ct = [self.ahe.enc(ek[0], ek[1], m) for m in mbin]
 
         # sign (pk = (pk, pp, proof))
         msg = str((t, cts))
-        signing_σ = sig.schnorr_sign(sk, pp, msg)
+        signing_σ = sig.schnorr_sign(sm_sk, dso_ek[1], msg)
 
-        return (user_pk, (t, cts, signing_σ))
+        return (sm_pk, (t, cts, signing_σ))
     
-    def consumption_report(self, sm_ek, sm_sk, m: int, t):
-        """Create a consumption report by encrypting a message.
+    # def consumption_report(self, dso_ek, sm_sk, m: int, t, sm_pk):
+    #     """Create a consumption report by encrypting a message.
 
-        The message `m` is converted to binary and each bit is encrypted with
-        the provided ElGamal key.
+    #     The message `m` is converted to binary and each bit is encrypted with
+    #     the provided ElGamal key.
 
-        Args:
-            m (int): integer message to be encoded as binary bits.
+    #     Args:
+    #         m (int): integer message to be encoded as binary bits.
 
-        Returns:
-            list[tuple[EcPt, EcPt]]: list of ciphertexts.
-        """
+    #     Returns:
+    #         list[tuple[EcPt, EcPt]]: list of ciphertexts.
+    #     """
  
-        cts = self.ahe.enc(sm_ek[0], m)
-        msg = str((t, cts))
-        signing_σ = sig.schnorr_sign(sm_sk, sm_ek[1], msg)
+    #     cts = self.ahe.enc(dso_ek[0], m)
+    #     msg = str((t, cts))
+    #     signing_σ = sig.schnorr_sign(sm_sk, dso_ek[1], msg)
         
-        # (user_pk, (t, cts, signing_σ))
-        # for (sm_report, r_prime) in zip(inputs, r_prime_list):
-
-        #     try:
-        #         pk_tuple, body = sm_report
-        #         pk_pt, pp, s_proof = pk_tuple
-        #         t, cts, signature = body
-        #     except ValueError:
-        #         raise ValueError("Invalid input format for sm_report")
-            
-        #     # TODO check if index is correct, normally it is done by ZKP
-        #     pk_prime = (r_prime) * pk_pt 
-        #     pi = "NIZKP here"
-        #     published.append((pk_prime, cts, t, pi))
-        return (cts, signing_σ)
+    #     return (sm_pk(cts, signing_σ)

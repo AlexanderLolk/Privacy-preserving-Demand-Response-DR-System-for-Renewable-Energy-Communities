@@ -225,21 +225,24 @@ class Board:
         """
         self.ct_b = ct_b
 
-    def publish_sm_comsumption(self, ct_consum, signed_consum):
+    def publish_sm_comsumption_PBB(self, consumption_report):
         """
         Args:
-          ct_consum: list[tuple[]]
-          signed_consum: tuple[]
 
         """
-        if not schnorr_verify(self.pk[0], self.pk[1], str(ct_consum), signed_consum):
-            print("Smartmeter consumption signature verification failed.")
+
+        for pk_prime, ct, t, proof in consumption_report:
+            self.participants.append(pk_prime)
+            
+            pk_key = str((pk_prime.x, pk_prime.y))
+            self.ct_t[pk_key] = (t, ct, proof)
+            # print("[NOT IMP] in privateboard: check proof for anonym in PBB")
         
-        self.ct_consumption = (ct_consum, signed_consum)
+        self.sm_consumptions = consumption_report
 
     def get_sm_comsumption(self):
         """ 
         return:
         """
-        return self.ct_consumption
+        return self.sm_consumptions
 

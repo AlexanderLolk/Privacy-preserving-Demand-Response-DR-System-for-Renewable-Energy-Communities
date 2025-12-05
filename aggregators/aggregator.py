@@ -17,7 +17,8 @@ class Aggregator:
         ((self.ek, _, self.e_proof), self.dk) = self.pro.ekey_gen_single(pp)
 
         self.participants = []
-        self.participants_report = []
+        self.participants_baseline_report = []
+        self.participants_consumption_report = []
     
     def get_id(self):
         """ 
@@ -120,7 +121,7 @@ class Aggregator:
     # report
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    def check_sm_report(self, sm_report, dr_aggregator):
+    def check_sm_report(self, sm_report):
         
         (pk, (t, cts, signature)) = sm_report
         # sm_pk_pt, group, _ = pk
@@ -133,19 +134,21 @@ class Aggregator:
 
         g = pp[1]
 
-        partial_from_agg = self.pro.ahe.partial_decrypt(cts, self.dk_share)
-        partial_from_dr = dr_aggregator.get_partial_decryption_share(cts)
+        # partial_from_agg = self.pro.ahe.partial_decrypt(cts, self.dk_share)
+        # partial_from_dr = dr_aggregator.get_partial_decryption_share(cts)
         
-        partial_combined = partial_from_agg + partial_from_dr
+        # partial_combined = partial_from_agg + partial_from_dr
 
-        print(f"combined length is {len(partial_combined)} of the partial decryptions")
-        msg_val = self.pro.ahe.threshold_decrypt(
-            partial_combined,
-            cts,
-            self.thresh_params
-        )
+        # print(f"combined length is {len(partial_combined)} of the partial decryptions")
+        # msg_val = self.pro.ahe.threshold_decrypt(
+        #     partial_combined,
+        #     cts,
+        #     self.thresh_params
+        # )
 
         # print(f" decrypted msg value: {msg_val}")
+
+        
 
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
@@ -156,10 +159,12 @@ class Aggregator:
                 if pk_prime_check == pk_prime_candidate:
                     pk_prime = pk_prime_check
         
-        if msg_val != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
-            print("SM wants to join DR event")
-            self.participants_report.append(sm_report)
+        if  cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
+            # print(f"{self.id} wants to join DR event \n")
+            self.participants_baseline_report.append(sm_report)
             self.participants.append(pk_prime)
+
+
             
     def get_participants(self):
         """ 
@@ -167,6 +172,16 @@ class Aggregator:
             list[EcPt]
         """
         return self.participants
+    
+    def get_participants_baseline(self):
+        return self.participants_baseline_report
+    
+    def get_participants_consumption(self):
+        """ 
+        return:
+            list[EcPt]
+        """
+        return self.participants_consumption_report
     
     def get_agg_id_And_encryption_key(self):
         """ 
@@ -176,9 +191,12 @@ class Aggregator:
         return (self.id, self.get_encryption_key())
     
     # Not implemented (see utils/anonym.py)
-    def make_anonym(self):
+    def make_anonym(self, consumption=False):
         """ 
         return:
             tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
         """
-        return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)
+        if not consumption:
+            return anonym.Anonym(self.get_participants_baseline(), self.mix_anon_list[1], self.sk)
+        
+        return anonym.Anonym(self.get_participants_consumption(), self.mix_anon_list[1], self.sk)

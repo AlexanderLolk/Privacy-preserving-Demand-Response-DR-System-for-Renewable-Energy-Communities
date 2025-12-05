@@ -84,19 +84,20 @@ class SmartMeter:
 
         """
         t = int(time.time())
-        return self.pro.report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))
+        baseline_report = self.pro.report(self.id, self.sk, self.dso_ek, m, t, self.get_public_key())
+        return baseline_report
     
     def get_sm_comsumption(self):
         """ 
             Returns: tuple[list[tuple[]], tuple[]]
         """
+        t = int(time.time())
+
         # Placeholder since we dont have real data
         # while target reduction is 10
-        t = int(time.time())
         consume = random.randint(9, 10)
-        ct_consum, signed_consum = self.pro.consumption_report(self.dso_ek, self.sk, consume, t)
-
-        return ct_consum, signed_consum
+        consumption_report = self.pro.report(self.id, self.sk, self.dso_ek, consume, t, self.get_public_key())
+        return consumption_report
     
     def check_if_in_event(self, input):
         """

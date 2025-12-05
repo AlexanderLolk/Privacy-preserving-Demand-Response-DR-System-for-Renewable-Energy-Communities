@@ -133,15 +133,15 @@ if __name__ == "__main__":
 
     # TODO perhaps a different message and a better way of choosing participating vs non-participating users
     for i, smartmeter in enumerate(sms):
-        if i < NUM_SM - 3:
-            m = 10
+        if i < NUM_SM - 1:
+            m = 12
         else:
             m = 0 # non-participating user sends 0 report
 
         report_data = smartmeter.generate_and_send_report(m)
         print(f"Smartmeter {smartmeter.id} sent report.")
         # extracting participants
-        report_agg.check_sm_report(report_data, report_dr_agg)
+        report_agg.check_sm_report(report_data)
     
     bb.publish_participants(report_agg.get_participants())
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     print("\"Anonym done\".")
 
     dr_agg = dr_aggs[0]
-    dr_agg.set_psudo_anonymous_iden(bb.get_publish_participants())
+    dr_agg.set_psudo_anonymous_iden(anonym_agg.get_participants())
     dr_agg.select_random_sms()
     bb.publish_selected_sm(dr_agg.get_selected())
     
@@ -173,18 +173,23 @@ if __name__ == "__main__":
     ##########
     # sm comsumption
     ##########
-    print("\n\nGetting sm's cunsumption reports.\n\n")
+    print("\n\nGetting sm's consumption reports.\n\n")
 
+    # sm_comsumption_reports = []
     for smartmeter in sms:
-        ct_consum, signed_consum = smartmeter.get_sm_comsumption()
-        
+        comsumption_report = smartmeter.get_sm_comsumption()
+        print(f"Smartmeter {smartmeter.id} sent comsuption.")
+        anonym_agg.check_sm_report(report_data)
+
+    _, consumption_anonym_pbb = anonym_agg.make_anonym(True)
+    bb.publish_sm_comsumption_PBB(consumption_anonym_pbb)
 
     ##########
     # EVAL
     ##########
     print("\n\nEval phase started.\n\n")
     # Publish baseline and target
-    bb.publish_baselines(bb.T_r) #
+    # bb.publish_baselines(bb.T_r) #
     if getattr(bb, "ct_T", None) is None:
         bb.ct_T = bb.T_r
 
