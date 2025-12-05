@@ -37,15 +37,17 @@ def sub(c1, c2):
     """
     Computes Enc(m1 - m2) given Enc(m1) and Enc(m2)
     """
+    print("\nc1: \n" + str(c1))
+    print("\nc2: \n" + str(c2))
     
-    if isinstance(c2, list):
-        # Input is [(P1, P2)], extract tuple inside list
-        if len(c2) > 0 and isinstance(c2[0], (list, tuple)):
-            c2 = c2[0]
+    # if isinstance(c2, list):
+    #     # Input is [(P1, P2)], extract tuple inside list
+    #     if len(c2) > 0 and isinstance(c2[0], (list, tuple)):
+    #         c2 = c2[0]
 
     # c1 and c2 are unpackable (they are tuples or lists of 2 points)
     a1, b1 = c1
-    a2, b2 = c2
+    a2, b2 = c2[0]
     
     return (a1 + (-a2), b1 + (-b2))
 
@@ -277,9 +279,12 @@ def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     pp = pro.pub_param()
     g = pp[1]
     order = pp[2]
+    # print("Generating proof for r...\n")
+    # print("proof_r -> ct1: " + str(ct1) + "\n")
+    # print("proof_r -> ct2: " + str(ct2) + "\n")
 
     C1_1, C2_1 = ct1
-    C1_2, C2_2 = ct2
+    C1_2, C2_2 = ct2[0]
 
     C1_eq, C2_eq = ct_eq
 
@@ -309,7 +314,7 @@ def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
     A1, A2, response, challenge = proof
 
     C1_1, C2_1 = ct1
-    C1_2, C2_2 = ct2
+    C1_2, C2_2 = ct2[0]
 
     C1_eq, C2_eq = ct_eq
 

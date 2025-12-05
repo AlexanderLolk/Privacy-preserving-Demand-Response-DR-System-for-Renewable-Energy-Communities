@@ -127,7 +127,7 @@ class DSO:
         delta_Q = "8"
         
         dr_param = [p, phi, R, Ø, E, ts, te, delta_Q]
-        target_reduction_value = 2
+        target_reduction_value = 310
         return dr_param, target_reduction_value
 
     # noisy list
@@ -161,9 +161,9 @@ class DSO:
         
         # encrypt each value in the noisy list and then sign the list
         # TODO should it be each value thats signed or is signing the entire list ok?
-        # enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
+        enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
         # enc_TR = [self.pro.ahe.enc(self.ek, val)[0] for val in values]
-        enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
+        # enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
         signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR
