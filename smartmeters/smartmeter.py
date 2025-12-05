@@ -14,6 +14,8 @@ class SmartMeter:
            pp = self.pro.pub_param()
 
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        # as a default
+        self.participating = False
 
     def get_public_key(self):
         """
@@ -83,6 +85,10 @@ class SmartMeter:
             (user_pk, (t, ct, signing_σ))
 
         """
+
+        if m > 0:
+            self.participating = True
+
         t = int(time.time())
         baseline_report = self.pro.report(self.id, self.sk, self.dso_ek, m, t, self.get_public_key())
         return baseline_report
@@ -99,6 +105,9 @@ class SmartMeter:
         consumption_report = self.pro.report(self.id, self.sk, self.dso_ek, consume, t, self.get_public_key())
         return consumption_report
     
+    def is_participating(self):
+        return self.participating
+
     def check_if_in_event(self, input):
         """
 
@@ -106,9 +115,15 @@ class SmartMeter:
           input: [EcPt]
 
         """
+
+        # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: {str(input)} \nwith the anon_pk as: {self.anon_id}")
         for anon_pk in input:
             if self.anon_id == anon_pk:
                 print("SM: " + self.id + " is in the event")
                 self.in_event = True
+                return
             else:
                 self.in_event = False
+    
+    def in_envent(self):
+        return self.in_event

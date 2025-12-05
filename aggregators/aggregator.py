@@ -160,7 +160,7 @@ class Aggregator:
                     pk_prime = pk_prime_check
         
         if not consumption and cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
-            # print(f"{self.id} wants to join DR event \n")
+            print(f"{self.id} wants to join DR event \n")
             self.participants_baseline_report.append(sm_report)
             self.participants.append(pk_prime)
         elif consumption:

@@ -146,7 +146,7 @@ class Board:
         self.participants = participants
 
     # currently not used, since it isnt in the sequnce chart
-    def get_publish_participants(self):
+    def get_participants(self):
         """
         return:
             list[EcPt]
@@ -182,14 +182,13 @@ class Board:
         Args:
           anonym_reports: tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]
         """
-        self.participants = []
-        self.ct_t = {}  # pk' -> (t, ct_c, σ)
+
+        self.anonym_report_map = {}  # pk' -> (t, ct_c, σ)
         
         for pk_prime, ct, t, proof in anonym_reports:
-            self.participants.append(pk_prime)
-            
             pk_key = str((pk_prime.x, pk_prime.y))
-            self.ct_t[pk_key] = (t, ct, proof)
+            print(f"\nkpk_prime: {pk_key}")
+            self.anonym_report_map[pk_key] = (t, ct, proof)
             print("[NOT IMP] in privateboard: check proof for anonym in PBB")
 
         self.anonym_reports = anonym_reports
@@ -215,7 +214,7 @@ class Board:
         return self.selected
 
     # the baseline
-    def publish_baselines(self, ct_b):
+    def get_sm_baseline(self):
         """
         Args:
           ct_b: TODO
@@ -223,7 +222,10 @@ class Board:
         Returns:
 
         """
-        self.ct_b = ct_b
+        # return self.anonym_reports
+        
+        # test
+        return self.anonym_report_map
 
     def publish_sm_comsumption_PBB(self, consumption_report):
         """
@@ -231,12 +233,11 @@ class Board:
 
         """
 
+        self.consumption_report_map = {}
         for pk_prime, ct, t, proof in consumption_report:
-            self.participants.append(pk_prime)
-            
             pk_key = str((pk_prime.x, pk_prime.y))
-            self.ct_t[pk_key] = (t, ct, proof)
-            # print("[NOT IMP] in privateboard: check proof for anonym in PBB")
+            self.consumption_report_map[pk_key] = (t, ct, proof)
+            print("[NOT IMP] in privateboard: check proof for anonym in PBB")
         
         self.sm_consumptions = consumption_report
 
@@ -244,5 +245,8 @@ class Board:
         """ 
         return:
         """
-        return self.sm_consumptions
+        # return self.sm_consumptions
+
+        # test
+        return self.consumption_report_map
 

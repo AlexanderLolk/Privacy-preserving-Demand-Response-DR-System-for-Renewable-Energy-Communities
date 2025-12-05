@@ -43,54 +43,85 @@ def eval(BB, PBB, dk_share, dso_ek, agg_id):
     Retrieves reports, computes individual reductions, aggregates them, 
     and initiates the threshold decryption process to verify targets
     """
+    
+
+    print("\nin eval")
+    # print("baseline_BB: " + str(baseline_BB))
+    # print("consumption_PBB: " + str(consumption_PBB))
+
     # list of cts
     # ct_b: baseline ciphertexts from BB
-    ct_b = getattr(BB, "ct_b", None)
-    if ct_b is None:
-        print("Public board missing baseline ciphertexts (ct_b).")
-        return (PBB, BB)
+    # ct_b = getattr(BB, "ct_b", None)
+    # if ct_b is None:
+    #     print("Public board missing baseline ciphertexts (ct_b).")
+    #     return (PBB, BB)
     
-    ct_b_single = None
+    # ct_b_single = None
     
-    if isinstance(ct_b, tuple):
-        noisy_list = ct_b[0] 
-        ct_b_single = noisy_list[0] 
-    elif isinstance(ct_b, list):
-        ct_b_single = ct_b[0]
-    else:
-        ct_b_single = ct_b
+    # if isinstance(ct_b, tuple):
+    #     noisy_list = ct_b[0] 
+    #     ct_b_single = noisy_list[0] 
+    # elif isinstance(ct_b, list):
+    #     ct_b_single = ct_b[0]
+    # else:
+    #     ct_b_single = ct_b
 
-    # ct_t: consumption reports from PBB
-    consumption_reports = getattr(PBB, "ct_t", None)
-    if consumption_reports is None:
-        print("Private board missing consumption reports (ct_t).")
-        return (PBB, BB)
+    # # ct_t: consumption reports from PBB
+    # consumption_reports = getattr(PBB, "ct_t", None)
+    # if consumption_reports is None:
+    #     print("Private board missing consumption reports (ct_t).")
+    #     return (PBB, BB)
 
-    try:
-        ct_T = BB.get_target_reduction()
-        # print("\n----> ct_T :" + str(ct_T) + "")
-    except AttributeError:
-        print("No ct_T found in BB during Eval")
-        return (PBB, BB)
+    # try:
+    #     ct_T = BB.get_target_reduction()
+    #     # print("\n----> ct_T :" + str(ct_T) + "")
+    # except AttributeError:
+    #     print("No ct_T found in BB during Eval")
+    #     return (PBB, BB)
     
+    target_reduction = BB.get_target_reduction()
+    baseline_BB = BB.get_sm_baseline()
+    consumption_PBB = PBB.get_sm_comsumption()
+    # report format -> pk_prime, ct, t, proof
+    # test report format = pk_prime -> ct, t, proof
+
+    participants = BB.get_participants()
+    for pk_prime in participants:
+        pk_prime_str = str((pk_prime.x, pk_prime.y))
+        print(f"all participants: {pk_prime_str}")
+
+    for pk_prime in participants:
+        pk_prime_str = str((pk_prime.x, pk_prime.y))
+        # baseline_BB[pk_prime] = (ct, t, proof)
+        sm_baseline_ct, sm_baseline_t, sm_baseline_proof = baseline_BB[pk_prime_str]
+
+        # baseline_BB[pk_prime] = (ct, t, proof)
+        sm_onsumption_ct, sm_onsumption_t, sm_onsumption_proof = consumption_PBB[pk_prime_str]
+
+        ct_o, ord_proof = ord_comparison(ct_b, ct_m)
+
+
+
     # lists
     eval_results_step1 = [] 
     CT_red = [] 
 
+
+
     # Steps 1, 2, 3: Loop and call placeholders
-    for pk_prime, report_data in consumption_reports.items():
-        t = report_data[0]
-        ct_m = report_data[1] 
+    # for pk_prime, report_data in consumption_reports.items():
+    #     t = report_data[0]
+    #     ct_m = report_data[1] 
 
-        # step 1:ord comparison
-        ct_o, ord_proof = ord_comparison(ct_b, ct_m)
-        eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
+    #     # step 1:ord comparison
+    #     ct_o, ord_proof = ord_comparison(ct_b, ct_m)
+    #     eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
 
-        # step 2 ct reduction
-        ct_red = ct_reduction(ct_b_single, ct_m, ct_o) 
+    #     # step 2 ct reduction
+    #     ct_red = ct_reduction(ct_b_single, ct_m, ct_o) 
 
-        # step 3 set CT_red
-        CT_red.append((ct_red, t, pk_prime))
+    #     # step 3 set CT_red
+    #     CT_red.append((ct_red, t, pk_prime))
 
     # step 4: Aggregation
     ct_sum = ct_aggregation(CT_red)
@@ -174,6 +205,7 @@ def ord_comparison(ct_b, ct_c):
     Requires NIZKP.
     
     """
+    print("\nin ord_comparison")
     pro = Procedures()
     pp = pro.pub_param()
     g = pp[1]
@@ -198,6 +230,7 @@ def ct_reduction(ct_b, ct_m, ct_o):
     [Current] Placeholder: Returns Enc(0) (Identity point).
     Does not perform subtraction; assumes 0 reduction.
     """
+    print("\nin ct_reduction")
     # baselilne - measured
     ct_diff = sub(ct_b, ct_m)
 
@@ -216,6 +249,7 @@ def ct_aggregation(reduc_set):
     Sums all individual reductions into a single ciphertext (ct_sum).
     Uses the additive homomorphic property (for Ec).
     """
+    print("\nin ct_aggregation")
     C1_prod, C2_prod = reduc_set[0][0][0] 
     
     for i in range(1, len(reduc_set)):
@@ -233,6 +267,7 @@ def pet_comparison(ct_sum, ct_T, dso_ek):
     Iterates through targets (ct_T) to compare against ct_sum (to verify reductions).
     Calls epet for each target.
     """
+    print("\nin pet_comparison")
     ct_eq = []
     π_eq = []
     # print("pet_comparison -> ct_T: " + str(ct_T))
@@ -252,6 +287,7 @@ def epet(ct_sum, ct_t_i, dso_ek):
     Includes generation of proof 'r'.
     This uses the non-interactive zero-knowledge proof (NIZKP) proof_r
     """
+    print("\nin epet")
     pro = Procedures()
     pp = pro.pub_param()
     g = pp[1]
@@ -281,6 +317,7 @@ def proof_r(ct1, ct2, ct_eq, r, dso_ek):
     ct2: ct_target (List)
     ct_eq: Tuple (C1, C2)
     """
+    print("\nin proof_r")
     pro = Procedures()
     pp = pro.pub_param()
     g = pp[1]
@@ -311,6 +348,7 @@ def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
     """
     Verifies the NIZKP Proof for r
     """
+    print("\nin verify_r")
     pro = Procedures()
     pp = pro.pub_param()
     g = pp[1]
@@ -346,6 +384,7 @@ def partial_decrypt(ct_eq, dk_share):
     this aggregator's secret key share.
     Returns: (M_shares_list, pi_dec_proofs)
     """
+    print("\nin partial_decrypt")
     pro = Procedures()
     
     # Use the ElGamal partial_decrypt method
@@ -358,6 +397,7 @@ def partial_decrypt(ct_eq, dk_share):
 
 def combine_decryption_shares(BB, thresh_params):
     """Combine threshold decryption shares from multiple aggregators."""
+    print("\nin combine_decryption_shares")
     print("Attempting to combine decryption shares...")
 
     try:

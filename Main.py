@@ -175,23 +175,23 @@ if __name__ == "__main__":
     ##########
     print("\n\nGetting sm's consumption reports.\n\n")
 
-    # sm_comsumption_reports = []
+    # TODO should only be participants
     for smartmeter in sms:
-        comsumption_report = smartmeter.get_sm_comsumption()
-        print(f"Smartmeter {smartmeter.id} sent comsuption.")
-        anonym_agg.check_sm_report(report_data, True)
+        if smartmeter.is_participating():
+            comsumption_report = smartmeter.get_sm_comsumption()
+            print(f"Smartmeter {smartmeter.id} sent comsuption.")
+            anonym_agg.check_sm_report(report_data, consumption=True)
+        else:
+            print(f"Smartmeter {smartmeter.id} is not a participant.")
 
-    _, consumption_anonym_pbb = anonym_agg.make_anonym(True)
+    _, consumption_anonym_pbb = anonym_agg.make_anonym(consumption=True)
     bb.publish_sm_comsumption_PBB(consumption_anonym_pbb)
 
     ##########
     # EVAL
     ##########
-    print("\n\nEval phase started.\n\n")
-    # Publish baseline and target
-    # bb.publish_baselines(bb.T_r) #
-    if getattr(bb, "ct_T", None) is None:
-        bb.ct_T = bb.T_r
+    print("\n\nEVAL phase started.\n\n")
+
 
     # call Eval for each aggregator
     print("")
