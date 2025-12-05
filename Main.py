@@ -56,9 +56,10 @@ if __name__ == "__main__":
     bb = board.Board()
     bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
     bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
-    nois = dso.generate_noisy_list()
-    bb.target_reduction(nois) # noisy list from DSO
-    print("\ntarget_reduction from main: \n" + str(nois) + "\n")
+    noisy_target_reduction = dso.generate_noisy_list()
+    bb.publish_target_reduction(noisy_target_reduction) # noisy list from DSO
+    # print("\ntarget_reduction from main: \n" + str(nois) + "\n")
+
     
     # TODO Report writing: remember we are trying not to send the full class object info but as little as we can get away with
     for sm in sms:
@@ -75,17 +76,32 @@ if __name__ == "__main__":
     # TODO ALSO this is done with a ssl connection, so we have to make something up for this
     # set_dso_dk
     dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
-    for agg in aggs:
-        agg.set_dso_dk(dso.encrypt_dk_and_send_to_agg(agg.id))
-    
-    for dr in dr_aggs:
-        dr.set_dso_dk(dso.encrypt_dk_and_send_to_agg(dr.id))
 
-    # -------THRESHOLD KEY SETUP START
-    aggs[0].dk_share            = dso.key_shares[0]         # Energy aggregator
-    aggs[0].thresh_params       = dso.thresh_params       
-    dr_aggs[0].dk_share         = dso.key_shares[1]         # DR aggregator
-    dr_aggs[0].thresh_params    = dso.thresh_params    
+    # energy agg
+    for agg in aggs:
+        # first pass the threshold params if they havent been set up
+        agg.thresh_params = dso.get_threshold_params()
+        # then request the key share
+        share = dso.encrypt_dk_and_send_to_agg(agg.id)
+        agg.set_dso_dk(share)
+
+    # DR agg
+    for dr in dr_aggs:
+        dr.thresh_params = dso.get_threshold_params()
+        share = dso.encrypt_dk_and_send_to_agg(dr.id)
+        dr.set_dso_dk(share)
+
+    # for agg in aggs:
+    #     agg.set_dso_dk(dso.encrypt_dk_and_send_to_agg(agg.id))
+    
+    # for dr in dr_aggs:
+    #     dr.set_dso_dk(dso.encrypt_dk_and_send_to_agg(dr.id))
+
+    # # -------THRESHOLD KEY SETUP START
+    # aggs[0].dk_share            = dso.key_shares[0]         # Energy aggregator
+    # aggs[0].thresh_params       = dso.thresh_params       
+    # dr_aggs[0].dk_share         = dso.key_shares[1]         # DR aggregator
+    # dr_aggs[0].thresh_params    = dso.thresh_params    
     # -------THRESHOLD KEY SETUP END
 
     # Give agg pk to sms
@@ -96,6 +112,7 @@ if __name__ == "__main__":
     ##########
     # MIX
     ##########
+    print("\n\nMIX phase started.\n\n")
     mix_agg = aggs[0]
     mix_agg.create_mixed_anon_pk_set(sm_info)
 
@@ -109,6 +126,7 @@ if __name__ == "__main__":
     ##########
     # REPORT
     ##########
+    print("\n\nREPORT phase started.\n\n")
     report_user_info = sm_info
     report_agg = aggs[0]
     report_dr_agg = dr_aggs[0]
@@ -130,6 +148,7 @@ if __name__ == "__main__":
     ##########
     # ANONYM
     ##########
+    print("\n\nANONYM phase started.\n\n")
     anonym_agg = aggs[0]
     anonym_bb, anonym_pbb = anonym_agg.make_anonym()
     
@@ -137,12 +156,12 @@ if __name__ == "__main__":
     bb.publish_anonym_reports(anonym_bb, anonym_agg.id)
 
     # private board
-    pbb = privateboard.PrivateBoard()
-    pbb.publish_anonym_reports(anonym_pbb)
+    # pbb = privateboard.PrivateBoard()
+    bb.publish_anonym_reports_PBB(anonym_pbb)
     print("\"Anonym done\".")
 
     dr_agg = dr_aggs[0]
-    dr_agg.set_psudo_anonymous_iden(pbb.get_participants())
+    dr_agg.set_psudo_anonymous_iden(bb.get_publish_participants())
     dr_agg.select_random_sms()
     bb.publish_selected_sm(dr_agg.get_selected())
     
@@ -150,10 +169,20 @@ if __name__ == "__main__":
     for sm in sms:
         sm.check_if_in_event(bb.get_selected_sm())
 
+
+    ##########
+    # sm comsumption
+    ##########
+    print("\n\nGetting sm's cunsumption reports.\n\n")
+
+    for smartmeter in sms:
+        ct_consum, signed_consum = smartmeter.get_sm_comsumption()
+        
+
     ##########
     # EVAL
     ##########
-
+    print("\n\nEval phase started.\n\n")
     # Publish baseline and target
     bb.publish_baselines(bb.T_r) #
     if getattr(bb, "ct_T", None) is None:
@@ -162,11 +191,11 @@ if __name__ == "__main__":
     # call Eval for each aggregator
     print("")
     print("Aggregator 1 (Energy) running Eval...")
-    eval.eval(bb, pbb, aggs[0].dk_share, dso.ek, aggs[0].id)
+    eval.eval(bb, bb, aggs[0].dk_share, dso.ek, aggs[0].id)
     print(f"Aggregator 1 posted partial decryption shares.")
 
     print("Aggregator 2 (DR) running Eval...")
-    eval.eval(bb, pbb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
+    eval.eval(bb, bb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
     print(f"Aggregator 2 posted partial decryption shares.")
 
     print("Partial evaluation done by both aggregators.")

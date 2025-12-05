@@ -1,4 +1,5 @@
 import time
+import random
 from utils.signature import schnorr_verify
 from utils.procedures import Procedures
 
@@ -84,12 +85,18 @@ class SmartMeter:
         """
         t = int(time.time())
         return self.pro.report(self.id, self.sk, self.dso_ek, m, t=t, user_pk=(self.pk, self.pp, self.s_proof))
-
+    
     def get_sm_comsumption(self):
         """ 
-            Returns: TODO
+            Returns: tuple[list[tuple[]], tuple[]]
         """
-        return None
+        # Placeholder since we dont have real data
+        # while target reduction is 10
+        t = int(time.time())
+        consume = random.randint(9, 10)
+        ct_consum, signed_consum = self.pro.consumption_report(self.dso_ek, self.sk, consume, t)
+
+        return ct_consum, signed_consum
     
     def check_if_in_event(self, input):
         """

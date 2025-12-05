@@ -80,7 +80,7 @@ class Board:
         print("All smartmeters and aggregators were successfully verified.")
         return True
 
-    def target_reduction(self, T_r):
+    def publish_target_reduction(self, T_r):
         """
 
         Args:
@@ -95,6 +95,9 @@ class Board:
             print("target reduction list signature verification failed.")
             
         self.T_r = enc_T_r
+    
+    def get_target_reduction(self):
+        return self.T_r
 
     # mix
     # REPORT:
@@ -104,7 +107,6 @@ class Board:
     # We use g because its a value both the prover and verifier agrees on, instead of a random pk from the list which may cause inconsistency
     def publish_mix_pk_and_proof(self, mix_data):
         """
-
         Args:
           mix_data: 
             tuple[list[EcPt], 
@@ -173,6 +175,24 @@ class Board:
             print("Anonymous key signature verification failed.")
             
         self.anonym = anonym_reports
+    
+    # Anonym user consumption reports from 
+    def publish_anonym_reports_PBB(self, anonym_reports):
+        """
+        Args:
+          anonym_reports: tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]
+        """
+        self.participants = []
+        self.ct_t = {}  # pk' -> (t, ct_c, σ)
+        
+        for pk_prime, ct, t, proof in anonym_reports:
+            self.participants.append(pk_prime)
+            
+            pk_key = str((pk_prime.x, pk_prime.y))
+            self.ct_t[pk_key] = (t, ct, proof)
+            print("[NOT IMP] in privateboard: check proof for anonym in PBB")
+
+        self.anonym_reports = anonym_reports
         
     # pseudo-anonymous identities which are selected by the DR aggregator
     def publish_selected_sm(self, selected_w_sign):
@@ -197,7 +217,6 @@ class Board:
     # the baseline
     def publish_baselines(self, ct_b):
         """
-
         Args:
           ct_b: TODO
 
@@ -205,3 +224,22 @@ class Board:
 
         """
         self.ct_b = ct_b
+
+    def publish_sm_comsumption(self, ct_consum, signed_consum):
+        """
+        Args:
+          ct_consum: list[tuple[]]
+          signed_consum: tuple[]
+
+        """
+        if not schnorr_verify(self.pk[0], self.pk[1], str(ct_consum), signed_consum):
+            print("Smartmeter consumption signature verification failed.")
+        
+        self.ct_consumption = (ct_consum, signed_consum)
+
+    def get_sm_comsumption(self):
+        """ 
+        return:
+        """
+        return self.ct_consumption
+

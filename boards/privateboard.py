@@ -1,25 +1,19 @@
 class PrivateBoard:
-    """ """
-    
+    """ 
+    Args: TODO
+    """
     def __init__(self):
         pass
         
     # Anonym user consumption reports from 
     def publish_anonym_reports(self, anonym_reports):
         """
-
         Args:
           anonym_reports: tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]
-
         """
-        
         self.participants = []
         self.ct_t = {}  # pk' -> (t, ct_c, σ)
         
-        # for pk_prime, ct, t, proof in anonym_reports:
-        #     self.participants.append(pk_prime)
-        #     self.ct_t[pk_prime] = (t, ct, proof)
-        #     print("[NOT IMP] in privateboard: check proof for anonym in PBB")
         for pk_prime, ct, t, proof in anonym_reports:
             self.participants.append(pk_prime)
             

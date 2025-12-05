@@ -1,8 +1,5 @@
 # data/DSO.py
-# The DSO works as a supplier in the system
-# user's public keys
-# DSO public key
-# DR parameters (Demand Response)
+# The DSO works as a supplier and verifier in the system
 
 from utils.procedures import Procedures
 from utils.NIZKP import schnorr_NIZKP_verify
@@ -11,8 +8,9 @@ from utils.ec_elgamal import ElGamal
 import random
 
 class DSO:
-    """ """
+    """ 
     
+    """
     def __init__(self, init_id="DSO", pp=None):
         self.pro = Procedures()
         pp = self.pro.pub_param()
@@ -23,7 +21,6 @@ class DSO:
         #  SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
         ((self.ek, self.thresh_params, self.e_proof), self.key_shares) = self.pro.ekey_gen(pp)
-        self.i = 0
 
     def get_threshold_params(self):
         """Return the threshold parameters for decryption."""
@@ -127,7 +124,7 @@ class DSO:
         delta_Q = "8"
         
         dr_param = [p, phi, R, Ø, E, ts, te, delta_Q]
-        target_reduction_value = 310
+        target_reduction_value = 10
         return dr_param, target_reduction_value
 
     # noisy list
@@ -144,26 +141,13 @@ class DSO:
         zero_noise = random.randint(1, max_noise)
 
         values = [random.randint(0, target_reduction-1) for _ in range(noise_count)]
-        # print("\n ")
-        # print("noisy list before tr insert: " + str(values) + "\n")
         values.append(target_reduction) 
-        # print("noisy list -> appended tr: " + str(values) + "\n")
         values += [0] * zero_noise
-        # print("noisy list -> after adding zero_noise tr: " + str(values) + "\n")
         random.shuffle(values)
-        # print("noisy list -> after shuffle: " + str(values) + "\n")
 
-        # ek is a tuple: (curve, g, order, pk_point), extract pk_point
-        # if isinstance(self.ek, tuple):
-        #     _, _, _, pk_point = self.ek
-        # else:
-        #     pk_point = self.ek
-        
         # encrypt each value in the noisy list and then sign the list
-        # TODO should it be each value thats signed or is signing the entire list ok?
+        # enc() converts the values to bits
         enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
-        # enc_TR = [self.pro.ahe.enc(self.ek, val)[0] for val in values]
-        # enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
         signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR
@@ -191,11 +175,12 @@ class DSO:
             - aggs (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]]) 
 
         """
-
         # aggs = [(id, ek)]
         self.agg_ek = {id: ek for (id, ek) in aggs}    
 
-    # Report: encrypting isn't implemented
+    # REPORT: encrypting isn't implemented
+    # (otherwise elgamal would turn the scalar keyshare into a point, making it unusable for threshold
+    # decryption without solving discrete log)
     # This should use secure channels over SSL in production
     def encrypt_dk_and_send_to_agg(self, agg_id):
         """
@@ -205,24 +190,32 @@ class DSO:
 
         """
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
-        #TODO kinda stupid, make better
-        key_share = self.key_shares[self.i]
-        self.i = self.i + 1
-        return key_share
-        
-        # ek = self.agg_ek.get(agg_id)
-        # print("for agg id: ", agg_id)
-        # print("DSO decrypting key: ", str(self.dk))
 
-        # # Sign the point representation of dk (so verifier and signer use same canonical form)
-        # # self.pp is (G, g, o) so g is self.pp[1]
-        # dk_point = self.pp[1].pt_mul(self.dk)
-        # sign_dk = schnorr_sign(self.sk, self.pp, msg=str(dk_point))
-        
-        # enc_dk = enc(ek, self.pp, self.dk)
-        
-        # return (enc_dk, sign_dk)
+        # check if keys are generated
+        if not hasattr(self, 'key_shares') or not self.key_shares:
+            return None
+         
+        # check if we already assigned a share to this id (initialize map if it doesnt exist)
+        if not hasattr(self, 'assigned_shares_map'):
+            self.asssigned_shares_map = {}
 
+        if agg_id in self.asssigned_shares_map:
+            # return existing share for this agg
+            return self.asssigned_shares_map[agg_id]
+
+        # assign a new share
+        # use length of map to determine next index
+        next_index = len(self.asssigned_shares_map)
+
+        if next_index >= len(self.key_shares):
+            return None # if no more key shares available for the specific agg
+        
+        share = self.key_shares[next_index]
+        self.asssigned_shares_map[agg_id] = share
+
+        return share
+
+    # sign the lists of smartmeters and both aggregators
     def sign_registered_lists(self):
         """
         returns:

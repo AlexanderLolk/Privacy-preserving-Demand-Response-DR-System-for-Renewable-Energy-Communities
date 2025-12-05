@@ -1,14 +1,11 @@
-# the DSO publishes a signed list of registered aggregators on
-# BB. The DSO can update the list of registered smart meters and aggregators dynamically
-
 from utils.procedures import Procedures
 from utils.signature import schnorr_verify, schnorr_sign
-# from utils.ec_elgamal import dec #, make_table
 import utils.anonym as anonym
 
 class Aggregator:
-    """ """
-
+    """ 
+    
+    """
     def __init__(self, init_id="agg_id", pp=None):
         self.pro = Procedures()
         if pp is None:
@@ -54,54 +51,21 @@ class Aggregator:
         self.dso_pk = dso_pk
         self.dso_ek = dso_ek
         
-    def set_dso_dk(self, cipher_signature):
+    def set_dso_dk(self, key_share):
         """
-
         Args:
           cipher_signature: Bn
-
         """
-        # print("(Not implemented) In agg.set_dso_dk: got un-encrypted dso dk")
-        self.dso_dk = cipher_signature
-
-        # # cipher_signature is expected to be (ciphertext, signature)
-        # ciphertext, signature = cipher_signature
-
-        # # Build table for small messages (make_table maps EcPt -> int for a range)
-        # table = make_table(self.pp)
-
-        # # Decrypt: dec returns an EcPt (or previously returned table lookup)
-        # plain_pt = dec(self.dk, self.pp, table, ciphertext)
-
-        # # Try to convert the EcPt to an integer via the table, otherwise keep the EcPt
-        # if plain_pt in table:
-        #     dk_val = table[plain_pt]
-        # else:
-        #     dk_val = plain_pt
-
-        # # Verify the DSO signature on the string form of the key
-        # try:
-        #     valid = schnorr_verify(self.dso_pk, self.pp, str(dk_val), signature)
-        # except Exception:
-        #     valid = False
-
-        # if valid:
-        #     self.dso_dk = dk_val
-        #     print("DSO decryption key received and verified.")
-        # else:
-        #     self.dso_dk = None
-        #     print("Failed to verify DSO signature.")
+        self.dk_share = key_share
 
     # MIX: create mixed anonymous pk set
     # Report: this is signed by the aggregator, the idea is to prove this specific aggregator did the mixing
     # send (pk_prime, πmix) to board
     def create_mixed_anon_pk_set(self, ID_pk):
         """
-
         Args:
           ID_pk: list[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]
         """
-        # mix_anon_list = [pk_prime, r_prime, πmix_proof]
         self.mix_anon_list = self.pro.mix_id(ID_pk)   
 
     def publish_mixed_keys(self):
@@ -121,13 +85,11 @@ class Aggregator:
     
     def set_anon_key_mix(self, sm):
         """
-
         Args:
           sm:  tuple[str, tuple[EcGroup, EcPt, Bn]]
 
         Returns:
             tuple[Bn, tuple[Bn, Bn, EcPt]]
-
         """
         # sm can be either (id, pk) or just pk
         if isinstance(sm, tuple):
@@ -158,20 +120,17 @@ class Aggregator:
     # report
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    # TODO handle threshold partial decryption for this
     def check_sm_report(self, sm_report, dr_aggregator):
         
         (pk, (t, cts, signature)) = sm_report
         # sm_pk_pt, group, _ = pk
-        sm_pk_pt = pk[0]
+        sm_pk = pk[0]
         pp = pk[1]
-
-        if not schnorr_verify(sm_pk_pt, pp, str((t, cts)), signature):
+        # print("cts is " + str(cts))
+        if not schnorr_verify(sm_pk, pp, str((t, cts)), signature):
             print("Signature verification failed.")
             return
 
-        # gen_point = group.generator()
-        # identity_point = group.infinite() 
         g = pp[1]
 
         partial_from_agg = self.pro.ahe.partial_decrypt(cts, self.dk_share)
@@ -180,54 +139,24 @@ class Aggregator:
         partial_combined = partial_from_agg + partial_from_dr
 
         print(f"combined length is {len(partial_combined)} of the partial decryptions")
-
         msg_val = self.pro.ahe.threshold_decrypt(
             partial_combined,
             cts,
-            self.thresh_params,
-            expected_value=0
+            self.thresh_params
         )
 
-        print(f" decrypted msg value: {msg_val}")
-
-        # identity_point = 0 * g
-
-        # decrypted_bits = []
-
-        # for (c1, c2) in cts:
-        #     # print(self.dk_share)
-        #     share_agg_scalar = int(self.dk_share.x)
-        #     share_agg = share_agg_scalar * c1
-
-        #     share_dr = dr_aggregator.get_partial_decryption_share(c1)
-
-        #     share_total = share_agg + share_dr
-
-        #     msg_point = c2 + (-share_total)
-
-        #     if msg_point == identity_point:
-        #         decrypted_bits.append("0")
-        #     elif msg_point == g:
-        #         decrypted_bits.append("1")
-        #     else:
-        #         print("Decryption Error: Point matches neither 0 nor 1.")
-        #         return
-
-        # msg_str = "".join(decrypted_bits)
-        # msg_val = int(msg_str, 2)
+        # print(f" decrypted msg value: {msg_val}")
 
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
-            # blinding_factor = g.pt_mul(r_prime)
-            # pk_prime_check = pk[0].pt_add(blinding_factor)
             blinding_factor = int(r_prime) * g
-            pk_prime_check = pk[0] + blinding_factor
+            pk_prime_check = sm_pk + blinding_factor
             
             for pk_prime_candidate in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime_candidate:
                     pk_prime = pk_prime_check
         
-        if msg_val >= 0:
+        if msg_val != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
             print("SM wants to join DR event")
             self.participants_report.append(sm_report)
             self.participants.append(pk_prime)
@@ -252,9 +181,4 @@ class Aggregator:
         return:
             tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
         """
-
-        # list[tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]],
-        # list[EcPt],
-        # Bn
-
         return anonym.Anonym(self.participants_report, self.mix_anon_list[1], self.sk)

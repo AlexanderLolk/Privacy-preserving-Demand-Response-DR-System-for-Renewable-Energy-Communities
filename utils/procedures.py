@@ -11,15 +11,12 @@ class Procedures:
         self.pp = self.pub_param(curve)
         self.ahe = ElGamal(self.pp)
         
-    
-    
     def pub_param(self, curve="P-256"):
         curve = tc.CurveParameters(curve)
         g = curve.P
         order = curve.order
         return (curve, g, order)
     
-
     # SKey_Gen(id, pp) → ((id, pk), sk)
     # SKeyGen(id, pp) to generate a signing key pair ((id, pk), sk) and publishes (id, pk) 
     # generates signature key pair (sk, pk) for identity id
@@ -173,14 +170,14 @@ class Procedures:
         # to get pk sended back
         pk = user_pk[0]
         pp = user_pk[1]
-
-        # print("bin m: " + bin(10))
-
-        # convert message to binary in a list of bits
-        # mbin = [int(x) for x in bin(m)[2:]]
         
         # encrypt
-        cts = self.ahe.enc(ek[0], m)
+        # the message is already bits since enc took care of converting it to bits
+        if m > 0:
+            cts = self.ahe.enc(ek[0], m)
+        else:
+            # deterministic encryption of 0
+            cts = self.ahe.enc(ek[0], m, 1)
 
         # ct = [self.ahe.enc(ek[0], ek[1], m) for m in mbin]
 
@@ -189,3 +186,36 @@ class Procedures:
         signing_σ = sig.schnorr_sign(sk, pp, msg)
 
         return (user_pk, (t, cts, signing_σ))
+    
+    def consumption_report(self, sm_ek, sm_sk, m: int, t):
+        """Create a consumption report by encrypting a message.
+
+        The message `m` is converted to binary and each bit is encrypted with
+        the provided ElGamal key.
+
+        Args:
+            m (int): integer message to be encoded as binary bits.
+
+        Returns:
+            list[tuple[EcPt, EcPt]]: list of ciphertexts.
+        """
+ 
+        cts = self.ahe.enc(sm_ek[0], m)
+        msg = str((t, cts))
+        signing_σ = sig.schnorr_sign(sm_sk, sm_ek[1], msg)
+        
+        # (user_pk, (t, cts, signing_σ))
+        # for (sm_report, r_prime) in zip(inputs, r_prime_list):
+
+        #     try:
+        #         pk_tuple, body = sm_report
+        #         pk_pt, pp, s_proof = pk_tuple
+        #         t, cts, signature = body
+        #     except ValueError:
+        #         raise ValueError("Invalid input format for sm_report")
+            
+        #     # TODO check if index is correct, normally it is done by ZKP
+        #     pk_prime = (r_prime) * pk_pt 
+        #     pi = "NIZKP here"
+        #     published.append((pk_prime, cts, t, pi))
+        return (cts, signing_σ)
