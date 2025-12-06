@@ -119,7 +119,6 @@ class Board:
 
         """
         pk_prime, πmix = mix_data
-        print(pk_prime)
         self.mix_pk = pk_prime
         
         shuffle = Shuffle(self.pk[1])
@@ -187,7 +186,6 @@ class Board:
         
         for pk_prime, ct, t, proof in anonym_reports:
             pk_key = str((pk_prime.x, pk_prime.y))
-            print(f"\nkpk_prime: {pk_key}")
             self.anonym_report_map[pk_key] = (t, ct, proof)
             print("[NOT IMP] in privateboard: check proof for anonym in PBB")
 

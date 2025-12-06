@@ -155,7 +155,6 @@ class Aggregator:
 
         # print(f" decrypted msg value: {msg_val}")
 
-        print(f"\npk of the sm report:\n {sm_pk.x}, {sm_pk.y}")
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
             blinding_factor = int(r_prime) * g
@@ -168,7 +167,6 @@ class Aggregator:
         if not consumption and cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
             print(f"{sm_id} wants to join DR event \n")
             self.participants_baseline_report.append(sm_report)
-            print(f"pk_prime added to baseline participants:\n {pk_prime.x}, {pk_prime.y}")
             self.participants.append(pk_prime)
         elif consumption:
             self.participants_consumption_report.append(sm_report)
@@ -205,6 +203,8 @@ class Aggregator:
         return:
             tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
         """
+
+        # TODO PART OF UNSURE STORING OF R_PRIME
         r_prime_list = []
         for (pk, _, _), _ in self.participants_baseline_report:
             pk_str = str((pk.x, pk.y))
@@ -214,5 +214,4 @@ class Aggregator:
         if not consumption:
             return anonym.Anonym(self.get_participants_baseline(), r_prime_list, self.sk)
         
-        print("in agg, consumtions len: " + str(len(self.get_participants_consumption())))
         return anonym.Anonym(self.get_participants_consumption(), r_prime_list, self.sk)

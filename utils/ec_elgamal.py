@@ -432,8 +432,8 @@ class ElGamal:
         # Compare point coordinates
         assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
         
-el = ElGamal()
-el.test_keygen()
+# el = ElGamal()
+# el.test_keygen()
 # el.test_int_to_bytes_enc()
 # el.test_elgamal()
 # el.test_threshold_elgamal()

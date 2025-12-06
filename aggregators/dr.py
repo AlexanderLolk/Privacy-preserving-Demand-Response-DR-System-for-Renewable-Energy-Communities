@@ -52,7 +52,6 @@ class DR_Aggregator:
         # Some of the code what was tried on this function is in aggregator
         # self.dso_dk = cipher_signature
         self.dk_share = key_share
-        print(f"DR Aggregator {self.id} received key share: {key_share}")
     
     # anon_ids = pk_prime
     def set_psudo_anonymous_iden(self, anon_ids):

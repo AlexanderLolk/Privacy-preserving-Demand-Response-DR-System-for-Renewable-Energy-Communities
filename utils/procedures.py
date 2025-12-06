@@ -144,7 +144,6 @@ class Procedures:
         # TODO is pp[1] = pk?
         # TODO WHAT PK SOULD BE USED HERE?
         πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk=self.pp[1])
-        print(f"\n\nR_prime contains these values: {r_prime}\n\n")
 
         return (e_prime, r_prime, πmix_proof)
 
