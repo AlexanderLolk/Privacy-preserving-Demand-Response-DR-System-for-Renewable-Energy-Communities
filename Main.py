@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # private board
     # pbb = privateboard.PrivateBoard()
     bb.publish_anonym_reports_PBB(anonym_pbb)
-    print("\"Anonym done\".")
+    # print("\"Anonym done\".")
 
     dr_agg = dr_aggs[0]
     dr_agg.set_psudo_anonymous_iden(anonym_agg.get_participants())
@@ -180,7 +180,7 @@ if __name__ == "__main__":
         if smartmeter.is_participating():
             comsumption_report = smartmeter.get_sm_comsumption()
             print(f"Smartmeter {smartmeter.id} sent comsuption.")
-            anonym_agg.check_sm_report(report_data, consumption=True)
+            anonym_agg.check_sm_report(comsumption_report, smartmeter.id, consumption=True)
         else:
             print(f"Smartmeter {smartmeter.id} is not a participant.")
 

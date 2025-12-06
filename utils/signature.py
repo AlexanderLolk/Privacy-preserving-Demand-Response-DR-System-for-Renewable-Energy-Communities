@@ -4,7 +4,7 @@ import threshold_crypto as tc
 
 def key_gen(curve_name="P-256"):
     key = ECC.generate(curve=curve_name)
-    return key, key.public_key()
+    return key.d, key.public_key().pointQ
 
 def point_to_bytes(point):
     if hasattr(point, 'export'):
@@ -156,6 +156,18 @@ def test_schnorr_signature():
     
     print("\n=== All Schnorr signature tests passed! ===\n")
 
+def test_key_gen():
+    sk_key, pk_key = key_gen("P-256")
+    print(f"Private Key: {sk_key}")
+    print(f"Public Key x: {pk_key.x}, y: {pk_key.y}")
+
+    print("\nGenerating another keypair:")
+    sk_key, pk_key = key_gen("P-256")
+    print(f"Private Key: {sk_key}")
+    print(f"Public Key x: {pk_key.x}, y: {pk_key.y}")
+
+
 
 if __name__ == "__main__":
-    test_schnorr_signature()
+    test_key_gen()
+    # test_schnorr_signature()

@@ -33,10 +33,13 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
     
     print("[NOT IMP] in anonym.Anonym: compute zero-knowledge proof of knowledge signature σ_i on (pk_i, t, ct_i) and zero-knowledge proof of knowledge ")
 
+    i = 0
+
     # 1 step  
     published = []
     for (sm_report, r_prime) in zip(inputs, r_prime_list):
-
+        print(f"\nProcessing sm_report {i+1}/{len(inputs)}")
+        i += 1
         try:
             pk_tuple, body = sm_report
             pk_pt, pp, s_proof = pk_tuple
@@ -45,13 +48,21 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
             raise ValueError("Invalid input format for sm_report")
         
         # TODO check if index is correct, normally it is done by ZKP
-        pk_prime = (r_prime) * pk_pt 
+        # ANSWER: THEY DO NOT ALIGN!!!!!!
+        #
+        # pk_prime = (r_prime) * pk_pt
+        pk_prime = r_prime
+        # the type for r_prime
+        print(f"\nr_prime type: {type(r_prime)} \n")
+        print(f"\nsm's pk x is {pk_pt.x} \n with y as {pk_pt.y}\n")
+        print(f"sm's pk_prime x is {pk_prime.x} \n with y as {pk_prime.y}\n")
         pi = "NIZKP here"
         published.append((pk_prime, cts, t, pi))
 
     msg_bytes = b""
 
     for (pk_prime, ct, t, pi) in published:
+        # TODO maybe just str() the list of cts
         c1, c2 = ct[0]
         msg_bytes += _export_bytes(pk_prime)
         msg_bytes += _export_bytes(c1)

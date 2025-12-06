@@ -381,6 +381,51 @@ def test_basic_shuffle():
     
     return is_valid
 
+
+def test_basic_shuffle_pk():
+    from utils.procedures import Procedures
+    """ """
+    print("\n" + "="*60)
+    print("Testing Basic Shuffle Proof with Real Keys")
+    print("="*60)
+    pro = Procedures()
+    pp = pro.pp
+    shuffle = Shuffle(pp=pro.pp)
+    g = pp[1]
+    N = 5
+    
+    print(f"\n1. Generating {N} user keys ...")
+    users = []
+    e = []
+    
+    for i in range(N):
+        user_id = f"User_{i}"
+        ((id, (pk, pp_user, proof)), sk) = pro.skey_gen(user_id, pp)
+        users.append({
+            'id': user_id,
+            'pk': pk,
+            'sk': sk,
+            'proof': proof
+        })
+        e.append(pk)
+        print(f"   {user_id}: pk={str(pk)[:50]}...")
+    
+    print(f"\n2. Shuffling and anonymizing public keys...")
+    e_prime, r_prime, ψ = shuffle.GenShuffle(e) 
+    print(f"   Permutation: {ψ}")
+    
+    print(f"\n3. Generating shuffle proof (πmix)...")
+    proof = shuffle.GenProof(e, e_prime, r_prime, ψ, pk)
+    
+    print(f"\n4. Verifying shuffle proof...")
+    is_valid = shuffle.verify_shuffle_proof(proof, e, e_prime, pk)
+    
+    print(f"\n{'='*60}")
+    print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
+    print(f"{'='*60}\n")
+    
+    return is_valid
+
 def test_integration_with_aggregator():
     from utils.procedures import Procedures
     """ """
@@ -438,5 +483,6 @@ def test_integration_with_aggregator():
     return is_valid and all_verified
 
 if __name__ == "__main__":
-    test_basic_shuffle()
-    test_integration_with_aggregator()
+    # test_basic_shuffle()
+    test_basic_shuffle_pk()
+    # test_integration_with_aggregator()

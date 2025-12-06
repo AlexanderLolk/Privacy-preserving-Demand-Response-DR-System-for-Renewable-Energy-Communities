@@ -288,6 +288,15 @@ class ElGamal:
     ###
     # tests
     ###
+    def test_keygen(self):
+        (ek, _), dk = self.keygen()
+        # type of each:
+        print("ek type: " + str(type(ek)))
+        print("dk type: " + str(type(dk)))
+
+        print("sk is: " + str(dk))
+        print("ek -> x: " + str(ek.x) + ", y: " + str(ek.y))
+
     def test_int_to_bytes_enc(self):
         msg = 0
         # binary_string = f'{msg:b}'
@@ -424,8 +433,9 @@ class ElGamal:
         assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
         
 el = ElGamal()
+el.test_keygen()
 # el.test_int_to_bytes_enc()
 # el.test_elgamal()
-el.test_threshold_elgamal()
+# el.test_threshold_elgamal()
 # el.test_threshold_elgamal_point()
 # el.test_threshold_elgamal_deterministic_0()

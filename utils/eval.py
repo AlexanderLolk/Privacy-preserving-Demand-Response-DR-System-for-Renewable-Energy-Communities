@@ -88,12 +88,14 @@ def eval(BB, PBB, dk_share, dso_ek, agg_id):
     participants = BB.get_participants()
     for pk_prime in participants:
         pk_prime_str = str((pk_prime.x, pk_prime.y))
-        print(f"all participants: {pk_prime_str}")
+        print(f"participant:\n {pk_prime_str}")
 
     for pk_prime in participants:
         pk_prime_str = str((pk_prime.x, pk_prime.y))
+        print(f"\nall keys in baseline_BB:\n {baseline_BB.keys()}")
         # baseline_BB[pk_prime] = (ct, t, proof)
         sm_baseline_ct, sm_baseline_t, sm_baseline_proof = baseline_BB[pk_prime_str]
+
 
         # baseline_BB[pk_prime] = (ct, t, proof)
         sm_onsumption_ct, sm_onsumption_t, sm_onsumption_proof = consumption_PBB[pk_prime_str]

@@ -37,9 +37,8 @@ class Procedures:
             pp = self.pp
             
 
-        sk_key, _ = sig.key_gen("P-256")
-        sk = sk_key.d
-        pk = sk * pp[1]
+        sk, pk = sig.key_gen("P-256")
+        assert pk == sk * pp[1], "Public key does not match private key"
 
         proof =  nizkp.schnorr_NIZKP_proof(pk, pp, sk)
         return ((id, (pk, pp, proof)), sk)
@@ -138,10 +137,14 @@ class Procedures:
             pk = idpk[1][0]
             Id_A_pk.append(pk)
 
+        # TODO MAKE SURE IT RETURN G + R_PRIME INSTEAD OF JUST R_PRIME
         e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk) 
+        
         # proof of shuffle and anonymised list of pks
         # TODO is pp[1] = pk?
+        # TODO WHAT PK SOULD BE USED HERE?
         πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk=self.pp[1])
+        print(f"\n\nR_prime contains these values: {r_prime}\n\n")
 
         return (e_prime, r_prime, πmix_proof)
 

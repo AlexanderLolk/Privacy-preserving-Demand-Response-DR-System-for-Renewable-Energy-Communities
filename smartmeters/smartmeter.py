@@ -56,21 +56,21 @@ class SmartMeter:
         """
 
         # r_prime is the randomness used in the mixing
-        r_prime, signature = anon_key
+        pk_prime, signature = anon_key
         
-        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
+        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(pk_prime), signature):
             print("Anonymous key signature verification failed.")
         
-        self.r_prime = r_prime # Store the randomness
+        # self.r_prime = r_prime # Store the randomness
 
-        _, g, _ = self.pp
+        # _, g, _ = self.pp
 
         # Using additive to reconstruct identity
         # The blinding_factor is (r' * g). It is the vector you add to your position to hide where you started.
-        pk_prime = r_prime * g
+        # pk_prime = r_prime * g
 
         # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
-        self.anon_id = self.pk + pk_prime
+        self.anon_id = pk_prime
 
     # Report()
     # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)

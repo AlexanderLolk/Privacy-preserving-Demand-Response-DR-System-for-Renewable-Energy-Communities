@@ -19,6 +19,7 @@ class Aggregator:
         self.participants = []
         self.participants_baseline_report = []
         self.participants_consumption_report = []
+        self.pk_to_prime = {}
     
     def get_id(self):
         """ 
@@ -103,25 +104,31 @@ class Aggregator:
         # using additive logic (pk + r*G)
         for r_prime in self.mix_anon_list[1]:
 
-            # calculate r_prime * G
-            # blinding_factor = g.pt_mul(r_prime)
+            # calculate r_prime * g
             blinding_factor = int(r_prime) * g
+
             # then add r_prime to public key
-            # Old: anon_pk = sm_pk.pt_mul(r_prime)
             pk_prime_check = sm_pk + blinding_factor
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:
-                    sign_r_prime = schnorr_sign(self.sk, self.pp, str(r_prime))
-                    return (r_prime, sign_r_prime)
+                    sign_r_prime = schnorr_sign(self.sk, self.pp, str(blinding_factor))
+
+                    # TODO NOT SURE IF STORING IS THE RIGHT WAY
+                    pk_str = str((sm_pk.x, sm_pk.y))
+                    self.pk_to_prime[pk_str] = pk_prime
+                    
+                    
+                    return (blinding_factor, sign_r_prime)
         
         print("Public key not found in r_prime")
         return None
 
+
     # report
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    def check_sm_report(self, sm_report, consumption=False):
+    def check_sm_report(self, sm_report, sm_id="NOT_SAID", consumption=False):
         
         (pk, (t, cts, signature)) = sm_report
         # sm_pk_pt, group, _ = pk
@@ -148,8 +155,7 @@ class Aggregator:
 
         # print(f" decrypted msg value: {msg_val}")
 
-        
-
+        print(f"\npk of the sm report:\n {sm_pk.x}, {sm_pk.y}")
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
             blinding_factor = int(r_prime) * g
@@ -160,8 +166,9 @@ class Aggregator:
                     pk_prime = pk_prime_check
         
         if not consumption and cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
-            print(f"{self.id} wants to join DR event \n")
+            print(f"{sm_id} wants to join DR event \n")
             self.participants_baseline_report.append(sm_report)
+            print(f"pk_prime added to baseline participants:\n {pk_prime.x}, {pk_prime.y}")
             self.participants.append(pk_prime)
         elif consumption:
             self.participants_consumption_report.append(sm_report)
@@ -198,8 +205,14 @@ class Aggregator:
         return:
             tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
         """
+        r_prime_list = []
+        for (pk, _, _), _ in self.participants_baseline_report:
+            pk_str = str((pk.x, pk.y))
+            r_prime = self.pk_to_prime[pk_str]
+            r_prime_list.append(r_prime)
+
         if not consumption:
-            return anonym.Anonym(self.get_participants_baseline(), self.mix_anon_list[1], self.sk)
+            return anonym.Anonym(self.get_participants_baseline(), r_prime_list, self.sk)
         
-        # print("in agg, consumtions: " + str(self.get_participants_consumption()))
-        return anonym.Anonym(self.get_participants_consumption(), self.mix_anon_list[1], self.sk)
+        print("in agg, consumtions len: " + str(len(self.get_participants_consumption())))
+        return anonym.Anonym(self.get_participants_consumption(), r_prime_list, self.sk)
