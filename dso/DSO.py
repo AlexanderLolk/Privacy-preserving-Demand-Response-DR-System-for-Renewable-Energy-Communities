@@ -21,6 +21,7 @@ class DSO:
         #  SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
         ((self.ek, self.thresh_params, self.e_proof), self.key_shares) = self.pro.ekey_gen(pp)
+        self.i = 0
 
     def get_threshold_params(self):
         """Return the threshold parameters for decryption."""
@@ -124,7 +125,7 @@ class DSO:
         delta_Q = "8"
         
         dr_param = [p, phi, R, Ø, E, ts, te, delta_Q]
-        target_reduction_value = 10
+        target_reduction_value = 11
         return dr_param, target_reduction_value
 
     # noisy list
@@ -191,28 +192,34 @@ class DSO:
         """
         print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
 
-        # check if keys are generated
-        if not hasattr(self, 'key_shares') or not self.key_shares:
-            return None
+        # TODO DOES NOT WORK
+        # # check if keys are generated
+        # if not hasattr(self, 'key_shares') or not self.key_shares:
+        #     return None
          
-        # check if we already assigned a share to this id (initialize map if it doesnt exist)
-        if not hasattr(self, 'assigned_shares_map'):
-            self.asssigned_shares_map = {}
+        # # check if we already assigned a share to this id (initialize map if it doesnt exist)
+        # if not hasattr(self, 'assigned_shares_map'):
+        #     self.asssigned_shares_map = {}
 
-        if agg_id in self.asssigned_shares_map:
-            # return existing share for this agg
-            return self.asssigned_shares_map[agg_id]
+        # if agg_id in self.asssigned_shares_map:
+        #     # return existing share for this agg
+        #     return self.asssigned_shares_map[agg_id]
 
-        # assign a new share
-        # use length of map to determine next index
-        next_index = len(self.asssigned_shares_map)
+        # # assign a new share
+        # # use length of map to determine next index
+        # next_index = len(self.asssigned_shares_map)
 
-        if next_index >= len(self.key_shares):
-            return None # if no more key shares available for the specific agg
+        # if next_index >= len(self.key_shares):
+        #     return None # if no more key shares available for the specific agg
         
-        share = self.key_shares[next_index]
-        self.asssigned_shares_map[agg_id] = share
+        # share = self.key_shares[next_index]
+        # self.asssigned_shares_map[agg_id] = share
 
+        # return share
+
+        # stupid but works
+        share = self.key_shares[self.i]
+        self.i = 1
         return share
 
     # sign the lists of smartmeters and both aggregators

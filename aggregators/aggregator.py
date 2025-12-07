@@ -129,7 +129,6 @@ class Aggregator:
     # report is decrypted and verified
     # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
     def check_sm_report(self, sm_report, sm_id="NOT_SAID", consumption=False):
-        
         (pk, (t, cts, signature)) = sm_report
         # sm_pk_pt, group, _ = pk
         sm_pk = pk[0]
@@ -215,3 +214,23 @@ class Aggregator:
             return anonym.Anonym(self.get_participants_baseline(), r_prime_list, self.sk)
         
         return anonym.Anonym(self.get_participants_consumption(), r_prime_list, self.sk)
+    
+    def partial_dec_reports(self, baseline_BB, consumption_PBB):
+        baseline_pk_to_part = {}
+        consumption_pk_to_part = {}
+        # baseline_part = []
+        # consumption_part = []
+        # print(f"\n\n\n in agg, len of get_participants = {len(self.get_participants())}\n\n\n")
+        for pk_prime in self.get_participants():
+            pk_prime_str = str((pk_prime.x, pk_prime.y))
+            # baseline_BB[pk_prime] = (ct, t, proof)
+            sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
+            # baseline_part.append((pk_prime, self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share), sm_baseline_t, sm_baseline_proof))
+            baseline_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share), sm_baseline_t, sm_baseline_proof)
+
+            # baseline_BB[pk_prime] = (ct, t, proof)
+            sm_consumption_t, sm_consumption_ct, sm_consumption_proof = consumption_PBB[pk_prime_str]
+            # consumption_part.append((pk_prime, self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof))
+            consumption_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof)
+
+        return (baseline_pk_to_part, consumption_pk_to_part)

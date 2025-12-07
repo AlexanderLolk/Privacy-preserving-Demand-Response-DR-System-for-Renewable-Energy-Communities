@@ -234,9 +234,16 @@ class Board:
         self.consumption_report_map = {}
         for pk_prime, ct, t, proof in consumption_report:
             pk_key = str((pk_prime.x, pk_prime.y))
-            self.consumption_report_map[pk_key] = (t, ct, proof)
+            
+            # TODO IDEA FOR KEEPING MORE CONSUMPTIONS
+            # if pk_key not in self.consumption_report_map:
+            #     self.consumption_report_map[pk_key] = []
+            # self.consumption_report_map[pk_key].append(t, ct, proof)
+            
+            self.consumption_report_map[pk_key] = t, ct, proof
+           
             print("[NOT IMP] in privateboard: check proof for anonym in PBB")
-        
+        # not sure if needed
         self.sm_consumptions = consumption_report
 
     def get_sm_comsumption(self):

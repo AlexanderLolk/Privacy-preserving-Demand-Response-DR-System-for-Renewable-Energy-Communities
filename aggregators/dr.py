@@ -61,6 +61,9 @@ class DR_Aggregator:
           anon_ids: list[EcPt]
         """
         self.anon_ids = anon_ids
+
+    def get_participants(self):
+        return self.anon_ids
     
     def select_random_sms(self):
         """ 
@@ -88,4 +91,22 @@ class DR_Aggregator:
         # return c1_point.pt_mul(self.sk_share)
         return self.pro.ahe.partial_decrypt(ciphertexts, self.dk_share)
     
-    
+    def partial_dec_reports(self, baseline_BB, consumption_PBB):
+        baseline_pk_to_part = {}
+        consumption_pk_to_part = {}
+        # baseline_part = []
+        # consumption_part = []
+        # print(f"\n\n\n in dr, len of get_participants = {len(self.get_participants())}\n\n\n")
+        for pk_prime in self.get_participants():
+            pk_prime_str = str((pk_prime.x, pk_prime.y))
+            # baseline_BB[pk_prime] = (ct, t, proof)
+            sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
+            # baseline_part.append((pk_prime, self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share), sm_baseline_t, sm_baseline_proof))
+            baseline_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share), sm_baseline_t, sm_baseline_proof)
+
+            # baseline_BB[pk_prime] = (ct, t, proof)
+            sm_consumption_t, sm_consumption_ct, sm_consumption_proof = consumption_PBB[pk_prime_str]
+            # consumption_part.append((pk_prime, self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof))
+            consumption_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof)
+
+        return (baseline_pk_to_part, consumption_pk_to_part)

@@ -3,7 +3,6 @@ import smartmeters.smartmeter as sm
 import aggregators.aggregator as agg
 import aggregators.dr as dr
 import boards.board as board
-import boards.privateboard as privateboard
 import utils.eval as eval
 # from utils.generators import pub_param
 # from utils.procedures import Procedures
@@ -134,14 +133,14 @@ if __name__ == "__main__":
     # TODO perhaps a different message and a better way of choosing participating vs non-participating users
     for i, smartmeter in enumerate(sms):
         if i < NUM_SM - 1:
-            m = 12
+            m = 10
         else:
             m = 0 # non-participating user sends 0 report
 
         report_data = smartmeter.generate_and_send_report(m)
         print(f"Smartmeter {smartmeter.id} sent report.")
         # extracting participants
-        report_agg.check_sm_report(report_data)
+        report_agg.check_sm_report(report_data, smartmeter.id)
     
     bb.publish_participants(report_agg.get_participants())
 
@@ -195,13 +194,19 @@ if __name__ == "__main__":
 
     # call Eval for each aggregator
     print("")
-    print("Aggregator 1 (Energy) running Eval...")
-    eval.eval(bb, bb, aggs[0].dk_share, dso.ek, aggs[0].id)
-    print(f"Aggregator 1 posted partial decryption shares.")
 
-    print("Aggregator 2 (DR) running Eval...")
-    eval.eval(bb, bb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
-    print(f"Aggregator 2 posted partial decryption shares.")
+    eva = eval.Eval(dso.get_encryption_key())
+    agg_share = aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_comsumption())
+    dr_share = dr_aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_comsumption())
+    eva.eval(bb, bb, agg_share, dr_share, dso.get_threshold_params())
+
+    # print("Aggregator 1 (Energy) running Eval...")
+    # eval.eval(bb, bb, aggs[0].dk_share, dso.ek, aggs[0].id)
+    # print(f"Aggregator 1 posted partial decryption shares.")
+
+    # print("Aggregator 2 (DR) running Eval...")
+    # eval.eval(bb, bb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
+    # print(f"Aggregator 2 posted partial decryption shares.")
 
     print("Partial evaluation done by both aggregators.")
 
