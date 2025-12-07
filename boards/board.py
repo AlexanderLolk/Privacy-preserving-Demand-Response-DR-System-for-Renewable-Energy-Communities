@@ -209,6 +209,7 @@ class Board:
         return:
             list[EcPt]
         """
+        # print(f"\n\n\nlen of board's anon_id = {len(self.selected)}")
         return self.selected
 
     # the baseline

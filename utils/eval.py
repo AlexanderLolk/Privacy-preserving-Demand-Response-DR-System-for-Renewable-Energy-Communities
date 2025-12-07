@@ -92,17 +92,17 @@ class Eval:
 
         # lists
         participants = BB.get_participants()
+        selected = BB.get_selected_sm()
 
         self.el = ElGamal()
         
         agg_baselines_parts, agg_consumptions_parts = agg
         dr_baselines_parts, dr_consumptions_parts = dr
 
-        
-        
+        for_not_selected_or_marked = []
+        eval_results_step1 = []
+        CT_red = []
 
-        baseline_part = []
-        consumption_part = []
         for pk_prime in participants:
             pk_prime_str = str((pk_prime.x, pk_prime.y))
             sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
@@ -118,16 +118,33 @@ class Eval:
             sm_consumption_ct_part_agg, _, _ = agg_consumptions_parts[pk_prime_str]
             sm_consumption_ct_part_dr, _, _ = dr_consumptions_parts[pk_prime_str]
 
+            # Would need algo like Correction to ”Improving the DGK comparison protocol” to get this to works
+            # https://eprint.iacr.org/2018/1100.pdf
+            # report:
             consumption = self.el._eval_threshold_decrypt((sm_consumption_ct_part_agg + sm_consumption_ct_part_dr), sm_consumption_ct)
 
             # step 1:ord comparison
+            # TODO: ct_o is not ciphertext
             ct_o, t, ord_proof = self.ord_comparison(baseline, consumption)
-            (ct_o, t, pk_prime, ord_proof)
-            print(f"\n\n ----------- back in eval again ------------- \n\n")
-            # eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
+            if pk_prime not in selected:
+                for_not_selected_or_marked.append((ct_o, t, pk_prime, ord_proof))
+                continue # this skip the currect loop and take the next pk_prime
+            else:
+                eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
+            # print(f"\n\n ----------- back in eval again ------------- \n\n")
 
             # step 2 ct reduction
-            # ct_red = ct_reduction(ct_b_single, ct_m, ct_o)
+            ct_red = self.ct_reduction(sm_baseline_ct, sm_consumption_ct, ct_o)
+            if ct_red is None:
+                for_not_selected_or_marked.append((ct_o, t, pk_prime, ord_proof))
+                continue # this skip the currect loop and take the next pk_prime
+            
+            # step 3 set CT_red
+            CT_red.append((ct_red, t, pk_prime))
+
+        # step 4: Aggregation
+        ct_sum = self.ct_aggregation(CT_red)
+
 
         # return (baseline_part, consumption_part)
 
@@ -244,11 +261,12 @@ class Eval:
         result = None
         if (consumption < baseline):
             print(f"\n\nconsumption = {consumption} is less than baseline = {baseline}\n\n")
-            result = self.el.enc(self.dso_ek[0], 1)
+            # result = self.el.enc(self.dso_ek[0], 1)
+            result = 1
         else:
             print(f"\n\nconsumption = {consumption} have reach hights at baseline or bigger than baseline = {baseline}\n\n")
-            
-            result = self.el.enc(self.dso_ek[0], 0)
+            # result = self.el.enc(self.dso_ek[0], 0)
+            result = 0
 
         # ct_o = (c1, c2) # should be decrypted
 
@@ -256,8 +274,7 @@ class Eval:
         return result, t, ord_proof
 
     # ctred ← Reduct(ct_b, c_tm, ct_o)
-    # TODO SHOULD ONLY BE FOR SELECTED
-    def ct_reduction(ct_b, ct_m, ct_o):
+    def ct_reduction(self, ct_b, ct_c, ct_o):
         """
         (for step 2) Conditional Reduction Calculation.
         [Intended] Should compute Enc((Baseline - Consumption) * ct_o).
@@ -267,9 +284,13 @@ class Eval:
         """
         print("\nin ct_reduction")
         # baselilne - measured
-        ct_diff = sub(ct_b, ct_m)
+        # ct_diff = sub(ct_b, ct_m)
+        if ct_o < 1:
+            return None
 
-        return ct_diff
+        ct_diff = self.sub(ct_b, ct_c)
+
+        return ct_diff[0]
         # pro = Procedures()
         # pp = pro.pub_param()
         # g = pp[1]
@@ -278,14 +299,21 @@ class Eval:
         # return ct_red
 
     # ctsum ← Agg(ct_red)
-    def ct_aggregation(reduc_set):
+    def ct_aggregation(self, reduc_set):
         """
         (for step 4) Homomorphic Aggregation.
         Sums all individual reductions into a single ciphertext (ct_sum).
         Uses the additive homomorphic property (for Ec).
         """
         print("\nin ct_aggregation")
-        C1_prod, C2_prod = reduc_set[0][0][0] 
+
+        # TODO
+        ###
+        # C1_i, C2_i = reduc_set[i][0][0]
+        # ^^^^^^^^^^
+        # TypeError: cannot unpack non-iterable EccPoint object
+        ###
+        C1_prod, C2_prod = reduc_set[0][0]
         
         for i in range(1, len(reduc_set)):
             C1_i, C2_i = reduc_set[i][0][0]

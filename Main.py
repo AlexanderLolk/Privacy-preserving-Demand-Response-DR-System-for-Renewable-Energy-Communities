@@ -167,6 +167,7 @@ if __name__ == "__main__":
     # step 12 in seq chart
     for sm in sms:
         sm.check_if_in_event(bb.get_selected_sm())
+        # sm.check_if_in_event(anonym_agg.get_participants())
 
 
     ##########
@@ -211,4 +212,4 @@ if __name__ == "__main__":
     print("Partial evaluation done by both aggregators.")
 
     # COMBINE SHARES
-    eval.combine_decryption_shares(bb, dso.get_threshold_params())
+    # eval.combine_decryption_shares(bb, dso.get_threshold_params())

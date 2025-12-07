@@ -56,9 +56,9 @@ class SmartMeter:
         """
 
         # r_prime is the randomness used in the mixing
-        pk_prime, signature = anon_key
+        r_prime, signature = anon_key
         
-        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(pk_prime), signature):
+        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
             print("Anonymous key signature verification failed.")
         
         # self.r_prime = r_prime # Store the randomness
@@ -70,7 +70,7 @@ class SmartMeter:
         # pk_prime = r_prime * g
 
         # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
-        self.anon_id = pk_prime
+        self.anon_id = r_prime
 
     # Report()
     # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)
@@ -115,15 +115,19 @@ class SmartMeter:
           input: [EcPt]
 
         """
+        sm_pk_prime = (self.anon_id + self.pk)
+        print("")
 
-        # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: {str(input)} \nwith the anon_pk as: {self.anon_id}")
+        # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: {str(input)} \nwith the anon_pk as: x = {self.anon_id.x}, y = {self.anon_id.x}")
         for anon_pk in input:
-            if self.anon_id == anon_pk:
+            # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: x = {anon_pk.x},\n y = {anon_pk.y} \nwith the anon_pk as: x = {sm_pk_prime.x},\n y = {sm_pk_prime.y}")
+            if sm_pk_prime == anon_pk:
                 print("SM: " + self.id + " is in the event")
                 self.in_event = True
                 return
             else:
+                # print("SM: " + self.id + " didnt get a inv")
                 self.in_event = False
     
-    def in_envent(self):
+    def in_event(self):
         return self.in_event

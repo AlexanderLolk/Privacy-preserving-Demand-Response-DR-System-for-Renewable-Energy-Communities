@@ -38,7 +38,7 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
     for (sm_report, r_prime) in zip(inputs, r_prime_list):
         try:
             pk_tuple, body = sm_report
-            pk_pt, pp, s_proof = pk_tuple
+            pk, pp, s_proof = pk_tuple
             t, cts, signature = body
         except ValueError:
             raise ValueError("Invalid input format for sm_report")
@@ -47,7 +47,7 @@ def Anonym(inputs=None, r_prime_list=None, secret_key_T=None):
         # ANSWER: THEY DO NOT ALIGN!!!!!!
         # FOR NOW, AGG HAS A MAP TO STORE THE pk TO pk_prime
         # pk_prime = (r_prime) * pk_pt
-        pk_prime = r_prime
+        pk_prime = r_prime + pk
 
         pi = "NIZKP here"
         published.append((pk_prime, cts, t, pi))

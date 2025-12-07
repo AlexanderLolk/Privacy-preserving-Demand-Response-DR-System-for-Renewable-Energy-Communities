@@ -69,6 +69,7 @@ class DR_Aggregator:
         """ 
 
         """
+        
         self.selected = random.sample(self.anon_ids, k=2)
     
     # TODO if this need to be signed, then give pk before this function

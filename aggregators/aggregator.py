@@ -19,7 +19,7 @@ class Aggregator:
         self.participants = []
         self.participants_baseline_report = []
         self.participants_consumption_report = []
-        self.pk_to_prime = {}
+        self.pk_to_pk_prime = {}
     
     def get_id(self):
         """ 
@@ -116,7 +116,7 @@ class Aggregator:
 
                     # TODO NOT SURE IF STORING IS THE RIGHT WAY
                     pk_str = str((sm_pk.x, sm_pk.y))
-                    self.pk_to_prime[pk_str] = pk_prime
+                    self.pk_to_pk_prime[pk_str] = blinding_factor
                     
                     
                     return (blinding_factor, sign_r_prime)
@@ -139,7 +139,7 @@ class Aggregator:
             return
 
         g = pp[1]
-
+        
         # partial_from_agg = self.pro.ahe.partial_decrypt(cts, self.dk_share)
         # partial_from_dr = dr_aggregator.get_partial_decryption_share(cts)
         
@@ -154,6 +154,9 @@ class Aggregator:
 
         # print(f" decrypted msg value: {msg_val}")
 
+        deterministic_check = self.pro.ahe.enc(self.dso_ek[0], 0, r=1)
+
+
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
             blinding_factor = int(r_prime) * g
@@ -163,7 +166,7 @@ class Aggregator:
                 if pk_prime_check == pk_prime_candidate:
                     pk_prime = pk_prime_check
         
-        if not consumption and cts != self.pro.ahe.enc(self.dso_ek[0], 0, r=1):
+        if not consumption and cts != deterministic_check:
             print(f"{sm_id} wants to join DR event \n")
             self.participants_baseline_report.append(sm_report)
             self.participants.append(pk_prime)
@@ -207,7 +210,7 @@ class Aggregator:
         r_prime_list = []
         for (pk, _, _), _ in self.participants_baseline_report:
             pk_str = str((pk.x, pk.y))
-            r_prime = self.pk_to_prime[pk_str]
+            r_prime = self.pk_to_pk_prime[pk_str]
             r_prime_list.append(r_prime)
 
         if not consumption:
