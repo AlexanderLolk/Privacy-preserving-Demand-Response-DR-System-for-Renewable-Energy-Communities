@@ -285,8 +285,13 @@ class Eval:
         print("\nin ct_reduction")
         # baselilne - measured
         # ct_diff = sub(ct_b, ct_m)
+        # because we cant return none
         if ct_o < 1:
-            return None
+            pro = Procedures()
+            pp = pro.pub_param()
+            g = pp[1]
+            identity_point = 0 * g
+            return (identity_point, identity_point)
 
         ct_diff = self.sub(ct_b, ct_c)
 
