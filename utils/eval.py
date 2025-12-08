@@ -30,9 +30,10 @@ class Eval:
         # print("\nc1: \n" + str(c1))
         # print("\nc2: \n" + str(c2))
 
-        a1, b1 = c1 # baseline from smartmeters      ||| small number
-        a2, b2 = c2 # consumption from smartmeters   ||| big number
+        a1, b1 = c1 # baseline
+        a2, b2 = c2 # consumption
         
+        # a1 and b1 should be a higher encrypted value, so it should not decrypt to negative
         return (a1 + (-a2), b1 + (-b2))
 
     #=============
@@ -297,11 +298,12 @@ class Eval:
         for (c1_t, c2_t) in ct2:
             c1_diff = c1_sum + (-c1_t)
             c2_diff = c2_sum + (-c2_t)
+            A_values.append((c1_diff, c2_diff))
 
-            A1 = int(s) * c1_diff
-            A2 = int(s) * c2_diff
+            # A1 = int(s) * c1_diff
+            # A2 = int(s) * c2_diff
 
-            A_values.append((A1, A2))
+            # A_values.append((A1, A2))
 
         challenge = hash_to_bn(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 

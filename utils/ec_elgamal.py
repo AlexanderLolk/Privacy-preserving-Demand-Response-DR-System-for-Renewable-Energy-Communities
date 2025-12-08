@@ -366,7 +366,7 @@ class ElGamal:
         pub_key, key_shares, thresh_params = self.keygen_threshold()
         # print("Generated 2-of-2 threshold keys")
 
-        m = 12
+        m = 1
         # print(f"Original message: {m}")
 
         encrypted_msg = self.enc(pub_key, m)
@@ -385,9 +385,130 @@ class ElGamal:
         print(f"Total partial decryptions: {len(partial_combined)}")
 
         decrypted_msg = self.threshold_decrypt(partial_combined, encrypted_msg, thresh_params)
-        print(f"Final decrypted message: {decrypted_msg}")
+        print(f"Final decrypted message point: {decrypted_msg}")
+        print(f"decrypted_msg: x = {decrypted_msg.x}, y = {decrypted_msg.y}")
+        
+        decrypted_msg = self._eval_threshold_decrypt(partial_combined, encrypted_msg)
+        print(f"\nFinal decrypted message point: {decrypted_msg}")
 
         # assert decrypted_msg == m, f"Expected {m}, got {decrypted_msg}"
+
+    def test_threshold_elgamal_sub(self):
+            
+        pub_key, key_shares, thresh_params = self.keygen_threshold()
+        # print("Generated 2-of-2 threshold keys")
+
+        m = 18
+        # print(f"Original message: {m}")
+        sub_m = 9
+
+        encrypted_msg = self.enc(pub_key, m)
+
+        encrypted_msg_sub = self.enc(pub_key, sub_m)
+
+        print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
+        print(f"Encrypted sub message: {len(encrypted_msg_sub)} ciphertexts (one per bit)")
+
+        combind = []
+        for i in range(len(encrypted_msg)):
+            c1_m, c2_m = encrypted_msg[i]
+            c1_sub, c2_sub = encrypted_msg_sub[i]
+            combind.append((c1_m + (-c1_sub), c2_m + (-c2_sub)))
+
+        print("key shares: " + str(key_shares))
+        # Compute partial decryptions from each key share
+        # Each returns a list of PartialDecryption objects, one per bit
+        partial_from_share0 = self.partial_decrypt(combind, key_shares[0])
+        partial_from_share1 = self.partial_decrypt(combind, key_shares[1])
+        
+        # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
+        partial_combined = partial_from_share0 + partial_from_share1
+        
+        print(f"Computed partial decryptions from {len(key_shares)} key shares")
+        print(f"Total partial decryptions: {len(partial_combined)}")
+
+        decrypted_msg = self.threshold_decrypt(partial_combined, combind, thresh_params)
+        print(f"Final decrypted message point: {decrypted_msg}")
+        print(f"decrypted_msg: x = {decrypted_msg.x}, y = {decrypted_msg.y}")
+        
+        decrypted_msg = self._eval_threshold_decrypt(partial_combined, combind)
+        print(f"\nFinal decrypted message point: {decrypted_msg}")
+        assert decrypted_msg == m - sub_m, f"Expected {m - sub_m}, got {decrypted_msg}"
+    
+
+    def test_threshold_elgamal_on_target_reduction(self):
+        pub_key, key_shares, thresh_params = self.keygen_threshold()
+        
+        m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
+        # m = [1, 0, 0, 1, 0]
+
+        enc_tr = [self.enc(pub_key, val) for val in m]
+        iden0 = 0 * self.pp[1]
+        iden1 = 1 * self.pp[1]
+
+        print(f"iden0: x = {iden0.x}, y = {iden0.y}")
+        print(f"iden1: x = {iden1.x}, y = {iden1.y}")
+
+        decrypted_point = []
+        decrypted = []
+        for list_of_cts in enc_tr:
+            # list_of_cts [(ct1, ct2),......]
+            # print(f"list_of_cts = {list_of_cts}")
+            partials_share0 = self.partial_decrypt(list_of_cts, key_shares[0])
+            partials_share1 = self.partial_decrypt(list_of_cts, key_shares[1])
+            combined_partials = partials_share0 + partials_share1
+            
+            plaintext_point = self.threshold_decrypt(combined_partials, list_of_cts, thresh_params)
+            plaintext = self._eval_threshold_decrypt(combined_partials, list_of_cts)
+
+            print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
+            
+            # assert (plaintext_point.x == iden0.x and plaintext_point.y == iden0.y) or (plaintext_point.y == iden1.y and plaintext_point.x == iden1.x)
+            decrypted_point.append(plaintext_point)
+            decrypted.append(plaintext)
+
+        for i in range(len(m)):
+            assert m[i] == decrypted[i]
+
+        print("all good") 
+
+    def test_threshold_elgamal_on_target_reduction_eval(self):
+        pub_key, key_shares, thresh_params = self.keygen_threshold()
+        
+        m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
+        # m = [1, 0, 0, 1, 0]
+
+        enc_tr = [self.enc(pub_key, val) for val in m]
+        iden0 = 0 * self.pp[1]
+        iden1 = 1 * self.pp[1]
+
+        print(f"iden0: x = {iden0.x}, y = {iden0.y}")
+        print(f"iden1: x = {iden1.x}, y = {iden1.y}")
+
+        decrypted_point = []
+        decrypted = []
+        for list_of_cts in enc_tr:
+            # list_of_cts [(ct1, ct2),......]
+            # print(f"list_of_cts = {list_of_cts}")
+            partials_share0 = self.partial_decrypt(list_of_cts, key_shares[0])
+            partials_share1 = self.partial_decrypt(list_of_cts, key_shares[1])
+            combined_partials = partials_share0 + partials_share1
+            
+            plaintext_point = self.threshold_decrypt(combined_partials, list_of_cts, thresh_params)
+            plaintext = self._eval_threshold_decrypt(combined_partials, list_of_cts)
+
+            print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
+            
+            # assert (plaintext_point.x == iden0.x and plaintext_point.y == iden0.y) or (plaintext_point.y == iden1.y and plaintext_point.x == iden1.x)
+            decrypted_point.append(plaintext_point)
+            decrypted.append(plaintext)
+
+        for i in range(len(m)):
+            assert m[i] == decrypted[i]
+
+        print("all good") 
+
+
 
     def test_eval_threshold_elgamal(self):
             
@@ -489,12 +610,16 @@ class ElGamal:
 
         # Compare point coordinates
         assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
-        
-# el = ElGamal()
-# el.test_keygen()
-# el.test_int_to_bytes_enc()
-# el.test_elgamal()
-# el.test_threshold_elgamal()
-# el.test_eval_threshold_elgamal()
-# el.test_threshold_elgamal_point()
-# el.test_threshold_elgamal_deterministic_0()
+
+if __name__ == "__main__":
+    el = ElGamal()
+    # el.test_keygen()
+    # el.test_int_to_bytes_enc()
+    # el.test_elgamal()
+    el.test_threshold_elgamal()
+    el.test_threshold_elgamal_sub()
+    # el.test_threshold_elgamal_on_target_reduction()
+    # el.test_threshold_elgamal_on_target_reduction_eval()
+    # el.test_eval_threshold_elgamal()
+    # el.test_threshold_elgamal_point()
+    # el.test_threshold_elgamal_deterministic_0()

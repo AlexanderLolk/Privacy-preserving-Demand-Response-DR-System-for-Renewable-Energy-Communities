@@ -241,7 +241,7 @@ class Aggregator:
     def partial_dec_equal_cts(self, equal_cts):
         partial_cts = []
         for ct in equal_cts:
-            print(f"\nct in partial_dec_equal_cts in agg: {ct}")
+            # print(f"\nct in partial_dec_equal_cts in agg: {ct}")
             partial_ct = self.pro.ahe.partial_decrypt(ct, self.dk_share)
             partial_cts.append(partial_ct)
         return partial_cts
