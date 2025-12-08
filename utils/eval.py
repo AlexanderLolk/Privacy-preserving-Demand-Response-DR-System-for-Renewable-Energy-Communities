@@ -307,16 +307,10 @@ class Eval:
         """
         print("\nin ct_aggregation")
 
-        # TODO
-        ###
-        # C1_i, C2_i = reduc_set[i][0][0]
-        # ^^^^^^^^^^
-        # TypeError: cannot unpack non-iterable EccPoint object
-        ###
         C1_prod, C2_prod = reduc_set[0][0]
         
         for i in range(1, len(reduc_set)):
-            C1_i, C2_i = reduc_set[i][0][0]
+            C1_i, C2_i = reduc_set[i][0]
             
             C1_prod = C1_prod + C1_i
             C2_prod = C2_prod + C2_i
