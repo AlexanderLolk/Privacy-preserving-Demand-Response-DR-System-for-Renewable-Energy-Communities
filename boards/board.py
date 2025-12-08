@@ -28,6 +28,7 @@ class Board:
         #     print("DSO encryption key proof verification failed")
 
         self.pk, self.ek = dso_keys
+        self.sm_eval_status = {}
         
     # The DSO registers and has verified users and aggregators, then sends it to the board
     # TODO rewrite all schnorr_verify name to be schnorr_sign_verify for clarity
@@ -247,12 +248,16 @@ class Board:
         # not sure if needed
         self.sm_consumptions = consumption_report
 
-    def get_sm_comsumption(self):
+    def get_sm_consumption(self):
         """ 
         return:
         """
         # return self.sm_consumptions
 
-        # test
         return self.consumption_report_map
+    
+    def set_participants_eval_status(self, pk_prime, marked: bool):
+        self.sm_eval_status[pk_prime] = marked
 
+    def get_eval_consumption_and_target_comparison(self):
+        return self.sm_eval_status

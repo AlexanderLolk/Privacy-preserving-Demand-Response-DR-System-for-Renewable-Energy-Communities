@@ -133,18 +133,22 @@ class DSO:
     def generate_noisy_list(self):
         """ 
         Returns:
-            tuple[list[EcPt, EcPt], tuple[EcPt, Bn]]: some explanantion
         """
         _, target_reduction = DSO.calculate_target_reduction()
 
-        max_noise = max(1, target_reduction - 1)
-        noise_count = random.randint(1, max_noise)
+        max_noise = target_reduction
         zero_noise = random.randint(1, max_noise)
 
-        values = [random.randint(0, target_reduction-1) for _ in range(noise_count)]
-        values.append(target_reduction) 
-        values += [0] * zero_noise
+        values = []
+        for i in range(max_noise):
+            values.append(i)
+        
+        for i in range(zero_noise):
+            values.append(0)
+
         random.shuffle(values)
+
+        print(f"\n\ntarget reduc list: {values} \n\n")
 
         # encrypt each value in the noisy list and then sign the list
         # enc() converts the values to bits

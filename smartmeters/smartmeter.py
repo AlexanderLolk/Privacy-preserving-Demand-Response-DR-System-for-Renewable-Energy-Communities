@@ -3,7 +3,6 @@ import random
 from utils.signature import schnorr_verify
 from utils.procedures import Procedures
 
-
 class SmartMeter:
     """ """
     
@@ -93,7 +92,7 @@ class SmartMeter:
         baseline_report = self.pro.report(self.id, self.sk, self.dso_ek, m, t, self.get_public_key())
         return baseline_report
     
-    def get_sm_comsumption(self):
+    def get_sm_consumption(self):
         """ 
             Returns: tuple[list[tuple[]], tuple[]]
         """
@@ -122,7 +121,7 @@ class SmartMeter:
         for anon_pk in input:
             # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: x = {anon_pk.x},\n y = {anon_pk.y} \nwith the anon_pk as: x = {sm_pk_prime.x},\n y = {sm_pk_prime.y}")
             if sm_pk_prime == anon_pk:
-                print("SM: " + self.id + " is in the event")
+                print("SM: " + self.id + " is a participant in the event")
                 self.in_event = True
                 return
             else:

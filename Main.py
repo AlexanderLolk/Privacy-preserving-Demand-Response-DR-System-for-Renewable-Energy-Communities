@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # TODO should only be participants
     for smartmeter in sms:
         if smartmeter.is_participating():
-            comsumption_report = smartmeter.get_sm_comsumption()
+            comsumption_report = smartmeter.get_sm_consumption()
             print(f"Smartmeter {smartmeter.id} sent comsuption.")
             anonym_agg.check_sm_report(comsumption_report, smartmeter.id, consumption=True)
         else:
@@ -196,20 +196,21 @@ if __name__ == "__main__":
     # call Eval for each aggregator
     print("")
 
-    eva = eval.Eval(dso.get_encryption_key())
-    agg_share = aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_comsumption())
-    dr_share = dr_aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_comsumption())
-    eva.eval(bb, bb, agg_share, dr_share, dso.get_threshold_params())
+    evaluator = eval.Eval(dso.get_encryption_key())
 
-    # print("Aggregator 1 (Energy) running Eval...")
-    # eval.eval(bb, bb, aggs[0].dk_share, dso.ek, aggs[0].id)
-    # print(f"Aggregator 1 posted partial decryption shares.")
+    # partial decryption shares
+    agg_share = aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
+    dr_share = dr_aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
 
-    # print("Aggregator 2 (DR) running Eval...")
-    # eval.eval(bb, bb, dr_aggs[0].dk_share, dso.ek, dr_aggs[0].id)
-    # print(f"Aggregator 2 posted partial decryption shares.")
+    # evaluation
+    equal_cts, proofs = evaluator.eval(bb, bb, agg_share, dr_share, dso.get_threshold_params())
 
-    print("Partial evaluation done by both aggregators.")
+    if len(equal_cts) < 1:
+        print("No smartmeters can be evaluated")
+        exit(0)
 
-    # COMBINE SHARES
-    # eval.combine_decryption_shares(bb, dso.get_threshold_params())
+    # M_shares_list, π_dec_share = self.partial_decrypt(ct_eq, dk_share)
+    agg_equal_cts_share = aggs[0].partial_dec_equal_cts(equal_cts)
+    dr_equal_cts_share = dr_aggs[0].partial_dec_equal_cts(equal_cts)
+    
+    evaluator._eval(bb, bb, agg_equal_cts_share, dr_equal_cts_share, (equal_cts, proofs), dso.get_threshold_params())

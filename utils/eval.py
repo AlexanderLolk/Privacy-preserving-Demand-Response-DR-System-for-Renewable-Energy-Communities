@@ -11,9 +11,6 @@ class Eval:
 
     #####
     # Eval() outputs an evaluation and showcases which users have met the target reduction
-    # example:
-    # M_set = [1,0,1,1,0] means that user 0,2,3 have met the target reduction
-    # user 1 and 4 have not met the target reduction
 
     # enc               returns [(c1, c2), ...]     a list of tuples
     # ct_aggregation    returns (c1,c2)             a tuple
@@ -33,10 +30,10 @@ class Eval:
         # print("\nc1: \n" + str(c1))
         # print("\nc2: \n" + str(c2))
 
-        a1, b1 = c1[0] # baseline from smartmeters      ||| small number
-        a2, b2 = c2[0] # consumption from smartmeters   ||| big number
+        a1, b1 = c1 # baseline from smartmeters      ||| small number
+        a2, b2 = c2 # consumption from smartmeters   ||| big number
         
-        return [(a1 + (-a2), b1 + (-b2))]
+        return (a1 + (-a2), b1 + (-b2))
 
     #=============
     # Eval(BB, PBB, dk_share, agg_id, dso_ek) → (PBB, BB)
@@ -45,50 +42,16 @@ class Eval:
 
     # takes dk_share and agg_id instead of full dk
     # Takes this aggregator's 'dk_share' and 'agg_id'
-    def eval(self, BB, PBB, agg, dr, threshold_param):
+    def eval(self, BB, PBB, agg_share, dr_share, threshold_param):
         """
         Retrieves reports, computes individual reductions, aggregates them, 
         and initiates the threshold decryption process to verify targets
         """
         print("\nin eval")
-        # print("baseline_BB: " + str(baseline_BB))
-        # print("consumption_PBB: " + str(consumption_PBB))
-
-        # list of cts
-        # ct_b: baseline ciphertexts from BB
-        # ct_b = getattr(BB, "ct_b", None)
-        # if ct_b is None:
-        #     print("Public board missing baseline ciphertexts (ct_b).")
-        #     return (PBB, BB)
-        
-        # ct_b_single = None
-        
-        # if isinstance(ct_b, tuple):
-        #     noisy_list = ct_b[0] 
-        #     ct_b_single = noisy_list[0] 
-        # elif isinstance(ct_b, list):
-        #     ct_b_single = ct_b[0]
-        # else:
-        #     ct_b_single = ct_b
-
-        # # ct_t: consumption reports from PBB
-        # consumption_reports = getattr(PBB, "ct_t", None)
-        # if consumption_reports is None:
-        #     print("Private board missing consumption reports (ct_t).")
-        #     return (PBB, BB)
-
-        # try:
-        #     ct_T = BB.get_target_reduction()
-        #     # print("\n----> ct_T :" + str(ct_T) + "")
-        # except AttributeError:
-        #     print("No ct_T found in BB during Eval")
-        #     return (PBB, BB)
         
         target_reduction = BB.get_target_reduction()
         baseline_BB = BB.get_sm_baseline()
-        consumption_PBB = PBB.get_sm_comsumption()
-        # report format -> pk_prime, ct, t, proof
-        # test report format = pk_prime -> ct, t, proof
+        consumption_PBB = PBB.get_sm_consumption()
 
         # lists
         participants = BB.get_participants()
@@ -96,11 +59,11 @@ class Eval:
 
         self.el = ElGamal()
         
-        agg_baselines_parts, agg_consumptions_parts = agg
-        dr_baselines_parts, dr_consumptions_parts = dr
+        agg_baselines_parts, agg_consumptions_parts = agg_share
+        dr_baselines_parts, dr_consumptions_parts = dr_share
 
-        for_not_selected_or_marked = []
-        eval_results_step1 = []
+        self.for_marked_or_not_selected = []
+        self.eval_results = []
         CT_red = []
 
         for pk_prime in participants:
@@ -126,122 +89,52 @@ class Eval:
             # step 1:ord comparison
             # TODO: ct_o is not ciphertext
             ct_o, t, ord_proof = self.ord_comparison(baseline, consumption)
-            if pk_prime not in selected:
-                for_not_selected_or_marked.append((ct_o, t, pk_prime, ord_proof))
+            # 
+            if pk_prime not in selected or ct_o < 1:
+                self.for_marked_or_not_selected.append((ct_o, t, pk_prime, ord_proof))
                 continue # this skip the currect loop and take the next pk_prime
-            else:
-                eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
-            # print(f"\n\n ----------- back in eval again ------------- \n\n")
 
             # step 2 ct reduction
-            ct_red = self.ct_reduction(sm_baseline_ct, sm_consumption_ct, ct_o)
+            ct_red = self.ct_reduction(sm_baseline_ct, sm_consumption_ct)
             if ct_red is None:
-                for_not_selected_or_marked.append((ct_o, t, pk_prime, ord_proof))
+                self.for_marked_or_not_selected.append((ct_o, t, pk_prime, ord_proof))
                 continue # this skip the currect loop and take the next pk_prime
+            
+            self.eval_results.append((ct_o, t, pk_prime, ord_proof))
             
             # step 3 set CT_red
             CT_red.append((ct_red, t, pk_prime))
 
+        # check if ct_red is empty
+        if len(CT_red) < 1:
+            return [], []
+        
         # step 4: Aggregation
         ct_sum = self.ct_aggregation(CT_red)
-
-
-        # return (baseline_part, consumption_part)
-
-
-
-# ----------------------- old ------------------------------
-        # eval_results_step1 = []
-        # CT_red = [] 
-
-        # Steps 1, 2, 3: Loop and call placeholders
-        # for pk_prime, report_data in consumption_reports.items():
-        #     t = report_data[0]
-        #     ct_m = report_data[1] 
-
-        #     # step 1:ord comparison
-        #     ct_o, ord_proof = ord_comparison(ct_b, ct_m)
-        #     eval_results_step1.append((ct_o, t, pk_prime, ord_proof))
-
-        #     # step 2 ct reduction
-        #     ct_red = ct_reduction(ct_b_single, ct_m, ct_o) 
-
-        #     # step 3 set CT_red
-        #     CT_red.append((ct_red, t, pk_prime))
-
-        # # step 4: Aggregation
-        # ct_sum = ct_aggregation(CT_red)
-        # BB.ct_sum = ct_sum
-
-        # # STEP 5: PET COMPARISON
-        # # Check if ct_eq already exists on the board.
-        # # If it does, we'll use the existing one so all aggregators 
-        # # decrypt the same ciphertext.
         
-        # existing_ct_eq = getattr(BB, "ct_eq", None)
+        # step 5: PET comparison
+        print(f"Aggregator computing new PET (ct_eq) and publishing to Board.")
+        ct_eq, π_eq = self.pet_comparison(ct_sum, target_reduction)
         
-        # if existing_ct_eq is not None:
-        #     print(f"Aggregator {agg_id} using existing ct_eq from Public Board.")
-        #     ct_eq = existing_ct_eq
-        #     # verify BB.π_eq here normally
-        #     π_eq = getattr(BB, "π_eq", None)
-
-        #     if π_eq is None or len(π_eq) != len(ct_eq):
-        #         print("Error: Missing proofs on board.")
-        #         return (PBB, BB)
-
-        #     # VERIFY THE PROOFS
-        #     # We check that ct_eq correctly represents (ct_sum - ct_T)^r
-        #     all_valid = True
-        #     for i in range(len(ct_eq)):
-        #         # verify_r(ct_sum, ct_target, ct_result, proof, pub_key)
-        #         if not verify_r(ct_sum, ct_T[i], ct_eq[i], π_eq[i], dso_ek):
-        #             print(f"Verification failed for target {i}")
-        #             all_valid = False
-        #             break
-            
-        #     if not all_valid:
-        #         print(f"Aggregator {agg_id} rejected the calculation.")
-        #         return (PBB, BB)
-                
-        #     print(f"Aggregator {agg_id} successfully verified all PET proofs.")
-
-        # else:
-        #     print(f"Aggregator {agg_id} computing new PET (ct_eq) and publishing to Board.")
-        #     ct_eq, π_eq = pet_comparison(ct_sum, ct_T, dso_ek)
-            
-        #     # Publish immediately so the next aggregator uses this one
-        #     BB.ct_eq = ct_eq
-        #     BB.π_eq = π_eq
-        #     BB.eval_results = eval_results_step1 
-
-        # # STEP 6: PARTIAL DECRYPTION
-        # # Call partial_decrypt with agg's share
-        # M_shares_list, π_dec_share = partial_decrypt(ct_eq, dk_share)
+        return ct_eq, π_eq
+    
+    def _eval(self, BB, PBB, agg_share, dr_share, ct_target_consumption_comparison_w_proof, thresh_param):
         
-        # #####
-        # # Update the boards with eval results
-        
-        # # Store the aggregators partial share on the board
-        # if not hasattr(BB, "M_shares"):
-        #     BB.M_shares = {}
-        # if not hasattr(BB, "pi_dec_shares"):
-        #     BB.pi_dec_shares = {}
+        ct_target_consumption_comparison, proof = ct_target_consumption_comparison_w_proof
 
-        # # Publish the agg's share, labeled by its ID
-        # BB.M_shares[agg_id] = M_shares_list
-        # BB.pi_dec_shares[agg_id] = π_dec_share
+        # STEP 6: PARTIAL DECRYPTION
+        # Call partial_decrypt with agg's share
+        # combine_decryption_shares(self, BB, agg_share, dr_share, ct_eq_list, thresh_params):
+        M_set_final, proof_shar = self.combine_decryption_shares(agg_share, dr_share, ct_target_consumption_comparison, thresh_param)
         
-        # BB.eval_status = "evaluated_partial_decryption"
+        print(f"\nEvaluation complete\n")
+        print(f" participants marked: {len(self.eval_results)}")
+        print(f" participants not selected or did not meet baseline: {len(self.for_marked_or_not_selected)}\n")
+        print(f" target comparisons {len(ct_target_consumption_comparison)}")
+        print(f" Final M_set: {M_set_final}")
+        print(f" eval done")
 
-        # # private board
-        # PBB.eval_data = {
-        #     "ct_b": ct_b,
-        #     "consumption_reports": consumption_reports,
-        #     "dk_share": "hidden" 
-        # }
-        
-        # return (PBB, BB)
+        return BB
 
     # (cto, t, pk′, π_ord) ← ord(ctb, ctm)
     def ord_comparison(self, baseline, consumption):
@@ -251,11 +144,7 @@ class Eval:
         Requires NIZKP.
         
         """
-        print("\nin ord_comparison")
-        pro = Procedures()
-        pp = pro.pub_param()
-        g = pp[1]
-    
+        # print("\nin ord_comparison")
 
         t = int(time.time())
         result = None
@@ -268,13 +157,11 @@ class Eval:
             # result = self.el.enc(self.dso_ek[0], 0)
             result = 0
 
-        # ct_o = (c1, c2) # should be decrypted
-
         ord_proof = "ord_proof not implemented" # placeholder
         return result, t, ord_proof
 
     # ctred ← Reduct(ct_b, c_tm, ct_o)
-    def ct_reduction(self, ct_b, ct_c, ct_o):
+    def ct_reduction(self, ct_bs, ct_cs):
         """
         (for step 2) Conditional Reduction Calculation.
         [Intended] Should compute Enc((Baseline - Consumption) * ct_o).
@@ -282,26 +169,17 @@ class Eval:
         [Current] Placeholder: Returns Enc(0) (Identity point).
         Does not perform subtraction; assumes 0 reduction.
         """
-        print("\nin ct_reduction")
+        
         # baselilne - measured
         # ct_diff = sub(ct_b, ct_m)
-        # because we cant return none
-        if ct_o < 1:
-            pro = Procedures()
-            pp = pro.pub_param()
-            g = pp[1]
-            identity_point = 0 * g
-            return (identity_point, identity_point)
-
-        ct_diff = self.sub(ct_b, ct_c)
-
-        return ct_diff[0]
-        # pro = Procedures()
-        # pp = pro.pub_param()
-        # g = pp[1]
-        # identity_point = 0 * g
-        # ct_red = (identity_point, identity_point)
-        # return ct_red
+        
+        # ct_b and ct_ are lists of tuples because of enc()
+        ct_diff_list = []
+        for ct_b, ct_c in zip(ct_bs, ct_cs):
+            ct_diff_tuple = self.sub(ct_b, ct_c)
+            ct_diff_list.append(ct_diff_tuple)
+        
+        return ct_diff_list
 
     # ctsum ← Agg(ct_red)
     def ct_aggregation(self, reduc_set):
@@ -310,200 +188,226 @@ class Eval:
         Sums all individual reductions into a single ciphertext (ct_sum).
         Uses the additive homomorphic property (for Ec).
         """
-        print("\nin ct_aggregation")
 
-        C1_prod, C2_prod = reduc_set[0][0]
-        
+        C1_prod, C2_prod = reduc_set[0][0][0]
+
         for i in range(1, len(reduc_set)):
-            C1_i, C2_i = reduc_set[i][0]
+            for j in range(1, len(reduc_set[i][0])):
+                C1_i, C2_i = reduc_set[i][0][j]
+
+                C1_prod = C1_prod + C1_i
+                C2_prod = C2_prod + C2_i
             
-            C1_prod = C1_prod + C1_i
-            C2_prod = C2_prod + C2_i
-            
-        return [(C1_prod, C2_prod)]
+        return (C1_prod, C2_prod)
 
     # (cteq, πeq ) ← Pet(ctsum, ctT )
-    def pet_comparison(ct_sum, ct_T, dso_ek):
+    def pet_comparison(self, ct_sum, ct_T):
         """
         (for step 5) Private Equality Test
         Iterates through targets (ct_T) to compare against ct_sum (to verify reductions).
         Calls epet for each target.
         """
-        print("\nin pet_comparison")
+
         ct_eq = []
         π_eq = []
+
+        # ct_t is a list of lists of tuples with eccpoints
         # print("pet_comparison -> ct_T: " + str(ct_T))
         for ct_T_i in ct_T:
-            ct_eq_i, π_r_i = epet(ct_sum, ct_T_i, dso_ek)
+            ct_eq_i, π_r_i = self.epet(ct_sum, ct_T_i)
             ct_eq.append(ct_eq_i)
             π_eq.append(π_r_i)
 
         return (ct_eq, π_eq)
 
     # (ct_eq_i, π_r_i) ← Epet(ct_sum, ct_T_i)
-    def epet(ct_sum, ct_t_i, dso_ek):
+    def epet(self, ct_sum, ct_t_i):
         """
         Encrypted Private Equality Test (EPET) (page 19 in given report)
         Computes Enc(r * (Sum - Target)).
         If Sum == Target, result is Enc(0). If not, result is Enc(Random).
         Includes generation of proof 'r'.
         This uses the non-interactive zero-knowledge proof (NIZKP) proof_r
+
+        ct_sum: tuple (c1, c2)
+        ct_t_i: list of tuples [(c1, c2), ...]
         """
-        print("\nin epet")
-        pro = Procedures()
-        pp = pro.pub_param()
-        g = pp[1]
-        order = pp[2]
+        # print("\nin epet")
+
+        order = self.dso_ek[1][2]
         
         r = tc.number.random_in_range(1, order)
 
-        # ct_diff is a list
-        ct_diff = sub(ct_sum, ct_t_i)
-        (C1_diff, C2_diff) = ct_diff[0]
+        ct_eq = []
+            
+        # Since ct_t_i is a list of typles (bit-wise encryption), we iterate through it to extract each tuple
+        for (c1_t, c2_t) in ct_t_i:
+            c1_sum, c2_sum = ct_sum
 
-        C1_eq = int(r) * C1_diff
-        C2_eq = int(r) * C2_diff
+            c1_diff = c1_sum + (-c1_t)
+            c2_diff = c2_sum + (-c2_t)
 
-        # ct_eq is a tuple (not a list)
-        ct_eq = (C1_eq, C2_eq)
+            c1_eq = int(r) * c1_diff
+            c2_eq = int(r) * c2_diff
+
+            ct_eq.append((c1_eq, c2_eq))
 
         # pass the lists ct_sum and ct_t_i to proof_r
-        π_r_i = proof_r(ct_sum, ct_t_i, ct_eq, r, dso_ek)
+        π_r_i = self.proof_r(ct_sum, ct_t_i, ct_eq, r)
 
         return (ct_eq, π_r_i)
 
-    def proof_r(ct1, ct2, ct_eq, r, dso_ek):
+        # for (c1_sum, c2_sum), (c1_t, c2_t) in zip(ct_sum, ct_t_i):
+        #     c1_diff = c1_sum + (-c1_t)
+        #     c2_diff = c2_sum + (-c2_t)
+
+
+
+
+        # ct_diff = self.sub(ct_sum, ct_t_i)
+        # (C1_diff, C2_diff) = ct_diff
+
+        # C1_eq = int(r) * C1_diff
+        # C2_eq = int(r) * C2_diff
+
+        # # ct_eq is a tuple (not a list)
+        # ct_eq = (C1_eq, C2_eq)
+
+        # pass the lists ct_sum and ct_t_i to proof_r
+        # π_r_i = self.proof_r(ct_sum, ct_t_i, ct_eq, r)
+
+        # return (ct_eq, π_r_i)
+
+    def proof_r(self, ct1, ct2, ct_eq, r):
         """
         NIZKP for r used in EPET.
         ct1: ct_sum (List)
         ct2: ct_target (List)
         ct_eq: Tuple (C1, C2)
         """
-        print("\nin proof_r")
-        pro = Procedures()
-        pp = pro.pub_param()
-        g = pp[1]
-        order = pp[2]
-
-        # lists, [(C1, C2)]
-        C1_1, C2_1 = ct1[0]
-        C1_2, C2_2 = ct2[0]
-
-        C1_eq, C2_eq = ct_eq
-
-        # lists [(C1, C2)]
-        ct_diff = sub(ct1, ct2)
-        C1_diff, C2_diff = ct_diff[0]
-
+        # print("\nin proof_r")
+        g = self.dso_ek[1][1]
+        order = self.dso_ek[1][2]
         s = tc.number.random_in_range(1, order)  # nonce
 
-        A1 = int(s) * C1_diff
-        A2 = int(s) * C2_diff
+        # tuples
+        c1_sum, c2_sum = ct1
 
-        challenge = hash_to_bn(g, dso_ek, C1_1, C1_2, C2_1, C2_2, C1_eq, C2_eq, A1, A2, order=order)
+        A_values = []
+        for (c1_t, c2_t) in ct2:
+            c1_diff = c1_sum + (-c1_t)
+            c2_diff = c2_sum + (-c2_t)
+
+            A1 = int(s) * c1_diff
+            A2 = int(s) * c2_diff
+
+            A_values.append((A1, A2))
+
+        challenge = hash_to_bn(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
         response = (int(s) + int(challenge) * int(r)) % int(order)
 
-        return (A1, A2, response, challenge)
+        return (A_values, response, challenge)
 
-    def verify_r(ct1, ct2, ct_eq, proof, dso_ek):
+    def verify_r(self, ct1, ct2, ct_eq, proof):
         """
         Verifies the NIZKP Proof for r
         """
-        print("\nin verify_r")
-        pro = Procedures()
-        pp = pro.pub_param()
-        g = pp[1]
-        order = pp[2]
+        # print("\nin verify_r")
+        g = self.dso_ek[1][1]
+        order = self.dso_ek[1][2]
 
-        A1, A2, response, challenge = proof
+        A_values, response, challenge = proof
 
-        # lists, [(C1, C2)]
-        C1_1, C2_1 = ct1[0]
-        C1_2, C2_2 = ct2[0]
+        # tuples
+        c1_sum, c2_sum = ct1
 
-        C1_eq, C2_eq = ct_eq
+        c_check = hash_to_bn(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
-        # lists, [(C1, C2)]
-        ct_diff = sub(ct1, ct2)
-        C1_diff, C2_diff = ct_diff[0]
+        for (A1, A2), (c1_t, c2_t), (c1_eq, c2_eq) in zip(A_values, ct2, ct_eq):
+            c1_diff = c1_sum + (-c1_t)
+            c2_diff = c2_sum + (-c2_t)
 
-        c_check = hash_to_bn(g, dso_ek, C1_1, C1_2, C2_1, C2_2, C1_eq, C2_eq, A1, A2, order=order)
+            V1 = int(response) * c1_diff
+            V2 = int(response) * c2_diff
 
-        V1 = int(response) * C1_diff
-        V2 = int(response) * C2_diff
+            check1 = (V1 == A1 + (int(challenge) * c1_eq))
+            check2 = (V2 == A2 + (int(challenge) * c2_eq))
 
-        check1 = (V1 == A1 + (int(challenge) * C1_eq))
-        check2 = (V2 == A2 + (int(challenge) * C2_eq))
+            if not (check1 and check2):
+                return False
 
-        return check1 and check2 and (int(challenge) == int(c_check))
+        return int(challenge) == int(c_check)
 
     # Renamed from prove_epet_computation to partial_decrypt
     # ({M_share}, π_dec_share) ← PDec_Partial(ct_eq, dk_share)
-    def partial_decrypt(ct_eq, dk_share):
-        """
-        Performs partial decryption on a list of ciphertexts using
-        this aggregator's secret key share.
-        Returns: (M_shares_list, pi_dec_proofs)
-        """
-        print("\nin partial_decrypt")
-        pro = Procedures()
+    # def partial_decrypt(self, ct_eq, dk_share):
+    #     """
+    #     Performs partial decryption on a list of ciphertexts using
+    #     this aggregator's secret key share.
+    #     Returns: (M_shares_list, pi_dec_proofs)
+    #     """
+    #     print("\nin partial_decrypt")
+    #     pro = Procedures()
         
-        # Use the ElGamal partial_decrypt method
-        M_shares_list = pro.ahe.partial_decrypt(ct_eq, dk_share)
+    #     # Use the ElGamal partial_decrypt method
+    #     M_shares_list = pro.ahe.partial_decrypt(ct_eq, dk_share)
         
-        # Placeholder proofs - in production, generate actual NIZKP
-        pi_dec_proofs = ["placeholder_proof_of_decryption_share"] * len(ct_eq)
+    #     # Placeholder proofs - in production, generate actual NIZKP
+    #     pi_dec_proofs = ["placeholder_proof_of_decryption_share"] * len(ct_eq)
 
-        return (M_shares_list, pi_dec_proofs)
+    #     return (M_shares_list, pi_dec_proofs)
 
-    def combine_decryption_shares(BB, thresh_params):
+    def combine_decryption_shares(self, agg_share, dr_share, ct_eq_list, thresh_params):
         """Combine threshold decryption shares from multiple aggregators."""
         print("\nin combine_decryption_shares")
         print("Attempting to combine decryption shares...")
+        # pi_dec_proofs = ["placeholder_proof_of_decryption_share"] * len(ct_eq)
 
-        try:
-            share_lists = list(BB.M_shares.values())
-            if not share_lists:
-                print("No decryption shares found on board.")
-                return
+        g = self.dso_ek[1][1]
+        
+        # Define Identity Point (0*G)
+        identity_point = 0 * g
+        
+        M_set_final = []
+        # num_aggs = len(share_lists)
 
-            ct_eq_list = BB.ct_eq
+        for i in range(len(ct_eq_list)):
+            # Get partial decryptions for ciphertext i from all aggregators
+            # partials_for_ct_i = [share_lists[agg_idx][i] for agg_idx in range(num_aggs)]
+            ct_eq_i = ct_eq_list[i] # list of tuples
+
+            agg_partial_i = agg_share[i]
+            dr_partial_i = dr_share[i]
             
-            pro = Procedures()
-            pp = pro.pub_param()
-            g = pp[1]
+            combined_partial = agg_partial_i + dr_partial_i
             
-            # Define Identity Point (0*G)
-            identity_point = 0 * g
+            plaintext_point = self.el.threshold_decrypt(
+                # partials_for_ct_i,
+                combined_partial, 
+                ct_eq_i,  # Pass tuple (C1, C2) directly
+                thresh_params
+            )
+            print(f"\n check point:  x = {plaintext_point.x}, y = {plaintext_point.y} \n")
             
-            M_set_final = []
-            num_aggs = len(share_lists)
+            if plaintext_point == identity_point:
+                M_set_final.append(1)  # Target met (Diff == 0)
+            else:
+                M_set_final.append(0)  # Target not met (Diff != 0)
+        
+            # combined_partial = agg_share + dr_share
+            # # using point decryption, not int
+            # plaintext_point = self.el.threshold_decrypt(
+            #     # partials_for_ct_i,
+            #     [combined_partial], 
+            #     ct_eq_list,  # Pass tuple (C1, C2) directly
+            #     thresh_params
+            # )
 
-            for i in range(len(ct_eq_list)):
-                # Get partial decryptions for ciphertext i from all aggregators
-                partials_for_ct_i = [share_lists[agg_idx][i] for agg_idx in range(num_aggs)]
-                
-                # using point decryption, not int
-                plaintext_point = pro.ahe.threshold_decrypt_point(
-                    partials_for_ct_i,
-                    ct_eq_list[i],  # Pass tuple (C1, C2) directly
-                    thresh_params
-                )
-
-                # Check if result is Identity (Target met) or Random (Target not met)
-                if plaintext_point == identity_point:
-                    M_set_final.append(1)  # Target met (Diff == 0)
-                else:
-                    M_set_final.append(0)  # Target not met (Diff != 0)
+            # # Check if result is Identity (Target met) or Random (Target not met)
             
-            BB.M_set = M_set_final
-            BB.eval_status = "evaluated_complete"
-            print(f"Share combination complete. Final M_set: {BB.M_set}")
-
-        except Exception as e:
-            print(f"Error combining shares: {e}")
-            BB.eval_status = "evaluation_failed_combination"
+        pi_dec_proofs = ["placeholder_proof_of_decryption_share"] * len(ct_eq_list)
+        return M_set_final, pi_dec_proofs
 
 
 # def test_sub():

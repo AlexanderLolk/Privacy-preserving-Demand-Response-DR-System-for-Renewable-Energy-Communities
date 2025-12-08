@@ -237,3 +237,11 @@ class Aggregator:
             consumption_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof)
 
         return (baseline_pk_to_part, consumption_pk_to_part)
+    
+    def partial_dec_equal_cts(self, equal_cts):
+        partial_cts = []
+        for ct in equal_cts:
+            print(f"\nct in partial_dec_equal_cts in agg: {ct}")
+            partial_ct = self.pro.ahe.partial_decrypt(ct, self.dk_share)
+            partial_cts.append(partial_ct)
+        return partial_cts
