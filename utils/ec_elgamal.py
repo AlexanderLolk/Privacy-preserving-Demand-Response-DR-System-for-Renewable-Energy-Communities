@@ -80,7 +80,7 @@ class ElGamal:
         c1 = r * self.pp[1]
         c2 = (r * encryption_key) + message
         
-        return [c1, c2]
+        return (c1, c2)
     
     def enc(self, encryption_key: ECC.EccPoint, message: int, r=None):
         """
@@ -313,6 +313,50 @@ class ElGamal:
         # print(f"Decrypted message: {decrypted_message}, Expected: {expected_value}")
 
         return decrypted_message
+    
+    def threshold_decrypt_single(
+        self,
+        partial_decryptions: list,
+        encrypted_message: tuple,
+        threshold_params: tc.ThresholdParameters,
+    ):
+        """
+            Combine partial decryptions for a single ElGamal ciphertext (c1, c2)
+            and recover the decrypted message point.
+
+            Args:
+                partial_decryptions: list of tc.PartialDecryption objects, one per key share
+                encrypted_message: single tuple (c1, c2)
+                threshold_params: ThresholdParameters used to generate the shares
+
+            Returns:
+                ECC point: the recovered message point (C2 - reconstructed_nonce*G)
+        """
+
+        # Expect partial_decryptions to be a list of PartialDecryption objects (one per share)
+        c1, c2 = encrypted_message
+
+        # Collect indices
+        partial_indices = [pd.x for pd in partial_decryptions]
+
+        # Compute Lagrange coefficients for the available shares
+        lagrange_coefficients = [
+            tc.lagrange_coefficient_for_key_share_indices(partial_indices, idx, self.curve)
+            for idx in partial_indices
+        ]
+
+        # Compute weighted sum of the partial decryptions (yC1 values)
+        summands = [
+            (lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1)
+            for i in range(len(partial_decryptions))
+        ]
+
+        accumulated_point = tc.number.ecc_sum(summands)
+
+        # Recover the message point: M_point = C2 - accumulated_point
+        restored_point = c2 + (-accumulated_point)
+
+        return restored_point
 
     ###
     # tests
@@ -611,13 +655,42 @@ class ElGamal:
         # Compare point coordinates
         assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
 
+    def test_threshold_elgamal_single(self):
+        """Test threshold_decrypt_single with a single (c1, c2) ciphertext."""
+        pub_key, key_shares, thresh_params = self.keygen_threshold()
+
+        m = 42
+        print(f"Original message (single ciphertext): {m}")
+
+        # Encrypt as a single (c1, c2) tuple
+        encrypted_msg = self.encrypt_single(pub_key, m)
+        print(f"Ciphertext: {encrypted_msg}")
+
+        partial_from_share0 = self.partial_decrypt(encrypted_msg, key_shares[0])
+        partial_from_share1 = self.partial_decrypt(encrypted_msg, key_shares[1])
+        combind_partials
+
+        print(f"Computed {len(partials)} partial decryptions")
+
+        # Decrypt using threshold_decrypt_single
+        decrypted_point = self.threshold_decrypt_single(partials, encrypted_msg, thresh_params)
+        print(f"Decrypted message point: x = {decrypted_point.x}, y = {decrypted_point.y}")
+
+        # Expected message point
+        expected_point = m * self.pp[1]
+        print(f"Expected message point: x = {expected_point.x}, y = {expected_point.y}")
+
+        assert decrypted_point == expected_point, f"Expected {expected_point}, got {decrypted_point}"
+        print("Threshold single-ciphertext decryption verified!\n")
+
 if __name__ == "__main__":
     el = ElGamal()
     # el.test_keygen()
     # el.test_int_to_bytes_enc()
     # el.test_elgamal()
-    el.test_threshold_elgamal()
-    el.test_threshold_elgamal_sub()
+    # el.test_threshold_elgamal()
+    # el.test_threshold_elgamal_sub()
+    el.test_threshold_elgamal_single()
     # el.test_threshold_elgamal_on_target_reduction()
     # el.test_threshold_elgamal_on_target_reduction_eval()
     # el.test_eval_threshold_elgamal()

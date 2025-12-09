@@ -2,7 +2,7 @@ import random
 import utils.signature as sig
 import utils.NIZKP as nizkp
 from utils.ec_elgamal import ElGamal
-from utils.dec_proof import prove_correct_decryption
+from utils.dec_proof import prove_correct_decryption, prove_partial_decryption_share
 import threshold_crypto as tc
 
 class Procedures:
@@ -67,13 +67,14 @@ class Procedures:
 
         ek, dk_key_share, thres_param = self.ahe.keygen_threshold(pp)
 
-        # generate_message = 42
-        # (C1, C2) = elgamal_encrypt(pp, ek, M)
-        # cts = ElGamal.enc(ek, generate_message)
+        generate_message = 42
+        ct = self.ahe.encrypt_single(ek, generate_message)
 
         # Generate proof of correct decryption for threshold decryption
-        # πdk = prove_correct_decryption(ek, pp, m_scalar, dk)
-        return ((ek, thres_param, "place holder proof"), dk_key_share)
+        πdk0 = prove_partial_decryption_share(pp, ct, dk_key_share[0])
+        πdk1 = prove_partial_decryption_share(pp, ct, dk_key_share[1])
+        
+        return ((ek, thres_param, (πdk0, πdk1)), dk_key_share)
 
     def ekey_gen_single(self,pp=None):
         """Generate an ElGamal encryption keypair and a sample decryption proof.

@@ -1,5 +1,5 @@
 import time
-from utils.dec_proof import hash_to_bn
+from utils.dec_proof import hash_to_int
 from utils.procedures import Procedures
 from utils.ec_elgamal import ElGamal
 import threshold_crypto as tc
@@ -305,7 +305,7 @@ class Eval:
 
             # A_values.append((A1, A2))
 
-        challenge = hash_to_bn(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
+        challenge = hash_to_int(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
         response = (int(s) + int(challenge) * int(r)) % int(order)
 
@@ -324,7 +324,7 @@ class Eval:
         # tuples
         c1_sum, c2_sum = ct1
 
-        c_check = hash_to_bn(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
+        c_check = hash_to_int(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
         for (A1, A2), (c1_t, c2_t), (c1_eq, c2_eq) in zip(A_values, ct2, ct_eq):
             c1_diff = c1_sum + (-c1_t)
