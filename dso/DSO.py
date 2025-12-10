@@ -223,9 +223,8 @@ class DSO:
 
         # stupid but works
         share = self.key_shares[self.i]
-        proof = self.e_proof[self.i]
         self.i = 1
-        return share, proof
+        return share
 
     # sign the lists of smartmeters and both aggregators
     def sign_registered_lists(self):

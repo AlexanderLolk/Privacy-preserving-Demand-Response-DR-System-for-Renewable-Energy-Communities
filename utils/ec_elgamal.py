@@ -82,6 +82,7 @@ class ElGamal:
         
         return (c1, c2)
     
+    # TODO instead of a int, it should be list of int, since every message need to use det same random value r, instead of a new one each time
     def enc(self, encryption_key: ECC.EccPoint, message: int, r=None):
         """
         """

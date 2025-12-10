@@ -172,8 +172,6 @@ class Aggregator:
             self.participants.append(pk_prime)
         elif consumption:
             self.participants_consumption_report.append(sm_report)
-
-
             
     def get_participants(self):
         """ 
