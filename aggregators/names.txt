@@ -1,4 +1,0 @@
-blue agg
-red agg
-green agg
-yellow agg

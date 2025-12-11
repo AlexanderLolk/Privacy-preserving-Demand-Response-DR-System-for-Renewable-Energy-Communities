@@ -3,10 +3,33 @@ from Crypto.PublicKey import ECC
 import threshold_crypto as tc
 
 def key_gen(curve_name="P-256"):
+    """
+    Generates a standard Elliptic Curve key pair.
+
+    Args:
+        curve_name (str): The name of the curve to use (default "P-256").
+
+    Returns:
+        tuple: (private_key_integer, public_key_point)
+    """
     key = ECC.generate(curve=curve_name)
     return key.d, key.public_key().pointQ
 
 def point_to_bytes(point):
+    """
+    Serializes an Elliptic Curve point into bytes.
+    
+    Handles point objects from different libraries ('threshold_crypto' and 'Crypto.PublicKey.ECC').
+
+    Args:
+        point: The EC point object.
+
+    Returns:
+        bytes: The byte representation of the point (usually x-coord || y-coord).
+    
+    Raises:
+        TypeError: If the point object type is not supported.
+    """
     if hasattr(point, 'export'):
         # threshold_crypto point
         return point.export()
@@ -19,18 +42,31 @@ def point_to_bytes(point):
         raise TypeError(f"Unsupported point type: {type(point)}")
 
 def Hash(R, msg, order):
+    """
+    Computes the challenge hash 'e' for the Schnorr signature.
+    
+    Implements: e = H(R || msg) mod q
+    This binds the ephemeral commitment (R) and the message (msg) together.
+
+    Args:
+        R (Point): The ephemeral public key (randomness commitment).
+        msg (int, bytes, Point, or str): The message being signed.
+        order (int): The order of the elliptic curve group (q).
+
+    Returns:
+        int: The scalar challenge hash 'e'.
+    """
     h = hashlib.sha256()
     
     # Hash the point R
     h.update(point_to_bytes(R))
 
-    # Convert msg to bytes based on its type (doing them all for now because of earlier code said so)
+    # Convert msg to bytes based on its type
     if isinstance(msg, bytes):
         msg_bytes = msg
     elif isinstance(msg, int):
-        msg_bytes = msg.to_bytes((msg.bit_length() + 7) // 8, 'big') # its +7 because it rounds up to nearest byte and //
+        msg_bytes = msg.to_bytes((msg.bit_length() + 7) // 8, 'big')
     elif hasattr(msg, 'x') and hasattr(msg, 'y'):
-        # It's a point
         msg_bytes = point_to_bytes(msg)
     else:
         msg_bytes = str(msg).encode()
@@ -41,7 +77,23 @@ def Hash(R, msg, order):
     return digest_int % order
 
 def schnorr_sign(sk, pp, msg):
+    """
+    Generates a Schnorr signature for a message.
     
+    Mathematical steps:
+    1. Generate random nonce k.
+    2. Compute commitment R = k * G.
+    3. Compute challenge e = Hash(R, msg).
+    4. Compute response s = k + (sk * e) mod order.
+    
+    Args:
+        sk (int): The signer's private key (scalar).
+        pp (tuple): Public parameters (curve, G, order).
+        msg: The message to sign.
+
+    Returns:
+        tuple: (R, s) where R is the ephemeral point and s is the signature scalar.
+    """
     g = pp[1]
     order = pp[2]
     
@@ -53,6 +105,25 @@ def schnorr_sign(sk, pp, msg):
     return (ephemeral_key, signature)
 
 def schnorr_verify(pk, pp, msg, signature):
+    """
+    Verifies a Schnorr signature.
+    
+    Checks if: s * G == R + (e * PK)
+    
+    Derivation:
+    s * G = (k + sk * e) * G
+          = k * G + e * (sk * G)
+          = R + e * PK
+
+    Args:
+        pk (Point): The signer's public key.
+        pp (tuple): Public parameters (curve, G, order).
+        msg: The message that was signed.
+        signature (tuple): The signature (R, s).
+
+    Returns:
+        bool: True if the signature is valid, False otherwise.
+    """
     g = pp[1]
     order = pp[2]
     R, s = signature
@@ -66,6 +137,17 @@ def schnorr_verify(pk, pp, msg, signature):
 
 #
 def schnorr_sign_list(sk, pp, msg_list):
+    """
+    Batch signs a list of messages.
+
+    Args:
+        sk (int): Private key.
+        pp (tuple): Public parameters.
+        msg_list (list): List of messages.
+
+    Returns:
+        list: A list of signature tuples [(R, s), ...].
+    """
     signatures = []
     for msg in msg_list:
         sign = schnorr_sign(sk, pp, msg)
@@ -73,6 +155,20 @@ def schnorr_sign_list(sk, pp, msg_list):
     return signatures
 
 def schnorr_verify_list(pk, pp, msg_list, signatures):
+    """
+    Verifies a list of signatures against a list of messages.
+
+    Args:
+        pk (Point): Public key.
+        pp (tuple): Public parameters.
+        msg_list (list): List of messages.
+        signatures (list): List of signature tuples corresponding to the messages.
+
+    Returns:
+        tuple: (all_valid, results)
+               - all_valid (bool): True only if ALL signatures are valid.
+               - results (list): List of tuples (index, message, is_valid) for detailed debugging.
+    """
     results = []
     for i, (msg, signature) in enumerate(zip(msg_list, signatures)):
         is_valid = schnorr_verify(pk, pp, msg, signature)
@@ -83,91 +179,3 @@ def schnorr_verify_list(pk, pp, msg_list, signatures):
     
     all_valid = all(r[2] for r in results)
     return (all_valid, results)
-
-def test_schnorr_signature():
-    """Test Schnorr signature generation and verification."""
-    print("=== Testing Schnorr Signature ===")
-    
-    # Setup
-    curve = tc.CurveParameters("P-256")
-    g = curve.P
-    order = curve.order
-    pp = (curve, g, order)
-    
-    # Generate keypair
-    print("1. Generating keypair...")
-    sk_key, pk_key = key_gen("P-256")
-    
-    # Extract scalar from private key for signing
-    sk = sk_key.d
-    # Convert public key point to threshold_crypto point
-    pk_point = sk * g
-    
-    print(f"   Private key (scalar): {sk}")
-    print(f"   Public key (point): {pk_point}")
-    
-    # Test single message signing
-    print("\n2. Testing single message signing...")
-    msg = "yo"
-    print(f"   Message: {msg}")
-    
-    signature = schnorr_sign(sk, pp, msg)
-    R, s = signature
-    print(f"   Signature R: {R}")
-    print(f"   Signature s: {s}")
-    
-    # Verify signature
-    print("\n3. Verifying signature...")
-    is_valid = schnorr_verify(pk_point, pp, msg, signature)
-    print(f"   Valid: {is_valid}")
-    assert is_valid, "Signature verification failed!"
-    
-    # Test with wrong message
-    print("\n4. Testing with wrong message...")
-    wrong_msg = "Wrong message"
-    is_valid_wrong = schnorr_verify(pk_point, pp, wrong_msg, signature)
-    print(f"   Valid (should be False): {is_valid_wrong}")
-    assert not is_valid_wrong, "Signature should not verify with wrong message!"
-    
-    # Test list signing
-    print("\n5. Testing list signing...")
-    msg_list = ["Message 1", "Message 2", "Message 3"]
-    print(f"   Messages: {msg_list}")
-    
-    signatures = schnorr_sign_list(sk, pp, msg_list)
-    print(f"   Generated {len(signatures)} signatures")
-    
-    # Verify list
-    print("\n6. Verifying signature list...")
-    all_valid, results = schnorr_verify_list(pk_point, pp, msg_list, signatures)
-    print(f"   All valid: {all_valid}")
-    for idx, msg, valid in results:
-        print(f"   Message {idx}: '{msg}' -> {valid}")
-    assert all_valid, "List signature verification failed!"
-    
-    # Test with one wrong message
-    print("\n7. Testing list with one wrong message...")
-    wrong_msg_list = ["Message 1", "Wrong message", "Message 3"]
-    all_valid_wrong, results_wrong = schnorr_verify_list(pk_point, pp, wrong_msg_list, signatures)
-    print(f"   All valid (should be False): {all_valid_wrong}")
-    for idx, msg, valid in results_wrong:
-        print(f"   Message {idx}: '{msg}' -> {valid}")
-    assert not all_valid_wrong, "Should not verify with wrong messages!"
-    
-    print("\n=== All Schnorr signature tests passed! ===\n")
-
-def test_key_gen():
-    sk_key, pk_key = key_gen("P-256")
-    print(f"Private Key: {sk_key}")
-    print(f"Public Key x: {pk_key.x}, y: {pk_key.y}")
-
-    print("\nGenerating another keypair:")
-    sk_key, pk_key = key_gen("P-256")
-    print(f"Private Key: {sk_key}")
-    print(f"Public Key x: {pk_key.x}, y: {pk_key.y}")
-
-
-
-if __name__ == "__main__":
-    test_key_gen()
-    # test_schnorr_signature()

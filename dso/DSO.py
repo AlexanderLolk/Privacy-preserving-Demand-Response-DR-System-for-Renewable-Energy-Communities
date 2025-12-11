@@ -1,15 +1,11 @@
-# data/DSO.py
-# The DSO works as a supplier and verifier in the system
-
 from utils.procedures import Procedures
-from utils.NIZKP import schnorr_NIZKP_verify
+from utils.schnorr_priv_key_proof import schnorr_NIZKP_verify
 from utils.signature import schnorr_sign_list, schnorr_sign
-from utils.ec_elgamal import ElGamal
 import random
 
 class DSO:
     """ 
-    
+    The DSO works as a supplier and verifier in the system
     """
     def __init__(self, init_id="DSO", pp=None):
         self.pro = Procedures()

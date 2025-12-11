@@ -1,7 +1,7 @@
 # this is both for public and private boards
 from utils.signature import schnorr_verify, schnorr_verify_list
-from utils.NIZKP import schnorr_NIZKP_verify
-from utils.dec_proof import verify_correct_decryption
+from utils.schnorr_priv_key_proof import schnorr_NIZKP_verify
+from utils.elgamal_dec_proof import verify_correct_decryption
 from utils.shuffle import Shuffle
 
 class Board:

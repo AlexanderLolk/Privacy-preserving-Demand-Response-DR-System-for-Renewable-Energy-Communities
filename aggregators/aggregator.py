@@ -68,7 +68,7 @@ class Aggregator:
         Args:
           ID_pk: list[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]
         """
-        self.mix_anon_list = self.pro.mix_id(ID_pk)   
+        self.mix_anon_list = self.pro.mix_id(ID_pk, self.pp[1])   
 
     def publish_mixed_keys(self):
         """ 

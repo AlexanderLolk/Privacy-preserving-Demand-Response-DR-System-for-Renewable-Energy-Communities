@@ -122,21 +122,21 @@ def test_schnorr_NIZKP():
     # Verify proof
     print("\n3. Verifying proof...")
     is_valid = schnorr_NIZKP_verify(pk, pp, proof, msg)
-    print(f"   Valid: {is_valid}")
+    print(f"   Result (should be True): {is_valid}")
     assert is_valid, "NIZKP verification failed!"
     
     # Test with wrong message
     print("\n4. Testing with wrong message...")
     wrong_msg = "Wrong message"
     is_valid_wrong = schnorr_NIZKP_verify(pk, pp, proof, wrong_msg)
-    print(f"   Valid (should be False): {is_valid_wrong}")
+    print(f"   Result (should be False): {is_valid_wrong}")
     assert not is_valid_wrong, "NIZKP should not verify with wrong message!"
     
     # Test with tampered proof
     print("\n5. Testing with tampered proof...")
     tampered_proof = (c + 1, s, W)
     is_valid_tampered = schnorr_NIZKP_verify(pk, pp, tampered_proof, msg)
-    print(f"   Valid (should be False): {is_valid_tampered}")
+    print(f"   Result (should be False): {is_valid_tampered}")
     assert not is_valid_tampered, "NIZKP should not verify with tampered proof!"
     
     print("\n=== All Schnorr NIZKP tests passed! ===\n")

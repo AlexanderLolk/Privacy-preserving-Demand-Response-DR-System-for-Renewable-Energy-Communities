@@ -1,21 +1,39 @@
-# # Reading material at voting17_HLKD17.pdf
 import hashlib
 import random
-# from utils.procedures import Procedures (for tests only)
-#TODO remove tc from this file, and use number.random_in_range(1, curve_params.order) instead
 import threshold_crypto as tc
 
 class Shuffle:
+    """
+    Implements a Verifiable Shuffle for Elliptic Curve points (e.g., Public Keys or Ciphertexts).
+    
+    This class allows a server to:
+    1. Take a list of inputs (e).
+    2. Permute (shuffle) them to hide their order.
+    3. Re-randomize (blind) them so they look different.
+    4. Generate a Zero-Knowledge Proof (ZKP) that the output is a valid shuffle of the input,
+       without revealing the permutation mapping.
 
+    References:
+    - Code inspired by https://github.com/hyperion-voting/hyperion/blob/main/subroutines.py#L586
+    - Algorithms based on "Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets" (Haenni, Locher, Koenig, Dubuis, 2017).
+    """
     def __init__(self, pp):
         (self.curve, self.g, self.order) = pp
     
     def get_h_generators(self, N):
-        """ """
+        """ 
+        Generates a list of N independent generators (h_1, ..., h_N).
+        These are used for Pedersen commitments to the permutation matrix.
+        
+        Args:
+            N (int): Number of generators needed (equal to number of items to shuffle).
+            
+        Returns:
+            list: List of ECC points.
+        """
         h_generators_local = []
         
         for i in range(N):
-            # Use random scalar
             h_scalar = tc.number.random_in_range(1, self.order)
             h_i_point = int(h_scalar) * self.g
             h_generators_local.append(h_i_point)
@@ -23,18 +41,23 @@ class Shuffle:
         return h_generators_local
     
     def _serialize(self, data):
-        """Recursively serialize data to a canonical string format """
+        """
+        Recursively serialize data to a canonical string format for hashing.
+        """
         if isinstance(data, list) or isinstance(data, tuple):
             return "[" + ",".join(self._serialize(x) for x in data) + "]"
         elif hasattr(data, 'x') and hasattr(data, 'y'):
-            # It's an EccPoint (or similar), serialize coordinates
+            # It's an EccPoint, serialize coordinates
             return f"({int(data.x)},{int(data.y)})"
         else:
             # Integers, strings, etc.
             return str(data)
         
     def hash_to_zq(self, data):
-        """ """
+        """ 
+        Hash generic data to a scalar in the field Z_q (modulo curve order).
+        Used to generate non-interactive challenges (Fiat-Shamir heuristic).
+        """
         # Use canonical serialization
         serialized_data = self._serialize(data)
         
@@ -43,9 +66,13 @@ class Shuffle:
         digest = hasher.digest()
         return int.from_bytes(digest, "big")   
 
-    # Generates a random permutation ψ ∈ Ψ_N
     def GenPermutation(self, N):
-        """ """
+        """ 
+        Generates a random permutation vector of size N.
+        
+        Returns:
+            list: A list of indices [0, 1, ..., N-1] in random order.
+        """
         I = list(range(N))
         j_i = list(range(N))
         for i in range(N):
@@ -55,7 +82,18 @@ class Shuffle:
         return j_i
 
     def GenShuffle(self, e):
-        """ """
+        """ 
+        Performs the actual Shuffle and Re-randomization.
+        
+        Given input list e, it computes e' such that:
+        e'[i] = e[ψ[i]] + r[i]*G
+        
+        Args:
+            e (list): List of input points (public keys or ciphertexts).
+            
+        Returns:
+            tuple: (shuffled_list, randomness_list, permutation_indices)
+        """
         N = len(e)
         ψ = self.GenPermutation(N)
         
@@ -76,11 +114,19 @@ class Shuffle:
         e_prime_shuffled = [e_prime[ψ[j]] for j in range(N)]
         return (e_prime_shuffled, r_prime, ψ)
 
-    # GenCommitment() generates a commitment c = Com(ψ, r) to a permutation ψ by
-    # committing to the columns of the corresponding permutation matrix.
     def GenCommitment(self, ψ, h_gens):
         """ 
         Commits to the permutation matrix.
+        
+        This uses Pedersen commitments. Specifically, it commits to the fact that
+        the permutation maps index i to j.
+        
+        Args:
+            ψ (list): The permutation vector.
+            h_gens (list): Independent generators.
+            
+        Returns:
+            tuple: (commitments_c, randomness_r)
         """
 
         N = len(ψ)
@@ -104,7 +150,9 @@ class Shuffle:
         return (c, r)
 
     def GenCommitmentChain(self, c0, u):
-        """ """
+        """ 
+        Generates a chain of commitments, used for the proof to verify the permutation structure without revealing it.
+        """
         N = len(u)
         c = []
         r = []
@@ -119,6 +167,7 @@ class Shuffle:
                 prev_c = c[i - 1]
             
             # c_i = r_i * g + u_i * c_{i-1}
+            # This recursive structure binds the current commitment to the previous one
             c_i = (int(r_i) * self.g) + (int(u[i]) * prev_c)
             c.append(c_i)
 
@@ -127,22 +176,36 @@ class Shuffle:
         return (c, r)
 
     # pk for ours is ek
-    def GenProof(self, e, e_prime, r_prime, ψ, pk):
-        """ """
+    def GenProof(self, e, e_prime, r_prime, ψ, expo):
+        """ 
+        Generates a non-interactive Zero-Knowledge Proof (ZKP) of the shuffle.
+        
+        This proves:
+        1. e_prime is a permutation of e.
+        2. e_prime is a re-randomization of e (knowing the discrete logs r_prime).
+        
+        Args:
+            e (list): Original inputs.
+            e_prime (list): Shuffled outputs.
+            r_prime (list): Randomness used for blinding.
+            ψ (list): Permutation used.
+            expo: exponent g.
+
+        Returns:
+            dict: The proof structure containing commitments (t), responses (s), and helper values.
+        """
         N = len(e)
         q = int(self.order)
 
         # get h
         h_gens = self.get_h_generators(N)
 
-        # Step 1: Commit to permutation
+        # Commit to permutation
         c, r = self.GenCommitment(ψ, h_gens)
 
-        # Step 2-7: Generate challenges
+        # Generate challenges
         u = []
         for i in range(N):
-            # u_i = self.hash_to_zq((str(e), str(e_prime), str(c), i))
-            # u.append(u_i)
             u_i = self.hash_to_zq((e, e_prime, c, i)) 
             u.append(u_i)
 
@@ -153,7 +216,7 @@ class Shuffle:
         h = int(h_scalar) * self.g
         c_hat, r_hat = self.GenCommitmentChain(h, u_prime)
 
-        # Step 8-14: Compute weighted sums
+        # Compute weighted sums
         r_bar = sum(int(r_val) for r_val in r) % q
 
         v = [0] * N
@@ -165,7 +228,7 @@ class Shuffle:
         r_tilde = sum((int(r[i]) * int(u[i])) % q for i in range(N)) % q
         r_prime_sum = sum((int(r_prime[i]) * int(u[i])) % q for i in range(N)) % q
 
-        # Step 15-25: Generate witnesses
+        # Generate witnesses
         w = [tc.number.random_in_range(1, self.order) for _ in range(4)]
         w_hat = [tc.number.random_in_range(1, self.order) for _ in range(N)]
         w_prime = [tc.number.random_in_range(1, self.order) for _ in range(N)]
@@ -195,15 +258,12 @@ class Shuffle:
             hat_t_i = (int(w_hat[i]) * self.g) + (int(w_prime[i]) * prev_c)
             t_hat.append(hat_t_i)
         
-        # Step 26-27: Compute challenge
-        # y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
-        # t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
-        # challenge = self.hash_to_zq((y, t))
-        y = (e, e_prime, c, c_hat, pk)
+        # Compute challenge
+        y = (e, e_prime, c, c_hat, expo)
         t = (t1, t2, t3, t4, t_hat)
         challenge = self.hash_to_zq((y, t))
 
-        # Step 28-33: Compute responses
+        # Compute responses
         s1 = (int(w[0]) + int(challenge) * r_bar) % q
         s2 = (int(w[1]) + int(challenge) * r_hat_sum) % q
         s3 = (int(w[2]) + int(challenge) * r_tilde) % q
@@ -223,8 +283,22 @@ class Shuffle:
 
         return proof
 
-    def verify_shuffle_proof(self, proof, e, e_prime, pk):
-        """ """
+    def verify_shuffle_proof(self, proof, e, e_prime, expo):
+        """ 
+        Verifies the Zero-Knowledge Proof of Shuffle.
+        
+        Reconstructs the commitments from the responses and checks if they match 
+        the challenges.
+
+        Args:
+            proof (dict): The proof object generated by GenProof.
+            e (list): The original input list.
+            e_prime (list): The shuffled output list.
+            expo: Public parameter.
+
+        Returns:
+            bool: True if proof is valid, False otherwise.
+        """
         N = len(e)
         
         # Extract proof components
@@ -238,8 +312,6 @@ class Shuffle:
         # Recompute challenges u
         u = []
         for i in range(N):
-            # u_i = self.hash_to_zq((str(e), str(e_prime), str(c), i))
-            # u.append(u_i)
             u_i = self.hash_to_zq((e, e_prime, c, i))
             u.append(u_i)
         
@@ -267,11 +339,8 @@ class Shuffle:
         for i in range(1, N):
             c_tilde = c_tilde + (int(u[i]) * c[i])
         
-        # Recompute challenge
-        # y = (str(e), str(e_prime), str(c), str(c_hat), str(pk))
-        # t = (str(t1), str(t2), str(t3), str(t4), str(t_hat))
-        # challenge = self.hash_to_zq((y, t))
-        y = (e, e_prime, c, c_hat, pk)
+        # Recomputing the challenge
+        y = (e, e_prime, c, c_hat, expo)
         t = (t1, t2, t3, t4, t_hat)
         challenge = self.hash_to_zq((y, t))
         
@@ -335,154 +404,3 @@ class Shuffle:
         print(f"[DEBUG] Summary: t1={t1_check}, t2={t2_check}, t3={t3_check}, t4={t4_check}, t_hat={t_hat_valid}")
         
         return result
-
-# testing shuffle flow
-def test_basic_shuffle():
-    from utils.procedures import Procedures
-    """ """
-    print("\n" + "="*60)
-    print("Testing Basic Shuffle Proof with Real Keys")
-    print("="*60)
-    pro = Procedures()
-    pp = pro.pp
-    shuffle = Shuffle(pp=pro.pp)
-    g = pp[1]
-    N = 5
-    
-    print(f"\n1. Generating {N} user keys ...")
-    users = []
-    e = []
-    
-    for i in range(N):
-        user_id = f"User_{i}"
-        ((id, (pk, pp_user, proof)), sk) = pro.skey_gen(user_id, pp)
-        users.append({
-            'id': user_id,
-            'pk': pk,
-            'sk': sk,
-            'proof': proof
-        })
-        e.append(pk)
-        print(f"   {user_id}: pk={str(pk)[:50]}...")
-    
-    print(f"\n2. Shuffling and anonymizing public keys...")
-    e_prime, r_prime, ψ = shuffle.GenShuffle(e) 
-    print(f"   Permutation: {ψ}")
-    
-    print(f"\n3. Generating shuffle proof (πmix)...")
-    proof = shuffle.GenProof(e, e_prime, r_prime, ψ, g)
-    
-    print(f"\n4. Verifying shuffle proof...")
-    is_valid = shuffle.verify_shuffle_proof(proof, e, e_prime, g)
-    
-    print(f"\n{'='*60}")
-    print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
-    print(f"{'='*60}\n")
-    
-    return is_valid
-
-
-def test_basic_shuffle_pk():
-    from utils.procedures import Procedures
-    """ """
-    print("\n" + "="*60)
-    print("Testing Basic Shuffle Proof with Real Keys")
-    print("="*60)
-    pro = Procedures()
-    pp = pro.pp
-    shuffle = Shuffle(pp=pro.pp)
-    g = pp[1]
-    N = 5
-    
-    print(f"\n1. Generating {N} user keys ...")
-    users = []
-    e = []
-    
-    for i in range(N):
-        user_id = f"User_{i}"
-        ((id, (pk, pp_user, proof)), sk) = pro.skey_gen(user_id, pp)
-        users.append({
-            'id': user_id,
-            'pk': pk,
-            'sk': sk,
-            'proof': proof
-        })
-        e.append(pk)
-        print(f"   {user_id}: pk={str(pk)[:50]}...")
-    
-    print(f"\n2. Shuffling and anonymizing public keys...")
-    e_prime, r_prime, ψ = shuffle.GenShuffle(e) 
-    print(f"   Permutation: {ψ}")
-    
-    print(f"\n3. Generating shuffle proof (πmix)...")
-    proof = shuffle.GenProof(e, e_prime, r_prime, ψ, pk)
-    
-    print(f"\n4. Verifying shuffle proof...")
-    is_valid = shuffle.verify_shuffle_proof(proof, e, e_prime, pk)
-    
-    print(f"\n{'='*60}")
-    print(f"Result: {'✅ PASS' if is_valid else '❌ FAIL'}")
-    print(f"{'='*60}\n")
-    
-    return is_valid
-
-def test_integration_with_aggregator():
-    from utils.procedures import Procedures
-    """ """
-    print("\n" + "="*60)
-    print("Testing Full Integration Flow")
-    print("="*60)
-    pro = Procedures()
-
-    pp = pro.pp
-    g = pp[1]
-    N = 5
-    
-    shuffle = Shuffle(pp)
-    ID_pk = []
-    user_data = {}
-    
-    for i in range(N):
-        user_id = f"A{i}"
-        ((id, (pk, pp_user, proof)), sk) = pro.skey_gen(user_id, pp)
-        ID_pk.append((user_id, pk))
-        user_data[user_id] = {'pk': pk, 'sk': sk}
-    
-    print(f"\n2. Aggregator mixes public keys...")
-    e = [pk for _, pk in ID_pk]
-    e_prime, r_prime, ψ = shuffle.GenShuffle(e)
-    πmix = shuffle.GenProof(e, e_prime, r_prime, ψ, g)
-    
-    r_map = {}
-    for i, (user_id, original_pk) in enumerate(ID_pk):
-        shuffled_pos = ψ.index(i)
-        r_map[user_id] = r_prime[i]
-    
-    print(f"\n3. Verifying shuffle proof...")
-    is_valid = shuffle.verify_shuffle_proof(πmix, e, e_prime, g)
-    
-    print(f"\n4. Users verify they can use anonymized keys...")
-    all_verified = True
-    for i, (user_id, original_pk) in enumerate(ID_pk):
-        r_val = r_map[user_id]
-        shuffled_pos = ψ.index(i)
-        
-        blinding_point = int(r_val) * g
-        expected_pk = original_pk + blinding_point
-        
-        if expected_pk == e_prime[shuffled_pos]:
-            print(f"   ✓ {user_id} verified")
-        else:
-            print(f"   ✗ {user_id} FAILED verification")
-            all_verified = False
-    
-    print(f"\n{'='*60}")
-    print(f"Overall: {'✅ PASS' if (is_valid and all_verified) else '❌ FAIL'}")
-    print(f"{'='*60}\n")
-    
-    return is_valid and all_verified
-
-if __name__ == "__main__":
-    # test_basic_shuffle()
-    test_basic_shuffle_pk()
-    # test_integration_with_aggregator()

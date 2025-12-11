@@ -10,7 +10,11 @@ from Crypto.PublicKey import ECC
 # sk                = d
 
 class ElGamal:
-
+    """
+    ElGamal implementation using Elliptic Curve Cryptography (ECC).
+    Supports standard encryption/decryption, bitwise encryption for integers, 
+    and threshold decryption using Shamir's Secret Sharing.
+    """
     def __init__(self, curve="P-256"):
         if isinstance(curve, str):
             self.curve = tc.CurveParameters(curve)
@@ -23,19 +27,35 @@ class ElGamal:
             
     def keygen(self, pp=None):
         """
-        # 
+        Generates a public/private key pair for ElGamal encryption.
+        
+        The private key (dk) is a random integer 'x'.
+        The public key (ek) is the point X = x * G.
+
+        Returns:
+            tuple: ((public_key, public_parameters), private_key)
         """
         x = tc.number.random_in_range(2, self.pp[2])
         ek = x * self.pp[1]
         dk = x
         return ((ek, self.pp), dk) 
 
-    def _int_to_bits(self, message: int):
+    def __int_to_bits(self, message: int):
+        """
+        Helper function to convert an integer into a list of bits.
+        
+        Args:
+            message (int): The integer message to convert.
+
+        Returns:
+            list: A list of integers (0 or 1) representing the message binary.
+                  The order is from Most Significant Bit (MSB) to Least Significant Bit (LSB).
+        """
         if message == 0:
             return [0]
 
         length = message.bit_length()
-        # print("bit_length for message: " + str(length))
+        
         list_bits = []
 
         # Extracts the bit at position i
@@ -48,9 +68,18 @@ class ElGamal:
 
         return list_bits
     
-    def _bits_to_int(self, bits: list):
+    def __bits_to_int(self, bits: list):
+        """
+        Helper function to reconstruct an integer from a list of bits.
+
+        Args:
+            bits (list): A list of integers (0 or 1).
+
+        Returns:
+            int: The reconstructed integer value.
+        """
         message = 0
-        # print("bits: " + str(bits))
+        
         for bit in bits:
             # Append one bit to the right side of the number
             # example: wants to add 0101 into message
@@ -58,17 +87,21 @@ class ElGamal:
             #   message = (message << 1) | 0   # 0001 -> 0010 (2)
             #   message = (message << 1) | 1   # 0010 -> 0101 (5)
             #   result: 5 (0101)
-            # print(bit)
             message = (message << 1) | bit
 
-            # print("Added bit " + str(bit) + " to message")
-            # print("message is now: " + str(bin(message)[2:]))
-            # print("Number: " + str(message) + "\n")
         return message
 
 
     def encrypt_single(self, encryption_key: ECC.EccPoint, message: int):
         """
+        Encrypts a single message using standard EC-ElGamal.
+
+        Args:
+            encryption_key (ECC.EccPoint): The recipient's public key.
+            message (int): The message to encrypt. If int, it is mapped to a point (message * G).
+
+        Returns:
+            tuple: (C1, C2) representing the ciphertext points.
         """
         
         r = tc.number.random_in_range(2, self.pp[2])
@@ -82,15 +115,26 @@ class ElGamal:
         
         return (c1, c2)
     
-    # TODO instead of a int, it should be list of int, since every message need to use det same random value r, instead of a new one each time
     def enc(self, encryption_key: ECC.EccPoint, message: int, r=None):
         """
+        Performs bitwise encryption of an integer message.
+        
+        Decomposes the integer into bits, maps each bit to a point (0*G or 1*G),
+        and encrypts each bit individually.
+
+        Args:
+            encryption_key (ECC.EccPoint): The recipient's public key.
+            message (int): The integer message to encrypt.
+            r (int, optional): A specific random scalar to use. If None, one is generated.
+
+        Returns:
+            list: A list of (C1, C2) tuples, one for each bit of the message.
         """
         
         if r is None:
             r = tc.number.random_in_range(2, self.pp[2])
         
-        list_bits = self._int_to_bits(message)
+        list_bits = self.__int_to_bits(message)
         encryptions = []
         for bit in list_bits:
             bit_point = bit * self.pp[1]
@@ -100,8 +144,17 @@ class ElGamal:
 
         return encryptions
     
-    def _check_if_zero_or_one(self, message_points: list):
+    def __check_if_zero_or_one(self, message_points: list):
         """
+        Maps decrypted EC points back to bits (0 or 1).
+        
+        It checks if the point matches 1*G. If yes, bit is 1. Otherwise, assumes 0 (Identity point).
+
+        Args:
+            message_points (list): A list of EC Points.
+
+        Returns:
+            list: A list of integers (0 or 1).
         """
         one_point = 1 * self.pp[1]
         message_bits = []
@@ -115,15 +168,35 @@ class ElGamal:
             
     def decrypt_single(self, secret_key, ciphertext):
         """
+        Decrypts a single ciphertext tuple (C1, C2).
+        
+        Standard decryption:
+        S = Private_Key * C1
+        Message_Point = C2 - S
+
+        Args:
+            secret_key (int): The private key.
+            ciphertext (tuple): The (C1, C2) tuple.
+
+        Returns:
+            list: A list containing the decrypted bit (0 or 1).
         """
         c1 = ciphertext[0]
         c2 = ciphertext[1]
         s = (self.pp[2] + -secret_key) * c1
         s2 = c2 + s
-        return self._check_if_zero_or_one(s2)
+        return s2
     
     def dec(self, secret_key, ciphertexts):
         """
+        Decrypts a list of bit-ciphertexts and reconstructs the original integer.
+        
+        Args:
+            secret_key (int): The private key.
+            ciphertexts (list): A list of (C1, C2) tuples (one per bit).
+
+        Returns:
+            int: The reconstructed integer message.
         """
         point_messages = []
         for ciphertext in ciphertexts:
@@ -135,12 +208,22 @@ class ElGamal:
             message_point = c2 + s
             
             point_messages.append(message_point)
-        list_bits = self._check_if_zero_or_one(point_messages)
-        return self._bits_to_int(list_bits)
+        list_bits = self.__check_if_zero_or_one(point_messages)
+        return self.__bits_to_int(list_bits)
         
     # threshold partial decryption
     def keygen_threshold(self, pp=None):
         """
+        Generates a public key and secret key shares for Threshold ElGamal.
+        
+        Uses Shamir's Secret Sharing (via the external library threshold crypto (tc)) to split 
+        the private key into multiple shares.
+
+        Args:
+            pp: Public parameters (curve, generator, order).
+
+        Returns:
+            tuple: (Public_Key, Key_Shares, Threshold_Params)
         """
         
         thresh_params = tc.ThresholdParameters(2, 2)
@@ -151,15 +234,18 @@ class ElGamal:
         # encryption_key.Q = ek
         return encryption_key.Q, key_shares, thresh_params
     
-    # def partial_threshold_decrypt(self, encrypted_message, key_share):
-    #     encrypted_message = tc.EncryptedMessage(encrypted_message[0], encrypted_message[0], bytes(1))
-    #     return tc.compute_partial_decryption(encrypted_message, key_share)
-
-    # def decrypt_threshold(self, partial_decryptions, encrypted_message, thres_params):
-    #     return tc.decrypt_message(partial_decryptions, encrypted_message, thres_params)
-    
     def partial_decrypt(self, ciphertexts, key_share: tc.KeyShare):
         """
+        Computes a partial decryption for a list of ciphertexts using a single key share.
+        
+        For each ciphertext (C1, C2), it computes share_i = x_i * C1.
+        
+        Args:
+            ciphertexts (list): List of (C1, C2) tuples.
+            key_share (tc.KeyShare): The secret share belonging to a specific party.
+
+        Returns:
+            list: A list of PartialDecryption objects containing the share index and the computed point.
         """
         list_PartialDecryptions = []
         for ciphertext in ciphertexts:
@@ -176,10 +262,21 @@ class ElGamal:
         threshold_params: tc.ThresholdParameters,
     ):
         """
-            Combines multiple partial decryptions to obtain the original message.
-            encrypted_message is a list of (c1, c2) tuples, one for each bit.
-            partial_decryptions is a flat list of PartialDecryption objects from all key shares and all bits.
-            We need to organize them: group by bit index first, then by key share.
+        Combines multiple partial decryptions to obtain the original integer message.
+        
+        This function performs Lagrange Interpolation to reconstruct the shared secret's 
+        effect (x * C1) from the partial shares and subtracts it from C2 to recover the message.
+        
+        The partial_decryptions list is expected to be flat and ordered by share, 
+        containing all bit-shares for Share_0, then all bit-shares for Share_1, etc.
+
+        Args:
+            partial_decryptions (list): Flat list of PartialDecryption objects from all participants.
+            encrypted_message (list): List of (C1, C2) tuples representing the encrypted bits.
+            threshold_params (tc.ThresholdParameters): Parameters used for the secret sharing scheme.
+
+        Returns:
+            ECC.EccPoint: The reconstructed message as a point on the curve (Message_Value * g).
         """
         
         num_bits = len(encrypted_message)
@@ -194,7 +291,6 @@ class ElGamal:
             bit_partials = []
             for share_i in range(num_shares):
                 pd = partial_decryptions[share_i * num_bits + i]
-                # print(f"partial_decryptions[{share_i * num_bits + i}]")
                 bit_partials.append(pd)
             
             # [share0_bit0, share1_bit0]
@@ -206,7 +302,7 @@ class ElGamal:
             c1, c2 = encrypted_message[i]
             
             partial_indices = [dec.x for dec in bit_partials]
-            # Report:
+            
             # Lagrange coefficients are used to combine the partial decryptions from key shares to
             # reconstruct the decryption key (or its effect) and thus recover the original message.
             lagrange_coefficients = [
@@ -225,21 +321,19 @@ class ElGamal:
             
             # homomorphic property
             accumulated_point = tc.number.ecc_sum(summands)
-            # print(f"Bit {i}: restored_kdP = {accumulated_point}")
             
             # Recover the message point: M = C2 - (nonce * decryption key * g) where (...) is the sum in accumulated_point
             restored_point = c2 + (-accumulated_point)
             
-            bit = self._check_if_zero_or_one([restored_point])[0]
-            # print(f"Bit {i}: recovered bit = {bit}")
+            bit = self.__check_if_zero_or_one([restored_point])[0]
+            
             decrypted_bits.append(bit)
         
         # Convert bits back to integer
-        decrypted_message = self._bits_to_int(decrypted_bits)
+        decrypted_message = self.__bits_to_int(decrypted_bits)
 
+        # Convert int to point
         decrypted_message_point = decrypted_message * self.pp[1] 
-        
-        # print(f"Decrypted message: {decrypted_message}, Expected: {expected_value}")
 
         return decrypted_message_point
     
@@ -250,39 +344,37 @@ class ElGamal:
         encrypted_message: list,
     ):
         """
-            Combines multiple partial decryptions to obtain the original message.
-            encrypted_message is a list of (c1, c2) tuples, one for each bit.
-            partial_decryptions is a flat list of PartialDecryption objects from all key shares and all bits.
-            We need to organize them: group by bit index first, then by key share.
+        An Eval variant of threshold decryption that returns the integer value directly.
+        
+        Identical logic to threshold_decrypt but returns the raw integer instead of the 
+        point on the curve. Used primarily for Eval where Eval expects an int.
+
+        Args:
+            partial_decryptions (list): Flat list of PartialDecryption objects.
+            encrypted_message (list): List of (C1, C2) tuples.
+
+        Returns:
+            int: The decrypted integer message.
         """
         
         num_bits = len(encrypted_message)
-        # print("num_bit: " + str(num_bits))
         num_shares = len(partial_decryptions) // num_bits
-        # print(f"Number of bits: {num_bits}, Number of shares: {num_shares}")
         
-        # Changing partial_decryptions from [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-        # to [[share0_bit0, share1_bit0], [share0_bit1, share1_bit1], ...]
         partial_by_bit = []
         for i in range(num_bits):
             bit_partials = []
             for share_i in range(num_shares):
                 pd = partial_decryptions[share_i * num_bits + i]
-                # print(f"partial_decryptions[{share_i * num_bits + i}]")
                 bit_partials.append(pd)
             
-            # [share0_bit0, share1_bit0]
             partial_by_bit.append(bit_partials)
         
-        # Decrypt each bit position
         decrypted_bits = []
         for i, bit_partials in enumerate(partial_by_bit):
             c1, c2 = encrypted_message[i]
             
             partial_indices = [dec.x for dec in bit_partials]
-            # Report:
-            # Lagrange coefficients are used to combine the partial decryptions from key shares to
-            # reconstruct the decryption key (or its effect) and thus recover the original message.
+
             lagrange_coefficients = [
                 tc.lagrange_coefficient_for_key_share_indices(
                     partial_indices, idx, self.curve
@@ -290,28 +382,19 @@ class ElGamal:
                 for idx in partial_indices
             ]
             
-            # Compute sum of Lagrange-weighted partial decryptions for this bit
-            # Lagrange interpolation is a mathematical technique used to reconstruct a secret from multiple shares.
             summands = [
                 (lagrange_coefficients[i].coefficient * bit_partials[i].yC1)
                 for i in range(0, len(bit_partials))
             ]
             
-            # homomorphic property
             accumulated_point = tc.number.ecc_sum(summands)
-            # print(f"Bit {i}: restored_kdP = {accumulated_point}")
             
-            # Recover the message point: M = C2 - (nonce * decryption key * g) where (...) is the sum in accumulated_point
             restored_point = c2 + (-accumulated_point)
             
-            bit = self._check_if_zero_or_one([restored_point])[0]
-            # print(f"Bit {i}: recovered bit = {bit}")
+            bit = self.__check_if_zero_or_one([restored_point])[0]
             decrypted_bits.append(bit)
         
-        # Convert bits back to integer
-        decrypted_message = self._bits_to_int(decrypted_bits)
-        
-        # print(f"Decrypted message: {decrypted_message}, Expected: {expected_value}")
+        decrypted_message = self.__bits_to_int(decrypted_bits)
 
         return decrypted_message
     
@@ -322,16 +405,16 @@ class ElGamal:
         threshold_params: tc.ThresholdParameters,
     ):
         """
-            Combine partial decryptions for a single ElGamal ciphertext (c1, c2)
-            and recover the decrypted message point.
+        Combines partial decryptions for a single ElGamal ciphertext (C1, C2)
+        and recovers the decrypted message point.
 
-            Args:
-                partial_decryptions: list of tc.PartialDecryption objects, one per key share
-                encrypted_message: single tuple (c1, c2)
-                threshold_params: ThresholdParameters used to generate the shares
+        Args:
+            partial_decryptions (list): list of tc.PartialDecryption objects, one per key share.
+            encrypted_message (tuple): single tuple (C1, C2).
+            threshold_params (tc.ThresholdParameters): Parameters used to generate the shares.
 
-            Returns:
-                ECC point: the recovered message point (C2 - reconstructed_nonce*G)
+        Returns:
+            ECC.EccPoint: the recovered message point (C2 - reconstructed_nonce * g).
         """
 
         # Expect partial_decryptions to be a list of PartialDecryption objects (one per share)
@@ -358,342 +441,3 @@ class ElGamal:
         restored_point = c2 + (-accumulated_point)
 
         return restored_point
-
-    ###
-    # tests
-    ###
-    def test_keygen(self):
-        (ek, _), dk = self.keygen()
-        # type of each:
-        print("ek type: " + str(type(ek)))
-        print("dk type: " + str(type(dk)))
-
-        print("sk is: " + str(dk))
-        print("ek -> x: " + str(ek.x) + ", y: " + str(ek.y))
-
-    def test_int_to_bytes_enc(self):
-        msg = 0
-        # binary_string = f'{msg:b}'
-        # print("msg to bits: " + binary_string)
-
-        # self.int_to_bits(msg)
-        (ek, _), dk = self.keygen()
-        # ek, dks = self.keygen_threshold()
-        encryptions = self.enc(ek, msg)
-        # print(str(encryptions))
-        message = self.dec(dk, encryptions)
-        print("decrypted message: " + str(message))
-        # ek, dk = self.keygen()
-        # cipher = self.encrypt(ek, msg)
-        # message_dec_int = self.decrypt(dk, cipher, msg)
-        # assert msg == message_dec_int
-         
-
-    def test_elgamal(self):
-        (ek, _), dk = self.keygen()
-        print("sk is: " + str(dk))
-        print("pk is: " + str(ek))
-        
-        m = 123
-        print("Original message (integer): " + str(m))
-        
-        cipher = self.enc(ek, m)
-        print("Encrypted message: " + str(cipher))
-    
-        message_dec_int = self.dec(dk, cipher)
-        print("Decrypted message (integer): " + str(message_dec_int))
-        
-        assert message_dec_int == m, f"expected {m}, got {message_dec_int}"
-
-
-    def test_threshold_elgamal(self):
-            
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        # print("Generated 2-of-2 threshold keys")
-
-        m = 1
-        # print(f"Original message: {m}")
-
-        encrypted_msg = self.enc(pub_key, m)
-        print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
-
-        print("key shares: " + str(key_shares))
-        # Compute partial decryptions from each key share
-        # Each returns a list of PartialDecryption objects, one per bit
-        partial_from_share0 = self.partial_decrypt(encrypted_msg, key_shares[0])
-        partial_from_share1 = self.partial_decrypt(encrypted_msg, key_shares[1])
-        
-        # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-        partial_combined = partial_from_share0 + partial_from_share1
-        
-        print(f"Computed partial decryptions from {len(key_shares)} key shares")
-        print(f"Total partial decryptions: {len(partial_combined)}")
-
-        decrypted_msg = self.threshold_decrypt(partial_combined, encrypted_msg, thresh_params)
-        print(f"Final decrypted message point: {decrypted_msg}")
-        print(f"decrypted_msg: x = {decrypted_msg.x}, y = {decrypted_msg.y}")
-        
-        decrypted_msg = self._eval_threshold_decrypt(partial_combined, encrypted_msg)
-        print(f"\nFinal decrypted message point: {decrypted_msg}")
-
-        # assert decrypted_msg == m, f"Expected {m}, got {decrypted_msg}"
-
-    def test_threshold_elgamal_sub(self):
-            
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        # print("Generated 2-of-2 threshold keys")
-
-        m = 18
-        # print(f"Original message: {m}")
-        sub_m = 9
-
-        encrypted_msg = self.enc(pub_key, m)
-
-        encrypted_msg_sub = self.enc(pub_key, sub_m)
-
-        print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
-        print(f"Encrypted sub message: {len(encrypted_msg_sub)} ciphertexts (one per bit)")
-
-        combind = []
-        for i in range(len(encrypted_msg)):
-            c1_m, c2_m = encrypted_msg[i]
-            c1_sub, c2_sub = encrypted_msg_sub[i]
-            combind.append((c1_m + (-c1_sub), c2_m + (-c2_sub)))
-
-        print("key shares: " + str(key_shares))
-        # Compute partial decryptions from each key share
-        # Each returns a list of PartialDecryption objects, one per bit
-        partial_from_share0 = self.partial_decrypt(combind, key_shares[0])
-        partial_from_share1 = self.partial_decrypt(combind, key_shares[1])
-        
-        # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-        partial_combined = partial_from_share0 + partial_from_share1
-        
-        print(f"Computed partial decryptions from {len(key_shares)} key shares")
-        print(f"Total partial decryptions: {len(partial_combined)}")
-
-        decrypted_msg = self.threshold_decrypt(partial_combined, combind, thresh_params)
-        print(f"Final decrypted message point: {decrypted_msg}")
-        print(f"decrypted_msg: x = {decrypted_msg.x}, y = {decrypted_msg.y}")
-        
-        decrypted_msg = self._eval_threshold_decrypt(partial_combined, combind)
-        print(f"\nFinal decrypted message point: {decrypted_msg}")
-        assert decrypted_msg == m - sub_m, f"Expected {m - sub_m}, got {decrypted_msg}"
-    
-
-    def test_threshold_elgamal_on_target_reduction(self):
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        
-        m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
-        # m = [1, 0, 0, 1, 0]
-
-        enc_tr = [self.enc(pub_key, val) for val in m]
-        iden0 = 0 * self.pp[1]
-        iden1 = 1 * self.pp[1]
-
-        print(f"iden0: x = {iden0.x}, y = {iden0.y}")
-        print(f"iden1: x = {iden1.x}, y = {iden1.y}")
-
-        decrypted_point = []
-        decrypted = []
-        for list_of_cts in enc_tr:
-            # list_of_cts [(ct1, ct2),......]
-            # print(f"list_of_cts = {list_of_cts}")
-            partials_share0 = self.partial_decrypt(list_of_cts, key_shares[0])
-            partials_share1 = self.partial_decrypt(list_of_cts, key_shares[1])
-            combined_partials = partials_share0 + partials_share1
-            
-            plaintext_point = self.threshold_decrypt(combined_partials, list_of_cts, thresh_params)
-            plaintext = self._eval_threshold_decrypt(combined_partials, list_of_cts)
-
-            print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
-            
-            # assert (plaintext_point.x == iden0.x and plaintext_point.y == iden0.y) or (plaintext_point.y == iden1.y and plaintext_point.x == iden1.x)
-            decrypted_point.append(plaintext_point)
-            decrypted.append(plaintext)
-
-        for i in range(len(m)):
-            assert m[i] == decrypted[i]
-
-        print("all good") 
-
-    def test_threshold_elgamal_on_target_reduction_eval(self):
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        
-        m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
-        # m = [1, 0, 0, 1, 0]
-
-        enc_tr = [self.enc(pub_key, val) for val in m]
-        iden0 = 0 * self.pp[1]
-        iden1 = 1 * self.pp[1]
-
-        print(f"iden0: x = {iden0.x}, y = {iden0.y}")
-        print(f"iden1: x = {iden1.x}, y = {iden1.y}")
-
-        decrypted_point = []
-        decrypted = []
-        for list_of_cts in enc_tr:
-            # list_of_cts [(ct1, ct2),......]
-            # print(f"list_of_cts = {list_of_cts}")
-            partials_share0 = self.partial_decrypt(list_of_cts, key_shares[0])
-            partials_share1 = self.partial_decrypt(list_of_cts, key_shares[1])
-            combined_partials = partials_share0 + partials_share1
-            
-            plaintext_point = self.threshold_decrypt(combined_partials, list_of_cts, thresh_params)
-            plaintext = self._eval_threshold_decrypt(combined_partials, list_of_cts)
-
-            print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
-            
-            # assert (plaintext_point.x == iden0.x and plaintext_point.y == iden0.y) or (plaintext_point.y == iden1.y and plaintext_point.x == iden1.x)
-            decrypted_point.append(plaintext_point)
-            decrypted.append(plaintext)
-
-        for i in range(len(m)):
-            assert m[i] == decrypted[i]
-
-        print("all good") 
-
-
-
-    def test_eval_threshold_elgamal(self):
-            
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        # print("Generated 2-of-2 threshold keys")
-
-        m = 12
-        # print(f"Original message: {m}")
-
-        encrypted_msg = self.enc(pub_key, m)
-        print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
-
-        print("key shares: " + str(key_shares))
-        # Compute partial decryptions from each key share
-        # Each returns a list of PartialDecryption objects, one per bit
-        partial_from_share0 = self.partial_decrypt(encrypted_msg, key_shares[0])
-        partial_from_share1 = self.partial_decrypt(encrypted_msg, key_shares[1])
-        
-        # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-        partial_combined = partial_from_share0 + partial_from_share1
-        
-        print(f"Computed partial decryptions from {len(key_shares)} key shares")
-        print(f"Total partial decryptions: {len(partial_combined)}")
-
-        decrypted_msg = self._eval_threshold_decrypt(partial_combined, encrypted_msg)
-        print(f"Final decrypted message: {decrypted_msg}")
-
-        assert decrypted_msg == m, f"Expected {m}, got {decrypted_msg}"
-
-    def test_threshold_elgamal_point(self):
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        # print("Generated 2-of-2 threshold keys")
-
-        m = 12
-        # print(f"Original message: {m}")
-
-        encrypted_msg = self.enc(pub_key, m)
-        # print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
-
-        # Compute partial decryptions from each key share
-        # Each returns a list of PartialDecryption objects, one per bit
-        partial_from_share0 = self.partial_decrypt(encrypted_msg, key_shares[0])
-        partial_from_share1 = self.partial_decrypt(encrypted_msg, key_shares[1])
-
-        # encrypted_msg is:
-        print(f"Encrypted message points: {encrypted_msg}")
-        
-        # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-        partial_combined = partial_from_share0 + partial_from_share1
-        
-        print(f"Computed partial decryptions from {len(key_shares)} key shares")
-        print(f"Total partial decryptions: {len(partial_combined)}")
-
-        decrypted_msg = self.threshold_decrypt(partial_combined, encrypted_msg, thresh_params)
-        # decrypted_msg = self.threshold_decrypt([partial_from_share0, partial_from_share0], encrypted_msg, thresh_params)
-        print(f"Final decrypted message: {decrypted_msg}")
-
-        msg_point = m * self.pp[1]
-        
-        assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
-        print("Threshold ElGamal point decryption verified.")
-       
-
-    def test_threshold_elgamal_deterministic_0(self):
-            
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-        # print("Generated 2-of-2 threshold keys")
-
-        m = 0
-        # print(f"Original message: {m}")
-
-        encrypted_msg = self.enc(pub_key, m, r=1)
-        # print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
-        deterministic_encryption_of_0 = self.enc(pub_key, 0, r=1)
-        encrypted_of_0 = self.enc(pub_key, 0)
-        
-        assert deterministic_encryption_of_0 != encrypted_of_0, f"Something is wrong with deterministic encryption of 0"
-        assert encrypted_msg == deterministic_encryption_of_0, f"Deterministic encryption of 0 failed"
-        print("Deterministic encryption of 0 verified.")
-
-        # Compute partial decryptions from each key share
-        # Each returns a list of PartialDecryption objects, one per bit
-        partial_from_share0 = self.partial_decrypt(encrypted_msg, key_shares[0])
-        partial_from_share1 = self.partial_decrypt(encrypted_msg, key_shares[1])
-
-        # encrypted_msg is:
-        print(f"Encrypted message points: {encrypted_msg}")
-        
-        # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-        partial_combined = partial_from_share0 + partial_from_share1
-        
-        print(f"Computed partial decryptions from {len(key_shares)} key shares")
-        print(f"Total partial decryptions: {len(partial_combined)}")
-
-        decrypted_msg = self.threshold_decrypt(partial_combined, encrypted_msg, thresh_params)
-        print(f"Final decrypted message: {decrypted_msg}")
-        msg_point = m * self.pp[1]
-
-
-        # Compare point coordinates
-        assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
-
-    def test_threshold_elgamal_single(self):
-        """Test threshold_decrypt_single with a single (c1, c2) ciphertext."""
-        pub_key, key_shares, thresh_params = self.keygen_threshold()
-
-        m = 42
-        print(f"Original message (single ciphertext): {m}")
-
-        # Encrypt as a single (c1, c2) tuple
-        encrypted_msg = self.encrypt_single(pub_key, m)
-        print(f"Ciphertext: {encrypted_msg}")
-
-        partial_from_share0 = self.partial_decrypt(encrypted_msg, key_shares[0])
-        partial_from_share1 = self.partial_decrypt(encrypted_msg, key_shares[1])
-        combind_partials
-
-        print(f"Computed {len(partials)} partial decryptions")
-
-        # Decrypt using threshold_decrypt_single
-        decrypted_point = self.threshold_decrypt_single(partials, encrypted_msg, thresh_params)
-        print(f"Decrypted message point: x = {decrypted_point.x}, y = {decrypted_point.y}")
-
-        # Expected message point
-        expected_point = m * self.pp[1]
-        print(f"Expected message point: x = {expected_point.x}, y = {expected_point.y}")
-
-        assert decrypted_point == expected_point, f"Expected {expected_point}, got {decrypted_point}"
-        print("Threshold single-ciphertext decryption verified!\n")
-
-if __name__ == "__main__":
-    el = ElGamal()
-    # el.test_keygen()
-    # el.test_int_to_bytes_enc()
-    # el.test_elgamal()
-    # el.test_threshold_elgamal()
-    # el.test_threshold_elgamal_sub()
-    el.test_threshold_elgamal_single()
-    # el.test_threshold_elgamal_on_target_reduction()
-    # el.test_threshold_elgamal_on_target_reduction_eval()
-    # el.test_eval_threshold_elgamal()
-    # el.test_threshold_elgamal_point()
-    # el.test_threshold_elgamal_deterministic_0()

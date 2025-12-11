@@ -1,17 +1,33 @@
 import random
 import utils.signature as sig
-import utils.NIZKP as nizkp
+import utils.schnorr_priv_key_proof as nizkp
 from utils.ec_elgamal import ElGamal
-from utils.dec_proof import prove_correct_decryption, prove_partial_decryption_share
+from utils.elgamal_dec_proof import prove_correct_decryption, prove_partial_decryption_share
 import threshold_crypto as tc
 
 class Procedures:
-    
+    """
+    High-level procedures for a privacy-preserving reporting system.
+    Handles key generation, anonymous shuffling (Mix), and report creation/signing.
+    """
     def __init__(self, curve="P-256"):
+        """
+        Initializes the Procedures instance.
+        Sets up public parameters and the internal ElGamal instance.
+        """
         self.pp = self.pub_param(curve)
         self.ahe = ElGamal(self.pp)
         
     def pub_param(self, curve="P-256"):
+        """
+        Loads and returns the public parameters for the specified elliptic curve.
+
+        Args:
+            curve (str): The name of the curve (default "P-256").
+
+        Returns:
+            tuple: (curve, g, order)
+        """
         curve = tc.CurveParameters(curve)
         g = curve.P
         order = curve.order
@@ -21,46 +37,39 @@ class Procedures:
     # SKeyGen(id, pp) to generate a signing key pair ((id, pk), sk) and publishes (id, pk) 
     # generates signature key pair (sk, pk) for identity id
     def skey_gen(self, id=random, pp=None):
-        """Generate a signing keypair and a Schnorr NIZKP for the public key.
+        """
+        Generates a signing keypair and a Schnorr Non-Interactive Zero-Knowledge Proof (NIZKP) 
+        for the public key ownership.
 
         Args:
-            id: identifier for the key owner (may be a random generator by default).
-            pp: public parameters tuple as returned by `pub_param`.
+            id: The identity associated with this key.
+            pp (tuple, optional): Public parameters. Uses self.pp if None.
 
         Returns:
-            tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], Bn]: 
-                ((id, (pk, pp, proof)), sk)
-                where `pk` is the public signing key, `proof` is a Schnorr NIZKP,
-                and `sk` is the signing secret key.
+            tuple: ((id, (pk, pp, proof)), sk)
         """
         if pp is None:
             pp = self.pp
             
-
         sk, pk = sig.key_gen("P-256")
         assert pk == sk * pp[1], "Public key does not match private key"
 
         proof =  nizkp.schnorr_NIZKP_proof(pk, pp, sk)
         return ((id, (pk, pp, proof)), sk)
 
-    # EKeyGen(pp) → (ek, dk): On input of the public parameter pp, executes (ek, dk) ← AHE.KeyGen(1λ)
-    # which outputs encryption key pair.
-    # It then computes πdk ← Proofdk((pp, ek), dk), updates ek such
-    # that ek contains pp along with πdk, and returns (ek, dk).
     def ekey_gen(self, pp=None):
-        """Generate an ElGamal encryption keypair and a sample decryption proof.
+        """
+        Generates a Threshold ElGamal encryption keypair and proves decryption capability.
 
-        This function also computes a short non-interactive proof for a sample
-        message to allow verifiers to check that the secret key can decrypt
-        correctly.
+        This function generates a shared public key and secret key shares. It then encrypts
+        a sample message (42) and generates a Zero-Knowledge Proof (ZKP) that the key shares
+        can correctly partially decrypt this test ciphertext.
 
         Args:
-            pp (tuple[EcGroup, EcPt, Bn]): 
+            pp (tuple, optional): Public parameters. Uses self.pp if None.
 
         Returns:
-            tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]], Bn]: 
-            where `ek` is the public encryption key,
-            πdk` is the produced proof, and `dk` is the secret key.
+            tuple: ((pk, thres_param, (πdk0, πdk1)), dk_key_share)
         """
         if pp is None:  
             pp = self.pp
@@ -77,19 +86,17 @@ class Procedures:
         return ((ek, thres_param, (πdk0, πdk1)), dk_key_share)
 
     def ekey_gen_single(self,pp=None):
-        """Generate an ElGamal encryption keypair and a sample decryption proof.
+        """
+        Generates a standard (single-party) ElGamal encryption keypair and a decryption proof.
 
-        This function also computes a short non-interactive proof for a sample
-        message to allow verifiers to check that the secret key can decrypt
-        correctly.
+        This function creates a standard keypair, encrypts a sample message (200), and 
+        generates a ZKP that the secret key can successfully decrypt this ciphertext.
 
         Args:
-            pp (tuple[EcGroup, EcPt, Bn]): 
+            pp (tuple, optional): Public parameters. Uses self.pp if None.
 
         Returns:
-            tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]], Bn]: 
-            where `ek` is the public encryption key,
-            πdk` is the produced proof, and `dk` is the secret key.
+            tuple: ((Public_Key, Public_Params, Decryption_Proof), Secret_Key)
         """
         if pp is None:  
             pp = self.pp
@@ -105,27 +112,22 @@ class Procedures:
         
         return ((ek, pp, πdk), dk)
 
+    def mix_id(self, ID_pk, expo):
+        """
+        Anonymizes and shuffles a list of identity public keys using shuffling.
 
-    # mix shuffles a n anonymized list of pk_i
-    # REPORT:
-    # id_a_pk[] is a list of public keys
-    # sends an anonymized list of public keys along with the proof of shuffle
-    def mix_id(self, ID_pk):
-        """Anonymise and shuffle a list of identity public keys.
+        This function takes a list of public keys, creates permutations of them, re-randomizes them,
+        shuffles their order, and generates a proof of correct shuffling. This breaks the link
+        between the input order and output order, providing anonymity.
 
         Args:
-            ID_pk (list[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]): tuple of tuples (id, (pk, pp, proof)).
+            ID_pk (list): A list of tuples, where each item is (id, (pk, pp, proof)).
+            pk (ECC.Point): The public key used for the shuffle encryption/re-encryption.
 
         Returns:
-            tuple[list[EcPt], 
-                tuple[tuple[EcPt, EcPt, EcPt, EcPt, list[EcPt]], 
-                    tuple[Bn, Bn, Bn, Bn, list[Bn], list[Bn]], 
-                    list[EcPt],
-                    list[EcPt],
-                    EcPt,
-                    list[EcPt]]]:
+            tuple: (Shuffled_PKs, Randomness_Used, Shuffle_Proof)
         """
-        # ID_pk: list of tuples (id, (pk, pp, proof))
+
         from utils.shuffle import Shuffle
         shuffle = Shuffle(self.pp)
         
@@ -138,13 +140,11 @@ class Procedures:
             pk = idpk[1][0]
             Id_A_pk.append(pk)
 
-        # TODO MAKE SURE IT RETURN G + R_PRIME INSTEAD OF JUST R_PRIME
+        # set up the shuffle proof
         e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk) 
         
         # proof of shuffle and anonymised list of pks
-        # TODO is pp[1] = pk?
-        # TODO WHAT PK SOULD BE USED HERE?
-        πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, pk=self.pp[1])
+        πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, expo)
 
         return (e_prime, r_prime, πmix_proof)
 
@@ -152,56 +152,32 @@ class Procedures:
     user_info = {}
 
     def report(self, id, sm_sk, dso_ek, m, t, sm_pk):
-        """Create a report by encrypting a message and signing the tuple.
+        """
+        Creates a signed, encrypted report.
 
-        The message `m` is converted to binary and each bit is encrypted with
-        the provided ElGamal key. The resulting ciphertexts are then signed
-        using the user's signing key.
+        The message `m` (integer) is encrypted using bitwise ElGamal encryption under 
+        the DSO's (Data Service Operator) encryption key. The time `t` and the ciphertexts 
+        are then signed using the Smart Meter's (sm) secret signing key.
 
         Args:
-            id (str): reporter identifier.
-            sk (Bn): reporter signing secret key.
-            ek (EcPt): encryption keypair/parameters expected by `ahe.enc`.
-            m (int): integer message to be encoded as binary bits.
-            t (int): timestamp or round identifier included in the signed message.
-            user_pk (EcPt): the reporter's public key tuple (pk, pp, proof)
+            id: The identity of the reporter.
+            sm_sk (int): Smart Meter's secret signing key.
+            dso_ek (tuple): DSO's encryption key tuple containing (Public_Key, ...).
+            m (int): The measurement/message to report.
+            t (int): Timestamp or time epoch.
+            sm_pk: Smart Meter's public key.
 
         Returns:
-            tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]:
-                (user_pk, (t, ct, signing_σ))
+            tuple: (SmartMeter_PK, (Time, Ciphertexts, Signature))
         """
-        
-        # encrypt
-        # the message is already bits since enc took care of converting it to bits
         if m > 0:
             cts = self.ahe.enc(dso_ek[0], m)
         else:
             # deterministic encryption of 0
             cts = self.ahe.enc(dso_ek[0], m, 1)
 
-        # ct = [self.ahe.enc(ek[0], ek[1], m) for m in mbin]
-
         # sign (pk = (pk, pp, proof))
         msg = str((t, cts))
         signing_σ = sig.schnorr_sign(sm_sk, dso_ek[1], msg)
 
         return (sm_pk, (t, cts, signing_σ))
-    
-    # def consumption_report(self, dso_ek, sm_sk, m: int, t, sm_pk):
-    #     """Create a consumption report by encrypting a message.
-
-    #     The message `m` is converted to binary and each bit is encrypted with
-    #     the provided ElGamal key.
-
-    #     Args:
-    #         m (int): integer message to be encoded as binary bits.
-
-    #     Returns:
-    #         list[tuple[EcPt, EcPt]]: list of ciphertexts.
-    #     """
- 
-    #     cts = self.ahe.enc(dso_ek[0], m)
-    #     msg = str((t, cts))
-    #     signing_σ = sig.schnorr_sign(sm_sk, dso_ek[1], msg)
-        
-    #     return (sm_pk(cts, signing_σ)

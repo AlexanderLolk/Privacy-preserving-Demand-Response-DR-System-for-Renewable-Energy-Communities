@@ -1,5 +1,3 @@
-
-
 from utils.ec_elgamal import ElGamal
 import hashlib
 import threshold_crypto as tc
