@@ -1,19 +1,14 @@
 import threshold_crypto as tc
 from Crypto.PublicKey import ECC
 
-# params for threshold_crypto
-# G                 = ECC._curves[curve_name]
-# g                 = curve_params.P 
-# order             = curve_par ams.order
-# order.random()    = number.random_in_range(1, curve_params.order) AKA d
-# pk                = Q
-# sk                = d
-
 class ElGamal:
     """
     ElGamal implementation using Elliptic Curve Cryptography (ECC).
     Supports standard encryption/decryption, bitwise encryption for integers, 
     and threshold decryption using Shamir's Secret Sharing.
+
+    References:
+        - code used for threshold decryption: https://github.com/hyperion-voting/hyperion/blob/main/primitives.py#L227, https://github.com/tompetersen/threshold-crypto
     """
     def __init__(self, curve="P-256"):
         if isinstance(curve, str):
@@ -35,6 +30,9 @@ class ElGamal:
         Returns:
             tuple: ((public_key, public_parameters), private_key)
         """
+        if pp is not None:
+            self.pp = pp
+
         x = tc.number.random_in_range(2, self.pp[2])
         ek = x * self.pp[1]
         dk = x
@@ -63,7 +61,6 @@ class ElGamal:
         # (13 >> 2) = (1101) >> 2 = 3 (0011)
         # 3 (0011) & 1 (0001) = 1 (0001)
         for i in reversed(range(length)):
-            # print((message >> i) & 1)
             list_bits.append(((message >> i) & 1))
 
         return list_bits
@@ -280,9 +277,9 @@ class ElGamal:
         """
         
         num_bits = len(encrypted_message)
-        print("num_bit: " + str(num_bits))
+        # print("num_bit: " + str(num_bits))
         num_shares = len(partial_decryptions) // num_bits
-        print(f"Number of bits: {num_bits}, Number of shares: {num_shares}")
+        # print(f"Number of bits: {num_bits}, Number of shares: {num_shares}")
         
         # Changing partial_decryptions from [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
         # to [[share0_bit0, share1_bit0], [share0_bit1, share1_bit1], ...]
@@ -312,8 +309,6 @@ class ElGamal:
                 for idx in partial_indices
             ]
             
-            # Compute sum of Lagrange-weighted partial decryptions for this bit
-            # Lagrange interpolation is a mathematical technique used to reconstruct a secret from multiple shares.
             summands = [
                 (lagrange_coefficients[i].coefficient * bit_partials[i].yC1)
                 for i in range(0, len(bit_partials))

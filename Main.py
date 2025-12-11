@@ -1,216 +1,259 @@
-import dso.DSO as distributer
-import smartmeters.smartmeter as sm
-import aggregators.aggregator as agg
-import aggregators.dr as dr
-import boards.board as board
-import utils.eval as eval
-# from utils.generators import pub_param
-# from utils.procedures import Procedures
-import threshold_crypto as tc
+import dso.DSO                  as distributer
+import smartmeters.smartmeter   as smart_meter
+import aggregators.aggregator   as energy_aggregator
+import aggregators.dr           as dr_aggregator
+import boards.board             as board
+import utils.eval               as eval
 
-# Distribution System Operators (DSOs)
-
-# TODO: sign every list 
-
+# Main Simulation Runner
+# Main simulates the full protocol.
+# It instantiates all entities (DSO, Smart Meters, Aggregators)
+# and steps them through the protocol phases.
 
 if __name__ == "__main__":
-    
-    # pro = Procedures()
+
+    # ---------------------------------------------------------
+    # SYSTEM SETUP & INSTANTIATION
+    # ---------------------------------------------------------
+
+    # Initialize the Trusted Authority / Distribution System Operator
     dso = distributer.DSO()
 
-    NUM_SM = 5
-    NUM_AGG = 1
-    NUM_DR_AGG = 1
+    NUM_SM      = 10     # Total Smart Meters
+    NUM_AGG     = 1      # Energy Aggregator
+    NUM_DR_AGG  = 1      # DR Aggregator
     
-    sms = []
-    aggs = []
+    # Define how many users will actually try to join the event
+    NUM_PARTICIPANTS = NUM_SM - 2
+
+    sms     = []
+    aggs    = []
     dr_aggs = []
     
+    # Create entities
     for i in range(NUM_SM):
-        sms.append(sm.SmartMeter(init_id="sm_id_" + str(i)))
+        sms.append(smart_meter.SmartMeter(init_id="sm_id_" + str(i)))
     
     for i in range(NUM_AGG):
-        aggs.append(agg.Aggregator(init_id="agg_id_" + str(i)))
+        aggs.append(energy_aggregator.Aggregator(init_id="agg_id_" + str(i)))
         
     for i in range(NUM_DR_AGG):
-        dr_aggs.append(dr.DR_Aggregator(init_id="dr_agg_id_" + str(i)))
+        dr_aggs.append(dr_aggregator.DR_Aggregator(init_id="dr_agg_id_" + str(i)))
        
-    # sm_info and agg_info are dictionaries with id as key and public key (pk, pp, proof) as value
-    # sm_info = {smartmeter.id: smartmeter.get_public_key() for smartmeter in sms}
-    # agg_info = {aggregator.id: aggregator.get_public_key() for aggregator in aggs}
+    # Extract public keys for registration
+    sm_info     = [(smartmeter.id, smartmeter.get_public_key()) for smartmeter in sms]
+    agg_info    = [(aggregator.id, aggregator.get_public_key()) for aggregator in aggs]
+    dr_info     = [(dr.id, dr.get_public_key()) for dr in dr_aggs]
 
-    sm_info = [(smartmeter.id, smartmeter.get_public_key()) for smartmeter in sms]
-    agg_info = [(aggregator.id, aggregator.get_public_key()) for aggregator in aggs]
-    dr_info = [(dr.id, dr.get_public_key()) for dr in dr_aggs]
 
-    for sm in sm_info:
-        dso.verify_smartmeter(sm)
+
+    # ---------------------------------------------------------
+    # REGISTRATION & VERIFICATION (PK_i)
+    # ---------------------------------------------------------
+
+    # The DSO verifies the Zero-Knowledge Proofs (NIZKPs) of all entities
+    # to ensure they own their keys before registering them.
+    for smart_meter in sm_info:
+        dso.verify_smartmeter(smart_meter)
     
-    for agg in agg_info:
-        dso.verify_aggregator(agg)
+    for energy_aggregator in agg_info:
+        dso.verify_aggregator(energy_aggregator)
     
-    for dr in dr_info:
-        dso.verify_dr_aggregator(dr)
+    for dr_aggregator in dr_info:
+        dso.verify_dr_aggregator(dr_aggregator)
     
+    # Initialize the Board
     bb = board.Board()
-    bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key())) # pk (pk, pp, s_proof) and ek (ek, pp, e_proof)
-    bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
-    noisy_target_reduction = dso.generate_noisy_list()
-    bb.publish_target_reduction(noisy_target_reduction) # noisy list from DSO
-    # print("\ntarget_reduction from main: \n" + str(nois) + "\n")
 
+    # DSO publishes its keys (Signing + Encryption) to the Board
+    bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key()))
     
-    # TODO Report writing: remember we are trying not to send the full class object info but as little as we can get away with
-    for sm in sms:
-        sm.set_dso_public_keys(bb.pk, bb.ek)
-        
-    # TODO for more than one aggregator, we'd probably like some IDs as well
-    for agg in aggs:
-        agg.set_dso_public_keys(bb.pk, bb.ek)
-        
-    for dr in dr_aggs:
-        dr.set_dso_public_keys(bb.pk, bb.ek)
+    # DSO publishes the signed list of all verified participants
+    bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
     
-    # TODO needs to be treshhold elgamal, so that share is given instead of the whole key 
-    # TODO ALSO this is done with a ssl connection, so we have to make something up for this
-    # set_dso_dk
+    # DSO publishes the Noisy List (Encrypted Zero-Reports)
+    noisy_target_reduction = dso.generate_noisy_list()
+    bb.publish_target_reduction(noisy_target_reduction)
+
+
+
+    # ---------------------------------------------------------
+    # KEY DISTRIBUTION
+    # ---------------------------------------------------------
+
+    # Entities fetch DSO keys from the Board
+    for smart_meter in sms:
+        smart_meter.set_dso_public_keys(bb.pk, bb.ek)
+        
+    for energy_aggregator in aggs:
+        energy_aggregator.set_dso_public_keys(bb.pk, bb.ek)
+        
+    for dr_aggregator in dr_aggs:
+        dr_aggregator.set_dso_public_keys(bb.pk, bb.ek)
+    
+   # DSO distributes the Aggregator's specific encryption key
     dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
 
-    # energy agg
-    for agg in aggs:
-        # first pass the threshold params if they havent been set up
-        agg.thresh_params = dso.get_threshold_params()
-        # then request the key share
-        share = dso.encrypt_dk_and_send_to_agg(agg.id)
-        agg.set_dso_dk(share)
-
-    # DR agg
-    for dr in dr_aggs:
-        dr.thresh_params = dso.get_threshold_params()
-        share = dso.encrypt_dk_and_send_to_agg(dr.id)
-        dr.set_dso_dk(share)
-
-    # for agg in aggs:
-    #     agg.set_dso_dk(dso.encrypt_dk_and_send_to_agg(agg.id))
+    # --- Threshold Key Share Distribution ---
+    # This should happen over secure channels (SSL/TLS) in production.
+    # Here we simulate it by passing the share directly via `encrypt_dk_and_send_to_agg`.
     
-    # for dr in dr_aggs:
-    #     dr.set_dso_dk(dso.encrypt_dk_and_send_to_agg(dr.id))
+    # Energy Aggregator gets Share #1
+    for energy_aggregator in aggs:
+        energy_aggregator.thresh_params = dso.get_threshold_params()
+        share = dso.encrypt_dk_and_send_to_agg(energy_aggregator.id)
+        energy_aggregator.set_dso_dk(share)
 
-    # # -------THRESHOLD KEY SETUP START
-    # aggs[0].dk_share            = dso.key_shares[0]         # Energy aggregator
-    # aggs[0].thresh_params       = dso.thresh_params       
-    # dr_aggs[0].dk_share         = dso.key_shares[1]         # DR aggregator
-    # dr_aggs[0].thresh_params    = dso.thresh_params    
-    # -------THRESHOLD KEY SETUP END
+    # DR Aggregator gets Share #2
+    for dr_aggregator in dr_aggs:
+        dr_aggregator.thresh_params = dso.get_threshold_params()
+        share = dso.encrypt_dk_and_send_to_agg(dr_aggregator.id)
+        dr_aggregator.set_dso_dk(share)
 
-    # Give agg pk to sms
-    for sm in sms:
-        # for now they on get the first one
-        sm.set_agg_public_keys(bb.register_aggregator[0][1])
+    # Smart Meters fetch the Aggregator's public key (to verify future messages)
+    for smart_meter in sms:
+        smart_meter.set_agg_public_keys(bb.register_aggregator[0][1])
 
-    ##########
-    # MIX
-    ##########
-    print("\n\nMIX phase started.\n\n")
-    mix_agg = aggs[0]
-    mix_agg.create_mixed_anon_pk_set(sm_info)
 
-    bb.publish_mix_pk_and_proof(mix_agg.publish_mixed_keys())
 
+    # ---------------------------------------------------------
+    # MIX PHASE (Anonymization Setup)
+    # ---------------------------------------------------------
+    print("\n\nMIX PHASE STARTED\n\n")
+
+    # since there is only one
+    agg = aggs[0]
+    dr_agg = dr_aggs[0]
+
+    # The Aggregator shuffles the list of Smart Meter Public Keys
+    agg.create_mixed_anon_pk_set(sm_info)
+
+    # Publish the Shuffled Keys (pk') and the Shuffle Proof (πmix) to the Board
+    bb.publish_mix_pk_and_proof(agg.publish_mixed_keys())
+
+    # Smart Meters retrieve their specific blinding factor to recognize their new anonymous ID
     for smartmeter in sms:
         ### some method for the smartmeter to get the anon_pk
-        smartmeter.set_anon_key(mix_agg.set_anon_key_mix(smartmeter.get_public_key()))
+        smartmeter.set_anon_key(agg.set_anon_key_mix(smartmeter.get_public_key()))
         print(f"Smartmeter {smartmeter.id} got anon key mix.")
 
-    ##########
-    # REPORT
-    ##########
-    print("\n\nREPORT phase started.\n\n")
-    report_user_info = sm_info
-    report_agg = aggs[0]
-    report_dr_agg = dr_aggs[0]
 
-    # TODO perhaps a different message and a better way of choosing participating vs non-participating users
+
+    # ---------------------------------------------------------
+    # REPORT PHASE (Baseline Submission)
+    # ---------------------------------------------------------
+    print("\n\nREPORT PHASE STARTED\n\n")
+
+    report_user_info = sm_info
+
+    # Simulate User Behavior (placeholder)
+    # Some users participate (send m=10), others do not (send m=0).
     for i, smartmeter in enumerate(sms):
-        if i < NUM_SM - 1:
+        if i < NUM_PARTICIPANTS:
             m = 10
         else:
             m = 0 # non-participating user sends 0 report
 
-        report_data = smartmeter.generate_and_send_report(m)
+        # Smart Meter encrypts and signs the report
+        report_data = smartmeter.get_sm_baseline(m)
         print(f"Smartmeter {smartmeter.id} sent report.")
-        # extracting participants
-        report_agg.check_sm_report(report_data, smartmeter.id)
+        
+        # Energy Aggregator collects the report
+        # Internally, check_sm_report verifies if m=0 (via deterministic enc) to filter participants
+        agg.check_sm_baseline(report_data, smartmeter.id)
     
-    bb.publish_participants(report_agg.get_participants())
+    # Aggregator publishes list of anonymized participants found to the Board
+    bb.publish_participants(agg.get_participants())
 
-    ##########
-    # ANONYM
-    ##########
-    print("\n\nANONYM phase started.\n\n")
-    anonym_agg = aggs[0]
-    anonym_bb, anonym_pbb = anonym_agg.make_anonym()
+
+
+    # ---------------------------------------------------------
+    # ANONYM PHASE (Publishing Baseline)
+    # ---------------------------------------------------------
+    print("\n\nANONYM PHASE STARTED\n")
+
+    # Aggregator anonymizes the batch of valid baseline reports
+    anonym_bb, anonym_pbb = agg.make_anonym_baseline()
     
-    # public board
-    bb.publish_anonym_reports(anonym_bb, anonym_agg.id)
+    # Publish batch signature to Public Board
+    bb.publish_anonym_reports(anonym_bb, agg.id)
 
-    # private board
-    # pbb = privateboard.PrivateBoard()
+    # Publish actual data map to "Private" Board (in Board)
     bb.publish_anonym_reports_PBB(anonym_pbb)
-    # print("\"Anonym done\".")
 
-    dr_agg = dr_aggs[0]
-    dr_agg.set_psudo_anonymous_iden(anonym_agg.get_participants())
-    dr_agg.select_random_sms()
+
+
+    # ---------------------------------------------------------
+    # SELECTION PHASE (event)
+    # ---------------------------------------------------------
+    print("\n\nSELECTION PHASE STARTED\n")
+    
+    participants = agg.get_participants()
+    NUM_SELECTED = len(participants)//2
+    
+    # DR Aggregator retrieves the list of anonymous candidates
+    dr_agg.set_pseudo_anonymous_iden(participants)
+    
+    # DR Aggregator selects participants
+    dr_agg.select_random_sms(NUM_SELECTED)
+
+    # Publish selected Smart meters (signed by DR Agg) to the Board
     bb.publish_selected_sm(dr_agg.get_selected())
     
-    # step 12 in seq chart
-    for sm in sms:
-        sm.check_if_in_event(bb.get_selected_sm())
-        # sm.check_if_in_event(anonym_agg.get_participants())
+    # Smart Meters check the Board to see if they won
+    for smart_meter in sms:
+        smart_meter.check_if_in_event(bb.get_selected_sm())
 
 
-    ##########
-    # sm comsumption
-    ##########
+    # ---------------------------------------------------------
+    # CONSUMPTION PHASE (Actual Usage Submission)
+    # ---------------------------------------------------------
+    print("\n\nCONSUMPTION PHASE STARTED\n")
     print("\n\nGetting sm's consumption reports.\n\n")
 
-    # TODO should only be participants
+    # Only selected participants send their actual consumption data
     for smartmeter in sms:
         if smartmeter.is_participating():
             comsumption_report = smartmeter.get_sm_consumption()
             print(f"Smartmeter {smartmeter.id} sent comsuption.")
-            anonym_agg.check_sm_report(comsumption_report, smartmeter.id, consumption=True)
+            agg.check_sm_consumption(comsumption_report, smartmeter.id)
         else:
             print(f"Smartmeter {smartmeter.id} is not a participant.")
 
-    _, consumption_anonym_pbb = anonym_agg.make_anonym(consumption=True)
+    # Aggregator anonymizes and publishes the consumption reports
+    _, consumption_anonym_pbb = agg.make_anonym_consumption()
     bb.publish_sm_comsumption_PBB(consumption_anonym_pbb)
 
-    ##########
-    # EVAL
-    ##########
-    print("\n\nEVAL phase started.\n\n")
+    # ---------------------------------------------------------
+    # EVALUATION PHASE
+    # ---------------------------------------------------------
+    print("\n\nEVAL PHASE STARTED")
 
-
-    # call Eval for each aggregator
+    # Eval is called for each aggregator
     print("")
 
     evaluator = eval.Eval(dso.get_encryption_key())
 
-    # partial decryption shares
-    agg_share = aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
-    dr_share = dr_aggs[0].partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
+    # Partial Decryption of Reports
+    # Both Aggregators download encrypted reports (Baseline & Consumption) from the Board
+    # and compute their partial decryption shares.
+    agg_share = agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
+    dr_share = dr_agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
 
-    # evaluation
-    equal_cts, proofs = evaluator.eval(bb, bb, agg_share, dr_share, dso.get_threshold_params())
+    # Homomorphic calculation and checking (placeholder values)
+    # The Evaluator combines shares to check if Baseline - Consumption >= Target 
+    # Right now it returns a list of "Equal Ciphertexts" for successful users.
+    equal_cts, proofs = evaluator.eval(bb, bb, agg_share, dr_share)
 
     if len(equal_cts) < 1:
         print("No smartmeters can be evaluated")
         exit(0)
 
-    # M_shares_list, π_dec_share = self.partial_decrypt(ct_eq, dk_share)
-    agg_equal_cts_share = aggs[0].partial_dec_equal_cts(equal_cts)
-    dr_equal_cts_share = dr_aggs[0].partial_dec_equal_cts(equal_cts)
+    # Final decryption of result
+    # The aggregators partially decrypt the "Result Ciphertexts" (which should be 0)
+    # to prove the evaluation was correct.
+    agg_equal_cts_share = agg.partial_dec_equal_cts(equal_cts)
+    dr_equal_cts_share = dr_agg.partial_dec_equal_cts(equal_cts)
     
-    evaluator._eval(bb, bb, agg_equal_cts_share, dr_equal_cts_share, (equal_cts, proofs), dso.get_threshold_params())
+    # Does a final check: Does Decrypt(Result_CT) == 0?
+    evaluator.final_check_eval(bb, bb, agg_equal_cts_share, dr_equal_cts_share, (equal_cts, proofs), dso.get_threshold_params())

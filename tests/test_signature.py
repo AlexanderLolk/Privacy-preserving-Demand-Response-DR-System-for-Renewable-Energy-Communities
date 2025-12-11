@@ -1,10 +1,10 @@
 import threshold_crypto as tc
-import utils.signature as sig
+from utils.signature import Signature
 
 def test_schnorr_signature():
     """Test Schnorr signature generation and verification."""
     print("=== Testing Schnorr Signature ===")
-    
+    sig = Signature()
     # Setup
     curve = tc.CurveParameters("P-256")
     g = curve.P
@@ -13,7 +13,7 @@ def test_schnorr_signature():
     
     # Generate keypair
     print("1. Generating keypair...")
-    sk_key, pk_key = sig.key_gen("P-256")
+    sk_key, pk_key = sig.key_gen()
     
     # Extract scalar from private key for signing
     sk = sk_key
@@ -74,12 +74,13 @@ def test_schnorr_signature():
     print("\n=== All Schnorr signature tests passed! ===\n")
 
 def test_key_gen():
-    sk_key, pk_key = sig.key_gen("P-256")
+    sig = Signature()
+    sk_key, pk_key = sig.key_gen()
     print(f"Private Key: {sk_key}")
     print(f"Public Key x: {pk_key.x}, y: {pk_key.y}")
 
     print("\nGenerating another keypair:")
-    sk_key, pk_key = sig.key_gen("P-256")
+    sk_key, pk_key = sig.key_gen()
     print(f"Private Key: {sk_key}")
     print(f"Public Key x: {pk_key.x}, y: {pk_key.y}")
 

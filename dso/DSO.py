@@ -1,21 +1,36 @@
 from utils.procedures import Procedures
-from utils.schnorr_priv_key_proof import schnorr_NIZKP_verify
-from utils.signature import schnorr_sign_list, schnorr_sign
+from utils.private_key_proof import schnorr_NIZKP_verify
 import random
 
 class DSO:
     """ 
-    The DSO works as a supplier and verifier in the system
+    Represents the Distribution System Operator (DSO).
+    
+    The DSO is the central authority in this system. It is responsible for:
+     - Generating the threshold encryption parameters.
+     - Registering and verifying all participants (Smart Meters, Aggregators, DR Aggregators).
+     - Defining the parameters for Demand Response (DR) events.
+     - Generating the "Noisy List" (decoy zero-reports) to ensure privacy set size.
+     - Distributing secret key shares to the Aggregators.
     """
     def __init__(self, init_id="DSO", pp=None):
+        """
+        Initializes the DSO entity.
+        
+        Generates:
+        - Signing Key Pair (sk, pk) for authenticating DSO messages.
+        - Threshold Encryption Key Pair (ek, shares) for the system-wide ElGamal cryptosystem.
+        """
         self.pro = Procedures()
         pp = self.pro.pub_param()
         self.registered_sm = []
         self.registered_agg = []
         self.registered_dr = []
         
-        #  SkeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
+        #  SKeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        
+        # Generate the main encryption key for the system and the shares for the aggregators
         ((self.ek, self.thresh_params, self.e_proof), self.key_shares) = self.pro.ekey_gen(pp)
         self.i = 0
 
@@ -23,93 +38,73 @@ class DSO:
         """Return the threshold parameters for decryption."""
         return self.thresh_params
     
-    # verifies every smart meter (users)
-    # and adds it into a registered list
     def verify_smartmeter(self, sm_info):
-        """Verifies a smartmeter by checking Schnorr's NIZKP.
-        If the NIZKP is valid, the smartmeter is added to the list of registered smartmeters.
+        """
+        Verifies every smart meter (users) and adds it into a registered list.
+        
+        It checks the Schnorr Non-Interactive Zero-Knowledge Proof (NIZKP) included 
+        in the request to ensure the Smart Meter actually owns the private key 
+        corresponding to the public key it claims.
 
         Args:
-            - sm_info (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]):
-                A tuple containing the smartmeter's information:
-                - sm_info[0] (str): The identity (ID) of the smartmeter.
-                - sm_info[1] (tuple): Cryptographic parameters:
-                    - sm_info[1][0] (EcPt): Public signature key (pk).
-                    - sm_info[1][1] (tuple): Public parameters (G, g, order).
-                    - sm_info[1][2] (tuple): Schnorr NIZKP proof (challenge, response, commitment)
+            sm_info (tuple): (id, (pk, pp, proof))
 
         Returns:
-            bool: False if the verification (Schnorr's NIZKP check) fails, 
-            if true then a the smartmeter to a list registered smartmeters 
+            bool: True if verification succeeds and SM is registered; False otherwise.
         """
 
         sm_id, val = sm_info
         # val = (pk, pp, proof)
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_sm.append((sm_id, val))
-            # print("smart meter: " + sm_id + " is verified")
         else:
             print("failed to verify smart meter")
             return False
     
-    # verifies every aggregator
-    # and adds it into a registered list
     def verify_aggregator(self, agg_info):
-        """Verifies a aggregator by checking Schnorr's NIZKP.
-        If the NIZKP is valid, the aggregator is added to the list of registered aggregators.
+        """
+        Verifies the Energy aggregator's NIZKP proof and adds it (if True) into a registered list.
 
         Args:
-            - agg_info (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]):
-                A tuple containing the aggregator's information:
-                - agg_info[0] (str): The identity (ID) of the aggregator.
-                - agg_info[1] (tuple): Cryptographic parameters:
-                    - agg_info[1][0] (EcPt): Public signature key (pk).
-                    - agg_info[1][1] (tuple): Public parameters (G, g, order).
-                    - agg_info[1][2] (tuple): Schnorr NIZKP proof (challenge, response, commitment)
+            agg_info (tuple): (id, (pk, pp, proof))
 
         Returns:
-            bool: False if the verification (Schnorr's NIZKP check) fails. 
+            bool: True if verification succeeds and Aggregator is registered.
         """
         agg_id, val = agg_info
-        # val = (pk, pp, proof)
+        
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_agg.append((agg_id, val))
-            # print("aggregator: " + agg_id + " is verified")
         else:
             print("failed to verify aggregator")
             return False
     
     def verify_dr_aggregator(self, dr_info):
-        """Verifies a dr aggregator by checking Schnorr's NIZKP.
-        If the NIZKP is valid, the aggregator is added to the list of registered dr aggregators.
+        """
+        Verifies the DR aggregator's NIZKP proof and adds it (if True) into a registered list.
 
         Args:
-            - agg_info (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]):
-                A tuple containing the dr aggregator's information:
-                - agg_info[0] (str): The identity (ID) of the dr aggregator.
-                - agg_info[1] (tuple): Cryptographic parameters:
-                    - agg_info[1][0] (EcPt): Public signature key (pk).
-                    - agg_info[1][1] (tuple): Public parameters (G, g, order).
-                    - agg_info[1][2] (tuple): Schnorr NIZKP proof (challenge, response, commitment)
+            dr_info (tuple): (Identity_String, (Public_Key, Public_Params, Proof_of_Knowledge))
 
         Returns:
-            bool: False if the verification (Schnorr's NIZKP check) fails. 
+            bool: True if verification succeeds and DR Aggregator is registered.
         """
         dr_id, val = dr_info
         # val = (pk, pp, proof) 
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_dr.append((dr_id, val))
-            # print("aggregator: " + dr_id + " is verified")
         else:
             print("failed to verify aggregator")
             return False
     
-    # DR parameters and target reductions
-    # Placeholder values for now
     def calculate_target_reduction():
         """ 
+        Static method to define the parameters for the current Demand Response event.
+        
+        Placeholder values.¨
+
         Returns:
-            tuple[tuple[EcGroup, EcPt, Bn], int]: 
+            tuple: (List_of_Params, Target_Reduction_Integer)
         """
         p = "1"
         phi = "0.05"
@@ -124,11 +119,17 @@ class DSO:
         target_reduction_value = 11
         return dr_param, target_reduction_value
 
-    # noisy list
-    # TODO check if the noisy list is actually a mathematic implementation (this code was done as a translation of the report words)
     def generate_noisy_list(self):
         """ 
+        Generates the Noisy List of encrypted zero-reports.
+        
+        The list contains encryptions of 0 and the amount of target reduction values from
+        calculate_target_reduction() that are then mixed in with real user reports.
+        This ensures that even if only a few users participate, the total anonymity set 
+        remains large enough to protect them.
+
         Returns:
+            tuple: (List_of_Encrypted_Values, Signature_on_List)
         """
         _, target_reduction = DSO.calculate_target_reduction()
 
@@ -144,53 +145,57 @@ class DSO:
 
         random.shuffle(values)
 
-        print(f"\n\ntarget reduc list: {values} \n\n")
+        print(f"\n\nNoisy Target Reduction list: {values} \n\n")
 
-        # encrypt each value in the noisy list and then sign the list
-        # enc() converts the values to bits
         enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
-        signature_TR = schnorr_sign(self.sk, self.pp, str(enc_TR))
+        signature_TR = self.pro.sig.schnorr_sign(self.sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR
 
     def get_public_key(self):
         """ 
+        The DSO's signing public key pk with pp and proof.
+
         Returns:
-            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]:
-            some explanantion
+            tuple: (Public_Key, Public_Params, Proof)
         """
         return (self.pk, self.pp, self.s_proof)
     
     def get_encryption_key(self):
         """ 
+        The DSO's Encryption key ek with pp and proof.
+
         Returns:
-            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]: 
-            some explanantion
+            tuple: (Encryption_Key_Point, Public_Params, Proof_of_Decryption_Capability)
         """
         return (self.ek, self.pp, self.e_proof)
     
     def set_agg_encryption_key(self, aggs):
         """
-
+        Stores the individual encryption keys of the Aggregators as aggs = [(id, ek)].
+        
         Args:
-            - aggs (tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]]) 
-
+            aggs (list): List of (id, key_struct) tuples.
         """
-        # aggs = [(id, ek)]
         self.agg_ek = {id: ek for (id, ek) in aggs}    
 
-    # REPORT: encrypting isn't implemented
-    # (otherwise elgamal would turn the scalar keyshare into a point, making it unusable for threshold
-    # decryption without solving discrete log)
-    # This should use secure channels over SSL in production
     def encrypt_dk_and_send_to_agg(self, agg_id):
         """
+        Distributes a Threshold Decryption Key Share to a specific Aggregator.
+
+        Note
+        In a real deployment, this is done over a secure channel (TLS/SSL).
+        Currently, it returns the raw scalar key (int) share to simulate how it would work in
+        a local environment. (encryption isnt inserted here since ElGamal would turn the scalar
+        keyshare into a point, making it unusable for threshold decryption without solving discrete log)
 
         Args:
-            - agg_id: (str): 
+            agg_id (str): The ID of the aggregator requesting the share.
 
+        Returns:
+            int: The private key share (Scalar).
         """
-        print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
+        # print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
 
         # TODO DOES NOT WORK
         # # check if keys are generated
@@ -222,21 +227,22 @@ class DSO:
         self.i = 1
         return share
 
-    # sign the lists of smartmeters and both aggregators
     def sign_registered_lists(self):
         """
-        returns:
-            tuple[list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
-            list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn],
-            list[(str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]])], tuple[EcPt, Bn]]
+        Cryptographically signs the lists of all Smart meters and both aggregators.
+        
+        This allows aggregators to verify that a Smart Meter 
+        participating in the protocol is legitimate and registered with the DSO.
+
+        Returns:
+            tuple: (SM_List, SM_Sigs, Agg_List, Agg_Sigs, DR_List, DR_Sigs)
         """
         sm_msg_list = [sm_id for sm_id, _ in self.registered_sm]
         agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]
         dr_msg_list = [dr_id for dr_id, _ in self.registered_dr]
 
-        # (sk, sec_params, msg_list)
-        sm_signatures = schnorr_sign_list(self.sk, self.pp, sm_msg_list)
-        agg_signatures = schnorr_sign_list(self.sk, self.pp, agg_msg_list)
-        dr_signatures = schnorr_sign_list(self.sk, self.pp, dr_msg_list)
+        sm_signatures = self.pro.sig.schnorr_sign_list(self.sk, self.pp, sm_msg_list)
+        agg_signatures = self.pro.sig.schnorr_sign_list(self.sk, self.pp, agg_msg_list)
+        dr_signatures = self.pro.sig.schnorr_sign_list(self.sk, self.pp, dr_msg_list)
 
         return (self.registered_sm, sm_signatures, self.registered_agg, agg_signatures, self.registered_dr, dr_signatures)

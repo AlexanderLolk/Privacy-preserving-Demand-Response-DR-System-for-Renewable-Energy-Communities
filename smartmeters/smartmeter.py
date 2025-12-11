@@ -1,10 +1,17 @@
 import time
 import random
-from utils.signature import schnorr_verify
 from utils.procedures import Procedures
 
 class SmartMeter:
-    """ """
+    """ 
+    Represents a Smart Meter (user).
+    
+    The Smart Meter (SM) is responsible for:
+     - generating its own identity keys.
+     - receiving necessary keys from the DSO (Distribution System Operator) and Aggregator.
+     - verifying its anonymized identity assignment.
+     - generating signed, encrypted reports of energy consumption/reduction.
+    """
     
     def __init__(self, init_id="sm_id", pp=None):
         self.pro = Procedures()
@@ -12,77 +19,76 @@ class SmartMeter:
         if pp is None:
            pp = self.pro.pub_param()
 
+        # Generate signing key pair and proof of ownership
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        
         # as a default
         self.participating = False
 
     def get_public_key(self):
         """
-        return:
-            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
+        Retrieves the Smart Meter's public key package.
+
+        Returns:
+            tuple: (Public_Key_Point, Public_Params, Proof_of_Knowledge)
         """
         return (self.pk, self.pp, self.s_proof)
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
-        Args:
-          dso_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
-          dso_ek: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]
+        Stores the Distribution System Operator's keys.
+        These are needed to encrypt reports destined for the DSO.
 
+        Args:
+            dso_pk (tuple): The DSO's signing public key structure.
+            dso_ek (tuple): The DSO's ElGamal encryption key structure 
+                            (includes the Public Key Point and Threshold Params).
         """
         self.dso_pk = dso_pk
         self.dso_ek = dso_ek
 
     def set_agg_public_keys(self, agg_pk):
         """
+        Stores the Aggregator's public key.
+        This is needed to verify signatures on messages (like anon keys) coming from the Aggregator.
 
         Args:
-          agg_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
-
-        Returns:
-
+            agg_pk (tuple): The Aggregator's signing public key structure.
         """
         self.agg_pk = agg_pk
 
-    # Mix()
     def set_anon_key(self, anon_key):
-        """ Receives the randomness used to mix this sm's key.
-        Reconstructs the anonymous identity (pk') using pk + (r' * g).
+        """ 
+        Receives the randomness (blinding factor) used in Mix_id().
         
+        This allows the Smart Meter to locally reconstruct its "Anonymous Identity" (pk')
+        without revealing its value.
+        pk' = pk + r'
+        
+        It also verifies the Aggregator's signature on this assignment to ensure authenticity.
+
         Args:
-            anon_key: tuple[EcPt, tuple[EcPt, Bn]]: 
-
+            anon_key (tuple): A tuple containing (r_prime, signature).
+                              r_prime is the blinding factor (EC Point or Scalar).
         """
-
-        # r_prime is the randomness used in the mixing
         r_prime, signature = anon_key
         
-        if not schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
+        if not self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
             print("Anonymous key signature verification failed.")
         
-        # self.r_prime = r_prime # Store the randomness
-
-        # _, g, _ = self.pp
-
-        # Using additive to reconstruct identity
-        # The blinding_factor is (r' * g). It is the vector you add to your position to hide where you started.
-        # pk_prime = r_prime * g
-
         # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
         self.anon_id = r_prime
 
-    # Report()
-    # TODO: make sure m shouldnt be something else (main.py: m is set to be 10, it's placeholder right now)
-    def generate_and_send_report(self, m):
+    def get_sm_baseline(self, m):
         """
+        Generates a signed and encrypted report for a demand response event.
 
         Args:
-          m: TODO
+            m (int): The message payload.
 
         Returns: 
-            tuple[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]], tuple[int, list[tuple[EcPt, EcPt]], tuple[Bn, Bn, EcPt]]]
-            (user_pk, (t, ct, signing_σ))
-
+            tuple: (User_Public_Key, (Timestamp, Ciphertexts, Signature))
+                   This structure matches the input expected by the Aggregator/DSO.
         """
 
         if m > 0:
@@ -94,39 +100,52 @@ class SmartMeter:
     
     def get_sm_consumption(self):
         """ 
-            Returns: tuple[list[tuple[]], tuple[]]
+        Simulates generating a standard consumption report.
+        
+        Placeholder:
+            Currently generates a random consumption value between 9 and 10 for testing.
+
+        Returns: 
+            tuple: The signed and encrypted report object.
         """
         t = int(time.time())
 
-        # Placeholder since we dont have real data
-        # while target reduction is 10
         consume = random.randint(9, 10)
         consumption_report = self.pro.report(self.id, self.sk, self.dso_ek, consume, t, self.get_public_key())
         return consumption_report
     
     def is_participating(self):
+        """
+        Returns whether this SM has participated (sent a non-zero reduction) in the current event.
+        """
         return self.participating
 
     def check_if_in_event(self, input):
         """
+        Checks if this Smart Meter was selected for the event.
+
+        The input is a list of Anonymous Public Keys (pk'). 
+        The Smart Meter calculates its own pk' (pk + anon_id) and checks if it exists in the list.
 
         Args:
-          input: [EcPt]
+            input (list): A list of EC Points representing the anonymous public keys of selected participants.
 
+        Returns:
+            None: Sets the internal state `self.in_event`.
         """
         sm_pk_prime = (self.anon_id + self.pk)
-        print("")
+        # print("")
 
-        # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: {str(input)} \nwith the anon_pk as: x = {self.anon_id.x}, y = {self.anon_id.x}")
         for anon_pk in input:
-            # print(f"\nin sm as {self.id}, \ncheck_if_in_event's input: x = {anon_pk.x},\n y = {anon_pk.y} \nwith the anon_pk as: x = {sm_pk_prime.x},\n y = {sm_pk_prime.y}")
             if sm_pk_prime == anon_pk:
                 print("SM: " + self.id + " is a participant in the event")
                 self.in_event = True
                 return
             else:
-                # print("SM: " + self.id + " didnt get a inv")
                 self.in_event = False
     
     def in_event(self):
+        """
+        Getter for the event participation status.
+        """
         return self.in_event

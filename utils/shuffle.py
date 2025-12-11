@@ -14,8 +14,8 @@ class Shuffle:
        without revealing the permutation mapping.
 
     References:
-    - Code inspired by https://github.com/hyperion-voting/hyperion/blob/main/subroutines.py#L586
-    - Algorithms based on "Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets" (Haenni, Locher, Koenig, Dubuis, 2017).
+        - Code inspired by https://github.com/hyperion-voting/hyperion/blob/main/subroutines.py#L586
+        - Algorithms based on "Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets" (Haenni, Locher, Koenig, Dubuis, 2017).
     """
     def __init__(self, pp):
         (self.curve, self.g, self.order) = pp
@@ -347,11 +347,13 @@ class Shuffle:
         # Verify t1 = -challenge*c_bar + s1*g
         t1_prime = (-(int(challenge) * c_bar)) + (int(s1) * self.g)
         t1_check = (t1 == t1_prime)
-        
+        assert t1 == t1_prime
+
         # Verify t2 = -challenge*c_hat_final + s2*g
         t2_prime = (-(int(challenge) * c_hat_final)) + (int(s2) * self.g)
         t2_check = (t2 == t2_prime)
-        
+        assert t2 == t2_prime
+
         # Verify t3
         t3_prime_1 = -(int(challenge) * c_tilde)
         t3_prime_2 = int(s3) * self.g
@@ -362,6 +364,7 @@ class Shuffle:
         
         t3_prime = t3_prime_1 + t3_prime_2 + t3_prime_prod
         t3_check = (t3 == t3_prime)
+        assert t3 == t3_prime
 
         # Verify t4
         sum_s_prime_e_prime = int(s_prime[0]) * e_prime[0]
@@ -377,6 +380,7 @@ class Shuffle:
         
         t4_prime = sum_s_prime_e_prime + (-term_challenge) + (-term_s4)
         t4_check = (t4 == t4_prime)
+        assert t4 == t4_prime
 
         # Verify t_hat chain
         t_hat_valid = True
@@ -399,8 +403,6 @@ class Shuffle:
             t4_check and
             t_hat_valid
         )
-        
-        print(f"\n[DEBUG] Final result: {result}")
-        print(f"[DEBUG] Summary: t1={t1_check}, t2={t2_check}, t3={t3_check}, t4={t4_check}, t_hat={t_hat_valid}")
+        assert t_hat_valid == True
         
         return result

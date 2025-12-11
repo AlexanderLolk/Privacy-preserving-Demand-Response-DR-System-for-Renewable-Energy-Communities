@@ -1,19 +1,28 @@
 from utils.procedures import Procedures
-from utils.signature import schnorr_verify, schnorr_sign
-import utils.anonym as anonym
 
 class Aggregator:
     """ 
+    Represents the Energy Aggregator.
     
+    The Aggregator acts as an intermediary between Smart Meters and the DSO/Board.
+    Its responsibilities include:
+     - Mixing (Anonymizing): Shuffling and re-randomizing Smart Meter public keys.
+     - Collection: Receiving encrypted reports from Smart Meters.
+     - Anonymization: Stripping any un-needed identifier data before going on the Board.
+     - Partial Decryption: Using its secret key share to partially decrypt the final results.
     """
     def __init__(self, init_id="agg_id", pp=None):
+        """
+        Initializes the Aggregator.
+        Generates signing keys and encryption keys (though encryption keys are often 
+        just shares distributed by the DSO in this threshold scheme).
+        """
         self.pro = Procedures()
         if pp is None:
            pp = self.pro.pub_param()
 
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
-        
-        # TODO: do we need ek for the aggregator?
+        # primarily uses the key share 'dk' from the DSO.
         ((self.ek, _, self.e_proof), self.dk) = self.pro.ekey_gen_single(pp)
 
         self.participants = []
@@ -22,78 +31,69 @@ class Aggregator:
         self.pk_to_pk_prime = {}
     
     def get_id(self):
-        """ 
-        return: 
-            str:
-        """
+        """Returns the Aggregator's ID string."""
         return self.id
 
     def get_public_key(self):
-        """ 
-        return:
-            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
-        """
+        """Returns the Aggregator's signing public key package."""
         return (self.pk, self.pp, self.s_proof)
     
     def get_encryption_key(self):
-        """ 
-        Returns:
-            tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]: 
-        """
+        """Returns the Aggregator's own encryption key package."""
         return (self.ek, self.pp, self.e_proof)
     
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
-
-        Args:
-          dso_pk: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]
-          dso_ek: tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]
-
+        Stores the DSO's public keys. 
+        Needed to verify DSO signatures or encrypt data for the DSO.
         """
         self.dso_pk = dso_pk
         self.dso_ek = dso_ek
         
     def set_dso_dk(self, key_share):
         """
+        Stores the Threshold Decryption Key Share assigned by the DSO.
+        This share is used to partially decrypt the aggregated results.
+        
         Args:
-          cipher_signature: Bn
+          key_share: The secret scalar share x_i.
         """
         self.dk_share = key_share
 
-    # MIX: create mixed anonymous pk set
-    # Report: this is signed by the aggregator, the idea is to prove this specific aggregator did the mixing
-    # send (pk_prime, πmix) to board
     def create_mixed_anon_pk_set(self, ID_pk):
         """
+        Executes the Mix shuffle protocol.
+        
+        Takes a list of real identities (Public Keys), shuffles them, and re-randomizes them.
+        Generates a Zero-Knowledge Proof (πmix) that the output set is a valid shuffle of the input.
+
         Args:
-          ID_pk: list[tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[Bn, Bn, EcPt]]]
+          ID_pk: List of registered Smart Meter public keys.
         """
         self.mix_anon_list = self.pro.mix_id(ID_pk, self.pp[1])   
 
     def publish_mixed_keys(self):
         """ 
-        return: 
-            tuple[list[EcPt], 
-            tuple[tuple[EcPt, EcPt, EcPt, EcPt, list[EcPt]], 
-                tuple[Bn, Bn, Bn, Bn, list[Bn], list[Bn]], 
-                list[EcPt],
-                list[EcPt],
-                EcPt,
-                list[EcPt]]]
+        Returns the result of the mixing process to be published on the Board.
+
+        Returns:
+            tuple: (List_of_Anonymized_PKs, Shuffle_Proof)
         """
-        # publish (pk_prime, πmix)
-        # TODO: sign the list? or each element?
         return (self.mix_anon_list[0], self.mix_anon_list[2])
     
     def set_anon_key_mix(self, sm):
         """
+        Retrieves the specific blinding factor (randomness) used for a specific Smart Meter.
+        
+        This allows the Aggregator to privately inform the Smart Meter that they can recognice
+        themselves in the anonymized list (since the random value is added to their key).
+        
         Args:
-          sm:  tuple[str, tuple[EcGroup, EcPt, Bn]]
+          sm: Tuple containing the Smart Meter's ID and Public Key.
 
         Returns:
-            tuple[Bn, tuple[Bn, Bn, EcPt]]
+            tuple: (Blinding_Factor_Point, Signature)
         """
-        # sm can be either (id, pk) or just pk
         if isinstance(sm, tuple):
             sm_pk = sm[0]
         else:
@@ -112,9 +112,9 @@ class Aggregator:
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:
-                    sign_r_prime = schnorr_sign(self.sk, self.pp, str(blinding_factor))
+                    sign_r_prime = self.pro.sig.schnorr_sign(self.sk, self.pp, str(blinding_factor))
 
-                    # TODO NOT SURE IF STORING IS THE RIGHT WAY
+                    # Store mapping of pk -> Blinding_Factor for later use in Anonym()
                     pk_str = str((sm_pk.x, sm_pk.y))
                     self.pk_to_pk_prime[pk_str] = blinding_factor
                     
@@ -124,39 +124,35 @@ class Aggregator:
         print("Public key not found in r_prime")
         return None
 
+    def check_sm_baseline(self, baseline_report, sm_id="NOT_SAID"):
+        """
+        Receives, verifies, and stores a report from a Smart Meter.
+        
+        It checks:
+        1. The signature on the report.
+        2. Whether the report is an "empty" zero-report (using the deterministic encryption check).
+           - If it's a zero baseline report, the user is ignored (did not participate).
+           - If it's a valid report, they are added to the participants list.
 
-    # report
-    # report is decrypted and verified
-    # Report: remember there is a certain time period where smartmeters can/should sign up for an event (scenario: if there is one participant only, and that participant immidietly starting the event, that participant would be able to be figured out who they are)
-    def check_sm_report(self, sm_report, sm_id="NOT_SAID", consumption=False):
-        (pk, (t, cts, signature)) = sm_report
-        # sm_pk_pt, group, _ = pk
+        Args:
+          sm_report: The report tuple (PK, (Time, Ciphertext, Signature)).
+          sm_id: ID for logging purposes.
+          consumption (bool): False if this is a Baseline report, True if Consumption report.
+        """
+        (pk, (t, cts, signature)) = baseline_report
+        
         sm_pk = pk[0]
         pp = pk[1]
-        # print("cts is " + str(cts))
-        if not schnorr_verify(sm_pk, pp, str((t, cts)), signature):
-            print("Signature verification failed.")
-            return
+        
+        if not self.pro.sig.schnorr_verify(sm_pk, pp, str((t, cts)), signature):
+            raise ValueError("baseline check failed")
 
         g = pp[1]
-        
-        # partial_from_agg = self.pro.ahe.partial_decrypt(cts, self.dk_share)
-        # partial_from_dr = dr_aggregator.get_partial_decryption_share(cts)
-        
-        # partial_combined = partial_from_agg + partial_from_dr
 
-        # print(f"combined length is {len(partial_combined)} of the partial decryptions")
-        # msg_val = self.pro.ahe.threshold_decrypt(
-        #     partial_combined,
-        #     cts,
-        #     self.thresh_params
-        # )
-
-        # print(f" decrypted msg value: {msg_val}")
-
+        # Generate a deterministic encryption of 0 to check against
         deterministic_check = self.pro.ahe.enc(self.dso_ek[0], 0, r=1)
 
-
+        # Identify the anonymized key (pk') corresponding to this report
         pk_prime = None
         for r_prime in self.mix_anon_list[1]:
             blinding_factor = int(r_prime) * g
@@ -166,80 +162,139 @@ class Aggregator:
                 if pk_prime_check == pk_prime_candidate:
                     pk_prime = pk_prime_check
         
-        if not consumption and cts != deterministic_check:
+        # If it's a baseline report and not zero (meaning sm wants to participate)
+        if cts != deterministic_check:
             print(f"{sm_id} wants to join DR event \n")
-            self.participants_baseline_report.append(sm_report)
+            self.participants_baseline_report.append(baseline_report)
             self.participants.append(pk_prime)
-        elif consumption:
-            self.participants_consumption_report.append(sm_report)
+
+    def check_sm_consumption(self, consumption_report, sm_id="NOT_SAID"):
+        """
+        Receives, verifies, and stores a report from a Smart Meter.
+        
+        It checks:
+        1. The signature on the report.
+        2. Whether the report is an "empty" zero-report (using the deterministic encryption check).
+           - If it's a zero baseline report, the user is ignored (did not participate).
+           - If it's a valid report, they are added to the participants list.
+
+        Args:
+          sm_report: The report tuple (PK, (Time, Ciphertext, Signature)).
+          sm_id: ID for logging purposes.
+          consumption (bool): False if this is a Baseline report, True if Consumption report.
+        """
+        (pk, (t, cts, signature)) = consumption_report
+        
+        sm_pk = pk[0]
+        pp = pk[1]
+        
+        if not self.pro.sig.schnorr_verify(sm_pk, pp, str((t, cts)), signature):
+            raise ValueError("Consumption check failed")
+        g = pp[1]
+        
+        self.participants_consumption_report.append(consumption_report)
             
     def get_participants(self):
-        """ 
-        return:
-            list[EcPt]
-        """
+        """Returns list of anonymized public keys of participants."""
         return self.participants
     
     def get_participants_baseline(self):
+        """Returns list of raw baseline reports."""
         return self.participants_baseline_report
     
     def get_participants_consumption(self):
-        """ 
-        return:
-            list[EcPt]
-        """
+        """Returns list of raw consumption reports."""
         return self.participants_consumption_report
     
     def get_agg_id_And_encryption_key(self):
-        """ 
-        return:
-            tuple[str, tuple[EcPt, tuple[EcGroup, EcPt, Bn], tuple[EcPt, tuple[EcPt, EcPt], tuple[EcPt, EcPt], Bn]]]
-        """
+        """Returns ID and Encryption Key."""
         return (self.id, self.get_encryption_key())
     
-    # Not implemented (see utils/anonym.py)
-    def make_anonym(self, consumption=False):
-        """ 
-        return:
-            tuple[tuple[Bn, tuple[Bn, Bn, EcPt]], tuple[EcPt, tuple[EcPt, EcPt], int, str(placeholder)]]
+    def make_anonym_baseline(self):
         """
+        Executes the 'Anonym' protocol to publish reports to the Board.
+        
+        This batches the collected reports, replaces real PKs with Anonymized PKs,
+        and signs the batch.
 
-        # TODO PART OF UNSURE STORING OF R_PRIME
+        Returns:
+            tuple: (Batch_Signature, List_of_Anonymized_Entries)
+        """
+        # Match blinding factors to the sorted list of reports
         r_prime_list = []
         for (pk, _, _), _ in self.participants_baseline_report:
             pk_str = str((pk.x, pk.y))
             r_prime = self.pk_to_pk_prime[pk_str]
             r_prime_list.append(r_prime)
-
-        if not consumption:
-            return anonym.Anonym(self.get_participants_baseline(), r_prime_list, self.sk)
+        return self.pro.anonym(self.get_participants_baseline(), r_prime_list, self.sk)
+    
+    def make_anonym_consumption(self):
+        """
+        Executes the 'Anonym' protocol to publish reports to the Board.
         
-        return anonym.Anonym(self.get_participants_consumption(), r_prime_list, self.sk)
+        This batches the collected reports, replaces real PKs with Anonymized PKs,
+        and signs the batch.
+
+        Returns:
+            tuple: (Batch_Signature, List_of_Anonymized_Entries)
+        """
+        
+        # Match blinding factors to the sorted list of reports
+        r_prime_list = []
+        for (pk, _, _), _ in self.participants_consumption_report:
+            pk_str = str((pk.x, pk.y))
+            r_prime = self.pk_to_pk_prime[pk_str]
+            r_prime_list.append(r_prime)
+        return self.pro.anonym(self.get_participants_consumption(), r_prime_list, self.sk)
     
     def partial_dec_reports(self, baseline_BB, consumption_PBB):
+        """
+        Performs partial decryption on reports gotten from the Bulletin Board.
+        
+        It iterates through the participants, finds their encrypted reports on the board,
+        and applies the Aggregator's key share to generate a Partial Decryption Share.
+
+        Args:
+          baseline_BB: Map of baseline reports from Board.
+          consumption_PBB: Map of consumption reports from Board.
+
+        Returns:
+            tuple: (Baseline_Partial_Shares, Consumption_Partial_Shares)
+        """
         baseline_pk_to_part = {}
         consumption_pk_to_part = {}
-        # baseline_part = []
-        # consumption_part = []
-        # print(f"\n\n\n in agg, len of get_participants = {len(self.get_participants())}\n\n\n")
-        for pk_prime in self.get_participants():
-            pk_prime_str = str((pk_prime.x, pk_prime.y))
-            # baseline_BB[pk_prime] = (ct, t, proof)
-            sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
-            # baseline_part.append((pk_prime, self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share), sm_baseline_t, sm_baseline_proof))
-            baseline_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share), sm_baseline_t, sm_baseline_proof)
 
-            # baseline_BB[pk_prime] = (ct, t, proof)
+        for pk_prime in self.get_participants():
+            # Convert the EC Point to a string key for dict lookup
+            pk_prime_str = str((pk_prime.x, pk_prime.y))
+            
+            # Process Baseline Report
+            # Retrieve the encrypted baseline report from the Board using the anonymized key
+            sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
+            baseline_pk_to_part[pk_prime_str] = (
+                self.pro.ahe.partial_decrypt(sm_baseline_ct, self.dk_share),
+                sm_baseline_t,
+                sm_baseline_proof
+            )
+
+            # Process Consumption Report
+            # Retrieve and partially decrypt the consumption report similarly
             sm_consumption_t, sm_consumption_ct, sm_consumption_proof = consumption_PBB[pk_prime_str]
-            # consumption_part.append((pk_prime, self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof))
-            consumption_pk_to_part[pk_prime_str] = (self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share), sm_consumption_t, sm_consumption_proof)
+            consumption_pk_to_part[pk_prime_str] = (
+                self.pro.ahe.partial_decrypt(sm_consumption_ct, self.dk_share),
+                sm_consumption_t,
+                sm_consumption_proof
+            )
 
         return (baseline_pk_to_part, consumption_pk_to_part)
     
     def partial_dec_equal_cts(self, equal_cts):
+        """
+        Helper function to partially decrypt a list of specific ciphertexts.
+        Often used for verifying the DSO's Noisy List.
+        """
         partial_cts = []
         for ct in equal_cts:
-            # print(f"\nct in partial_dec_equal_cts in agg: {ct}")
             partial_ct = self.pro.ahe.partial_decrypt(ct, self.dk_share)
             partial_cts.append(partial_ct)
         return partial_cts

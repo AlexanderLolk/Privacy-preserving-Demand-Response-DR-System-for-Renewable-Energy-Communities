@@ -1,6 +1,5 @@
 from utils.ec_elgamal import ElGamal
 
-
 def test_keygen(el):
     (ek, _), dk = el.keygen()
     # type of each:
@@ -12,20 +11,14 @@ def test_keygen(el):
 
 def test_int_to_bytes_enc(el):
     msg = 0
-    # binary_string = f'{msg:b}'
-    # print("msg to bits: " + binary_string)
 
-    # self.int_to_bits(msg)
     (ek, _), dk = el.keygen()
-    # ek, dks = self.keygen_threshold()
+
     encryptions = el.enc(ek, msg)
-    # print(str(encryptions))
+
     message = el.dec(dk, encryptions)
+
     print("decrypted message: " + str(message))
-    # ek, dk = self.keygen()
-    # cipher = self.encrypt(ek, msg)
-    # message_dec_int = self.decrypt(dk, cipher, msg)
-    # assert msg == message_dec_int
         
 
 def test_elgamal(el):
@@ -65,10 +58,8 @@ def test_elgamal_big_number(el):
 def test_threshold_elgamal(el):
         
     pub_key, key_shares, thresh_params = el.keygen_threshold()
-    # print("Generated 2-of-2 threshold keys")
 
     m = 1
-    # print(f"Original message: {m}")
 
     encrypted_msg = el.enc(pub_key, m)
     print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
@@ -92,56 +83,10 @@ def test_threshold_elgamal(el):
     decrypted_msg = el._eval_threshold_decrypt(partial_combined, encrypted_msg)
     print(f"\nFinal decrypted message point: {decrypted_msg}")
 
-    # assert decrypted_msg == m, f"Expected {m}, got {decrypted_msg}"
-
-# def test_threshold_elgamal_sub(el):
-        
-#     pub_key, key_shares, thresh_params = el.keygen_threshold()
-#     # print("Generated 2-of-2 threshold keys")
-
-#     m = 10
-#     # print(f"Original message: {m}")
-#     sub_m = 9
-
-#     encrypted_msg = el.enc(pub_key, m)
-
-#     encrypted_msg_sub = el.enc(pub_key, sub_m)
-
-#     print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
-#     print(f"Encrypted sub message: {len(encrypted_msg_sub)} ciphertexts (one per bit)")
-
-#     combind = []
-#     for i in range(len(encrypted_msg)):
-#         c1_m, c2_m = encrypted_msg[i]
-#         c1_sub, c2_sub = encrypted_msg_sub[i]
-#         combind.append((c1_m + (-c1_sub), c2_m + (-c2_sub)))
-
-#     print("key shares: " + str(key_shares))
-#     # Compute partial decryptions from each key share
-#     # Each returns a list of PartialDecryption objects, one per bit
-#     partial_from_share0 = el.partial_decrypt(combind, key_shares[0])
-#     partial_from_share1 = el.partial_decrypt(combind, key_shares[1])
-    
-#     # Combine: interleave them so we have [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
-#     partial_combined = partial_from_share0 + partial_from_share1
-    
-#     print(f"Computed partial decryptions from {len(key_shares)} key shares")
-#     print(f"Total partial decryptions: {len(partial_combined)}")
-
-#     decrypted_msg = el.threshold_decrypt(partial_combined, combind, thresh_params)
-#     print(f"Final decrypted message point: {decrypted_msg}")
-#     print(f"decrypted_msg: x = {decrypted_msg.x}, y = {decrypted_msg.y}")
-    
-#     decrypted_msg = el._eval_threshold_decrypt(partial_combined, combind)
-#     print(f"\nFinal decrypted message point: {decrypted_msg}")
-#     assert decrypted_msg == m - sub_m, f"Expected {m - sub_m}, got {decrypted_msg}"
-
-
 def test_threshold_elgamal_on_target_reduction(el):
     pub_key, key_shares, thresh_params = el.keygen_threshold()
     
     m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
-    # m = [1, 0, 0, 1, 0]
 
     enc_tr = [el.enc(pub_key, val) for val in m]
     iden0 = 0 * el.pp[1]
@@ -154,7 +99,6 @@ def test_threshold_elgamal_on_target_reduction(el):
     decrypted = []
     for list_of_cts in enc_tr:
         # list_of_cts [(ct1, ct2),......]
-        # print(f"list_of_cts = {list_of_cts}")
         partials_share0 = el.partial_decrypt(list_of_cts, key_shares[0])
         partials_share1 = el.partial_decrypt(list_of_cts, key_shares[1])
         combined_partials = partials_share0 + partials_share1
@@ -164,7 +108,6 @@ def test_threshold_elgamal_on_target_reduction(el):
 
         print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
         
-        # assert (plaintext_point.x == iden0.x and plaintext_point.y == iden0.y) or (plaintext_point.y == iden1.y and plaintext_point.x == iden1.x)
         decrypted_point.append(plaintext_point)
         decrypted.append(plaintext)
 
@@ -177,7 +120,6 @@ def test_threshold_elgamal_on_target_reduction_eval(el):
     pub_key, key_shares, thresh_params = el.keygen_threshold()
     
     m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
-    # m = [1, 0, 0, 1, 0]
 
     enc_tr = [el.enc(pub_key, val) for val in m]
     iden0 = 0 * el.pp[1]
@@ -190,7 +132,6 @@ def test_threshold_elgamal_on_target_reduction_eval(el):
     decrypted = []
     for list_of_cts in enc_tr:
         # list_of_cts [(ct1, ct2),......]
-        # print(f"list_of_cts = {list_of_cts}")
         partials_share0 = el.partial_decrypt(list_of_cts, key_shares[0])
         partials_share1 = el.partial_decrypt(list_of_cts, key_shares[1])
         combined_partials = partials_share0 + partials_share1
@@ -200,7 +141,6 @@ def test_threshold_elgamal_on_target_reduction_eval(el):
 
         print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
         
-        # assert (plaintext_point.x == iden0.x and plaintext_point.y == iden0.y) or (plaintext_point.y == iden1.y and plaintext_point.x == iden1.x)
         decrypted_point.append(plaintext_point)
         decrypted.append(plaintext)
 
@@ -209,22 +149,17 @@ def test_threshold_elgamal_on_target_reduction_eval(el):
 
     print("all good") 
 
-
-
 def test_eval_threshold_elgamal(el):
         
     pub_key, key_shares, thresh_params = el.keygen_threshold()
-    # print("Generated 2-of-2 threshold keys")
 
     m = 12
-    # print(f"Original message: {m}")
 
     encrypted_msg = el.enc(pub_key, m)
     print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
 
     print("key shares: " + str(key_shares))
     # Compute partial decryptions from each key share
-    # Each returns a list of PartialDecryption objects, one per bit
     partial_from_share0 = el.partial_decrypt(encrypted_msg, key_shares[0])
     partial_from_share1 = el.partial_decrypt(encrypted_msg, key_shares[1])
     
@@ -241,13 +176,10 @@ def test_eval_threshold_elgamal(el):
 
 def test_threshold_elgamal_point(el):
     pub_key, key_shares, thresh_params = el.keygen_threshold()
-    # print("Generated 2-of-2 threshold keys")
 
     m = 12
-    # print(f"Original message: {m}")
 
     encrypted_msg = el.enc(pub_key, m)
-    # print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
 
     # Compute partial decryptions from each key share
     # Each returns a list of PartialDecryption objects, one per bit
@@ -264,7 +196,7 @@ def test_threshold_elgamal_point(el):
     print(f"Total partial decryptions: {len(partial_combined)}")
 
     decrypted_msg = el.threshold_decrypt(partial_combined, encrypted_msg, thresh_params)
-    # decrypted_msg = self.threshold_decrypt([partial_from_share0, partial_from_share0], encrypted_msg, thresh_params)
+
     print(f"Final decrypted message: {decrypted_msg}")
 
     msg_point = m * el.pp[1]
@@ -276,10 +208,8 @@ def test_threshold_elgamal_point(el):
 def test_threshold_elgamal_deterministic_0(el):
         
     pub_key, key_shares, thresh_params = el.keygen_threshold()
-    # print("Generated 2-of-2 threshold keys")
 
     m = 0
-    # print(f"Original message: {m}")
 
     encrypted_msg = el.enc(pub_key, m, r=1)
     # print(f"Encrypted message: {len(encrypted_msg)} ciphertexts (one per bit)")
@@ -308,10 +238,8 @@ def test_threshold_elgamal_deterministic_0(el):
     print(f"Final decrypted message: {decrypted_msg}")
     msg_point = m * el.pp[1]
 
-
     # Compare point coordinates
     assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
-
 
 if __name__ == "__main__":
     el = ElGamal()
@@ -320,7 +248,6 @@ if __name__ == "__main__":
     test_elgamal(el)
     test_elgamal_big_number(el)
     test_threshold_elgamal(el)
-    # test_threshold_elgamal_sub(el)
     test_threshold_elgamal_on_target_reduction(el)
     test_threshold_elgamal_on_target_reduction_eval(el)
     test_eval_threshold_elgamal(el)
