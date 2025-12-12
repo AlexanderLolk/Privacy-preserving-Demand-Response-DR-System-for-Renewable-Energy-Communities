@@ -1,5 +1,6 @@
 from utils.procedures import Procedures
 from utils.private_key_proof import schnorr_NIZKP_verify
+from utils.elgamal_dec_proof import verify_correct_decryption
 import random
 
 class DSO:
@@ -26,6 +27,7 @@ class DSO:
         self.registered_sm = []
         self.registered_agg = []
         self.registered_dr = []
+        self.agg_ek = {}
         
         #  SKeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
@@ -58,8 +60,7 @@ class DSO:
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_sm.append((sm_id, val))
         else:
-            print("failed to verify smart meter")
-            return False
+            raise ValueError("failed to verify smart meter")
     
     def verify_aggregator(self, agg_info):
         """
@@ -76,8 +77,7 @@ class DSO:
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_agg.append((agg_id, val))
         else:
-            print("failed to verify aggregator")
-            return False
+            raise ValueError("failed to verify aggregator")
     
     def verify_dr_aggregator(self, dr_info):
         """
@@ -94,8 +94,7 @@ class DSO:
         if schnorr_NIZKP_verify(val[0], val[1], val[2]):
             self.registered_dr.append((dr_id, val))
         else:
-            print("failed to verify aggregator")
-            return False
+            raise ValueError("failed to verify dr aggregator")
     
     def calculate_target_reduction():
         """ 
@@ -170,14 +169,36 @@ class DSO:
         """
         return (self.ek, self.pp, self.e_proof)
     
-    def set_agg_encryption_key(self, aggs):
+    def set_agg_encryption_key(self, agg, dr_agg=False):
         """
         Stores the individual encryption keys of the Aggregators as aggs = [(id, ek)].
         
         Args:
-            aggs (list): List of (id, key_struct) tuples.
+            agg (tuple): tuple of (id, tuple(ek, pp, proof) signature) tuples.
         """
-        self.agg_ek = {id: ek for (id, ek) in aggs}    
+        id, (ek, pp, proof), signature = agg
+        message_to_verify = id + str(ek.x) + str(ek.y)
+
+        pk = None
+        if dr_agg == False:
+            for agg_id, val in self.registered_agg:
+                if agg_id == id:
+                    pk = val[0]
+
+        elif dr_agg == True:
+            for dr_id, val in self.registered_dr:
+                if dr_id == id:
+                    pk = val[0]
+                    break
+
+        if pk is None or pp is None:
+            raise ValueError("pk could not be found in registy")
+        if not self.pro.sig.schnorr_verify(pk, pp, message_to_verify, signature):
+            raise ValueError("dso failed to verify aggregator")
+        if not verify_correct_decryption(ek, pp, proof):
+            raise ValueError("dso failed to verify aggregator's proof of correct decryption")
+
+        self.agg_ek[id] = ek  
 
     def encrypt_dk_and_send_to_agg(self, agg_id):
         """
@@ -193,7 +214,7 @@ class DSO:
             agg_id (str): The ID of the aggregator requesting the share.
 
         Returns:
-            int: The private key share (Scalar).
+            tuple: (x position, The private key share (Scalar), Signature on the share)
         """
         # print("[NOT IMP] In dso.encrypt_dk_and_send_to_agg: un-encrypted dso dk given to agg (supposed to be a private channel over SSL)")
 
@@ -224,8 +245,16 @@ class DSO:
 
         # stupid but works
         share = self.key_shares[self.i]
-        self.i = 1
-        return share
+    
+        # encrypt the share with the agg's encryption key
+        x = share.x
+        y = share.y
+        # print(f"DSO encrypting dk share {x}, {y} for agg {agg_id} with ek {self.agg_ek[agg_id]}")
+        sig_share = self.pro.sig.schnorr_sign(self.sk, self.pp, str((x, y)))
+        enc_share = self.pro.ahe.enc(self.agg_ek[agg_id], y)
+
+
+        return x, enc_share, sig_share
 
     def sign_registered_lists(self):
         """

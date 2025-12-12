@@ -1,5 +1,6 @@
 from utils.ec_elgamal import ElGamal
 import utils.elgamal_dec_proof as dec
+# test has been made with help from ai
 
 def test_dec_proof():
     """Test decryption proof generation and verification."""
@@ -54,7 +55,7 @@ def test_partial_decryption_share_proof():
     proof = dec.prove_partial_decryption_share(elgamal.pp, ciphertext, key_shares[0])
 
     print("\n4. Verifying partial decryption share proof")
-    is_valid = dec.verify_partial_decryption_share(elgamal.pp, proof)
+    is_valid = dec.verify_partial_decryption_share(elgamal.pp, ciphertext, proof)
     print(f"   Valid: {is_valid}")
     assert is_valid, "Partial decryption share proof verification failed!"
 

@@ -4,6 +4,7 @@ import aggregators.aggregator   as energy_aggregator
 import aggregators.dr           as dr_aggregator
 import boards.board             as board
 import utils.eval               as eval
+from utils.elgamal_dec_proof import verify_partial_decryption_share
 
 # Main Simulation Runner
 # Main simulates the full protocol.
@@ -43,8 +44,11 @@ if __name__ == "__main__":
     # Extract public keys for registration
     sm_info     = [(smartmeter.id, smartmeter.get_public_key()) for smartmeter in sms]
     agg_info    = [(aggregator.id, aggregator.get_public_key()) for aggregator in aggs]
-    dr_info     = [(dr.id, dr.get_public_key()) for dr in dr_aggs]
+    dr_info     = [(dr.id, dr.get_public_key()) for dr in dr_aggs]  
 
+    # since there is only one
+    agg = aggs[0]
+    dr_agg = dr_aggs[0]
 
 
     # ---------------------------------------------------------
@@ -91,13 +95,17 @@ if __name__ == "__main__":
     for dr_aggregator in dr_aggs:
         dr_aggregator.set_dso_public_keys(bb.pk, bb.ek)
     
-   # DSO distributes the Aggregator's specific encryption key
-    dso.set_agg_encryption_key([agg.get_agg_id_And_encryption_key() for agg in aggs])
+    # DSO distributes the Aggregator's specific encryption key
+    for energy_aggregator in aggs:
+        dso.set_agg_encryption_key(energy_aggregator.get_agg_id_And_encryption_key())
+        
+    for dr_aggregator in dr_aggs:
+        dso.set_agg_encryption_key(dr_aggregator.get_dr_agg_id_And_encryption_key(), dr_agg=True)
 
     # --- Threshold Key Share Distribution ---
     # This should happen over secure channels (SSL/TLS) in production.
     # Here we simulate it by passing the share directly via `encrypt_dk_and_send_to_agg`.
-    
+
     # Energy Aggregator gets Share #1
     for energy_aggregator in aggs:
         energy_aggregator.thresh_params = dso.get_threshold_params()
@@ -121,20 +129,20 @@ if __name__ == "__main__":
     # ---------------------------------------------------------
     print("\n\nMIX PHASE STARTED\n\n")
 
-    # since there is only one
-    agg = aggs[0]
-    dr_agg = dr_aggs[0]
-
     # The Aggregator shuffles the list of Smart Meter Public Keys
     agg.create_mixed_anon_pk_set(sm_info)
 
     # Publish the Shuffled Keys (pk') and the Shuffle Proof (πmix) to the Board
     bb.publish_mix_pk_and_proof(agg.publish_mixed_keys())
+    
+    # Smart Meters retrieve the Aggregator's encryption key to receive their anon IDs
+    for smartmeter in sms:
+        agg.set_sm_encrypytion_keys(smartmeter.get_sm_id_And_encryption_key(), bb.get_sm_pk_by_id(smartmeter.id))
 
     # Smart Meters retrieve their specific blinding factor to recognize their new anonymous ID
     for smartmeter in sms:
         ### some method for the smartmeter to get the anon_pk
-        smartmeter.set_anon_key(agg.set_anon_key_mix(smartmeter.get_public_key()))
+        smartmeter.set_anon_key(agg.set_anon_key_mix(smartmeter.get_public_key(), smartmeter.id))
         print(f"Smartmeter {smartmeter.id} got anon key mix.")
 
 
@@ -142,7 +150,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------
     # REPORT PHASE (Baseline Submission)
     # ---------------------------------------------------------
-    print("\n\nREPORT PHASE STARTED\n\n")
+    print("\n\nBASELINE REPORT PHASE STARTED\n\n")
 
     report_user_info = sm_info
 
@@ -153,6 +161,7 @@ if __name__ == "__main__":
             m = 10
         else:
             m = 0 # non-participating user sends 0 report
+
 
         # Smart Meter encrypts and signs the report
         report_data = smartmeter.get_sm_baseline(m)
@@ -175,11 +184,11 @@ if __name__ == "__main__":
     # Aggregator anonymizes the batch of valid baseline reports
     anonym_bb, anonym_pbb = agg.make_anonym_baseline()
     
-    # Publish batch signature to Public Board
-    bb.publish_anonym_reports(anonym_bb, agg.id)
+    # Publish baseline reports
+    bb.publish_baseline_anonym_reports(anonym_bb, agg.id)
 
-    # Publish actual data map to "Private" Board (in Board)
-    bb.publish_anonym_reports_PBB(anonym_pbb)
+    # Publish consumption reports
+    bb.publish_consumption_anonym_reports(anonym_pbb)
 
 
 
@@ -224,6 +233,8 @@ if __name__ == "__main__":
     _, consumption_anonym_pbb = agg.make_anonym_consumption()
     bb.publish_sm_comsumption_PBB(consumption_anonym_pbb)
 
+
+
     # ---------------------------------------------------------
     # EVALUATION PHASE
     # ---------------------------------------------------------
@@ -237,9 +248,17 @@ if __name__ == "__main__":
     # Partial Decryption of Reports
     # Both Aggregators download encrypted reports (Baseline & Consumption) from the Board
     # and compute their partial decryption shares.
-    agg_share = agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
-    dr_share = dr_agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
-
+    agg_share, agg_proof = agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
+    dr_share, dr_proof = dr_agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
+    
+    # TODO CHECK PARTIAL PROOF with agg encryption
+    if not verify_partial_decryption_share(agg.pp, agg_proof[0][0], agg_proof[1]):
+        raise ValueError("Aggregator partial decryption share proof verification failed!")
+    
+    if not verify_partial_decryption_share(dr_agg.pp, dr_proof[0][0], dr_proof[1]):
+        raise ValueError("Dr Aggregator partial decryption share proof verification failed!")
+    
+    
     # Homomorphic calculation and checking (placeholder values)
     # The Evaluator combines shares to check if Baseline - Consumption >= Target 
     # Right now it returns a list of "Equal Ciphertexts" for successful users.

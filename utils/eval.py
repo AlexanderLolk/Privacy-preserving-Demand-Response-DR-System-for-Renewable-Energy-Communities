@@ -268,7 +268,7 @@ class Eval:
 
         return (ct_eq, π_r_i)
 
-    def proof_r(self, ct1, ct2, ct_eq, r):
+    def proof_r(self, ct1, ct2, ct_eq, witness):
         """
         Generates a NIZKP proving knowledge of the random scalar 'r' used in the EPET.
         
@@ -280,7 +280,7 @@ class Eval:
         """
         g = self.dso_ek[1][1]
         order = self.dso_ek[1][2]
-        s = tc.number.random_in_range(1, order)
+        r = tc.number.random_in_range(1, order)
 
         # tuples
         c1_sum, c2_sum = ct1
@@ -289,11 +289,15 @@ class Eval:
         for (c1_t, c2_t) in ct2:
             c1_diff = c1_sum + (-c1_t)
             c2_diff = c2_sum + (-c2_t)
-            A_values.append((c1_diff, c2_diff))
+            
+            c1_A = int(r) * c1_diff
+            c2_A = int(r) * c2_diff
+
+            A_values.append((c1_A, c2_A))
 
         challenge = hash_to_int(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
-        response = (int(s) + int(challenge) * int(r)) % int(order)
+        response = (int(r) + int(challenge) * int(witness)) % int(order)
 
         return (A_values, response, challenge)
 

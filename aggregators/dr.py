@@ -1,4 +1,5 @@
 import random
+from utils.elgamal_dec_proof import prove_partial_decryption_share
 from utils.procedures import Procedures
 
 class DR_Aggregator:
@@ -29,6 +30,15 @@ class DR_Aggregator:
     def get_public_key(self):
         """Returns the DR Aggregator's signing public key package."""
         return (self.pk, self.pp, self.s_proof)
+    
+    def get_encryption_key(self):
+        """Returns the Aggregator's own encryption key package."""
+        return (self.ek, self.pp, self.e_proof)
+    
+    def get_dr_agg_id_And_encryption_key(self):
+        """Returns ID and Encryption Key."""
+        message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
+        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.sk, self.pp, message_to_verify))
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
@@ -48,6 +58,15 @@ class DR_Aggregator:
         Args:
           key_share: The secret scalar share x_i.
         """
+        from threshold_crypto import KeyShare
+        x, enc_share, signature = key_share
+        
+        y = self.pro.ahe.dec(self.dk, enc_share)
+        if self.pro.sig.schnorr_verify(self.dso_pk[0], self.dso_pk[1], str((x, y)), signature) == False:
+            raise ValueError("DSO signature verification on dk share failed")
+
+        key_share = KeyShare(x, y, self.pp[0])
+
         self.dk_share = key_share
     
     # anon_ids = pk_prime
@@ -79,13 +98,8 @@ class DR_Aggregator:
             tuple: (Selected_List, Signature, DR_Agg_PK)
         """
         signature = self.pro.sig.schnorr_sign(self.sk, self.pp, str(self.selected))
+        
         return (self.selected, signature, self.get_public_key())
-    
-    def get_partial_decryption_share(self, ciphertexts):
-        """
-        Computes a partial decryption for a specific list of ciphertexts using the DR aggregator's key share.
-        """
-        return self.pro.ahe.partial_decrypt(ciphertexts, self.dk_share)
     
     def partial_dec_reports(self, baseline_BB, consumption_PBB):
         """
@@ -125,7 +139,13 @@ class DR_Aggregator:
                 sm_consumption_proof
             )
 
-        return (baseline_pk_to_part, consumption_pk_to_part)
+        pk_prime_commitment = self.get_participants()[0]
+        pk_prime_commitment_str = str((pk_prime_commitment.x, pk_prime_commitment.y))
+        _, commitment_ct, _ = baseline_BB[pk_prime_commitment_str] 
+        proof = prove_partial_decryption_share(self.pp, commitment_ct[0], self.dk_share)
+
+        return (baseline_pk_to_part, consumption_pk_to_part), (commitment_ct, proof)
+
     
     def partial_dec_equal_cts(self, equal_cts):
         """

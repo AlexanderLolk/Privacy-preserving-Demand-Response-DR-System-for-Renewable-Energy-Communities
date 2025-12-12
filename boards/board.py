@@ -88,6 +88,21 @@ class Board:
         
         print("All smartmeters and aggregators were successfully verified.")
         return True
+    
+    def get_sm_pk_by_id(self, sm_id):
+        """
+        Retrieves the public key package of a Smart Meter by its ID.
+
+        Args:
+          sm_id (str): The identifier of the Smart Meter.
+
+        Returns:
+            tuple: (pk, pp, proof) or None.
+        """
+        for id, pk in self.register_smartmeter:
+            if id == sm_id:
+                return pk
+        return None
 
     def publish_target_reduction(self, T_r):
         """
@@ -148,7 +163,7 @@ class Board:
         return self.participants
     
     # Report: Should be sent through the anonym algorithm
-    def publish_anonym_reports(self, anonym_reports, agg_id):
+    def publish_baseline_anonym_reports(self, anonym_reports, agg_id):
         """
         Publishes the batch of anonymized baseline reports.
         Verifies the Aggregator's signature on the batch hash.
@@ -172,7 +187,7 @@ class Board:
         self.anonym = anonym_reports
     
     # Anonym user consumption reports from 
-    def publish_anonym_reports_PBB(self, anonym_reports):
+    def publish_consumption_anonym_reports(self, anonym_reports):
         """
         Stores the actual content of the anonymized baseline reports into a map.
 

@@ -1,6 +1,6 @@
 import utils.private_key_proof as sch
 import threshold_crypto as tc
-
+# test has been made with help from ai
 def test_schnorr_NIZKP():
     """Test Schnorr NIZKP proof generation and verification."""
     print("=== Testing Schnorr NIZKP ===")

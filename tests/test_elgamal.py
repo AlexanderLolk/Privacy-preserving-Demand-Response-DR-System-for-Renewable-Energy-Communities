@@ -1,4 +1,5 @@
 from utils.ec_elgamal import ElGamal
+# test has been made with help from ai
 
 def test_keygen(el):
     (ek, _), dk = el.keygen()

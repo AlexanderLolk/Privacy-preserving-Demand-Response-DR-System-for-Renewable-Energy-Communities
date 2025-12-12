@@ -54,6 +54,8 @@ class Procedures:
         self.sig = Signature()
         sk, pk = self.sig.key_gen("P-256")
         assert pk == sk * pp[1], "Public key does not match private key"
+        
+        # self.
 
         proof =  nizkp.schnorr_NIZKP_proof(pk, pp, sk)
         return ((id, (pk, pp, proof)), sk)
@@ -88,7 +90,7 @@ class Procedures:
 
     def ekey_gen_single(self,pp=None):
         """
-        Generates a standard (single-party) ElGamal encryption keypair and a decryption proof.
+        Generates a standard ElGamal encryption keypair and a decryption proof.
 
         This function creates a standard keypair, encrypts a sample message (200), and 
         generates a ZKP that the secret key can successfully decrypt this ciphertext.
@@ -156,7 +158,7 @@ class Procedures:
         """
         Creates a signed, encrypted report.
 
-        The message `m` (integer) is encrypted using bitwise ElGamal encryption under 
+        The message m (int) is encrypted using bitwise ElGamal encryption under 
         the DSO's (Data Service Operator) encryption key. The time `t` and the ciphertexts 
         are then signed using the Smart Meter's (sm) secret signing key.
 
@@ -171,8 +173,9 @@ class Procedures:
         Returns:
             tuple: (SmartMeter_PK, (Time, Ciphertexts, Signature))
         """
+        r = tc.random_in_range(2, self.pp[2]-1)
         if m > 0:
-            cts = self.ahe.enc(dso_ek[0], m)
+            cts = self.ahe.enc(dso_ek[0], m, r)
         else:
             # deterministic encryption of 0
             cts = self.ahe.enc(dso_ek[0], m, 1)
@@ -249,7 +252,6 @@ class Procedures:
         msg_bytes = b""
 
         for (pk_prime, ct, t, pi) in published:
-            # TODO maybe just str() the list of cts
             c1, c2 = ct[0]
             msg_bytes += self.__export_bytes(pk_prime)
             msg_bytes += self.__export_bytes(c1)
@@ -271,4 +273,3 @@ class Procedures:
         pbb = published
         
         return bb, pbb
-

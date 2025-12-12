@@ -146,9 +146,9 @@ def prove_partial_decryption_share(pp, ct, key_share):
     # Response
     z = (t + c * y_i) % order
 
-    return (A1, A2, z, ct1, D_i, share_commitment)
+    return (A1, A2, z, D_i, share_commitment)
 
-def verify_partial_decryption_share(pp, proof):
+def verify_partial_decryption_share(pp, ct, proof):
     """
     Verifies the ZKP for a partial decryption share.
 
@@ -158,15 +158,16 @@ def verify_partial_decryption_share(pp, proof):
 
     Args:
         pp (tuple): Public parameters.
+        ct1 (ECC Point): The C1 component of the ciphertext.
         proof (tuple): The proof object.
 
     Returns:
         bool: True if valid, False otherwise.
     """
-
+    ct1, _ = ct
     g = pp[1]
     order = pp[2]
-    A1, A2, z, ct1, D_i, share_commitment = proof
+    A1, A2, z, D_i, share_commitment = proof
 
     # Recompute challenge
     c = hash_to_int(

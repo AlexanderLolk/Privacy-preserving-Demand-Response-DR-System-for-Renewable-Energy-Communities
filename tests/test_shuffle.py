@@ -1,5 +1,6 @@
 from utils.shuffle import Shuffle
 from utils.procedures import Procedures
+# test has been made with help from ai
 
 # testing shuffle flow
 def test_basic_shuffle():

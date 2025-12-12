@@ -1,3 +1,4 @@
+from utils.elgamal_dec_proof import verify_correct_decryption, prove_partial_decryption_share
 from utils.procedures import Procedures
 
 class Aggregator:
@@ -29,6 +30,7 @@ class Aggregator:
         self.participants_baseline_report = []
         self.participants_consumption_report = []
         self.pk_to_pk_prime = {}
+        self.sm_ek = {}
     
     def get_id(self):
         """Returns the Aggregator's ID string."""
@@ -42,6 +44,11 @@ class Aggregator:
         """Returns the Aggregator's own encryption key package."""
         return (self.ek, self.pp, self.e_proof)
     
+    def get_agg_id_And_encryption_key(self):
+        """Returns ID and Encryption Key."""
+        message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
+        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.sk, self.pp, message_to_verify))
+
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
         Stores the DSO's public keys. 
@@ -58,7 +65,42 @@ class Aggregator:
         Args:
           key_share: The secret scalar share x_i.
         """
+        from threshold_crypto import KeyShare
+        x, enc_share, signature = key_share
+        
+        y = self.pro.ahe.dec(self.dk, enc_share)
+        if self.pro.sig.schnorr_verify(self.dso_pk[0], self.dso_pk[1], str((x, y)), signature) == False:
+            raise ValueError("DSO signature verification on dk share failed")
+
+        key_share = KeyShare(x, y, self.pp[0])
+
         self.dk_share = key_share
+
+
+    def set_sm_encrypytion_keys(self, sm, bb_Sm_registry=None):
+        """
+        Stores the Aggregator's encryption key.
+
+        Args:
+            agg_id (str): The Aggregator's identifier.
+            agg_ek (tuple): The Aggregator's ElGamal encryption key structure.
+        """
+        id, (ek, pp, proof), signature = sm
+        message_to_verify = id + str(ek.x) + str(ek.y)
+
+        pk = None
+        if bb_Sm_registry is not None:
+            pk, _, _ = bb_Sm_registry
+
+
+        if pk is None or pp is None:
+            raise ValueError("pk could not be found in registy")
+        if not self.pro.sig.schnorr_verify(pk, pp, message_to_verify, signature):
+            raise ValueError("dso failed to verify aggregator")
+        if not verify_correct_decryption(ek, pp, proof):
+            raise ValueError("dso failed to verify aggregator's proof of correct decryption")
+
+        self.sm_ek[id] = ek
 
     def create_mixed_anon_pk_set(self, ID_pk):
         """
@@ -81,7 +123,7 @@ class Aggregator:
         """
         return (self.mix_anon_list[0], self.mix_anon_list[2])
     
-    def set_anon_key_mix(self, sm):
+    def set_anon_key_mix(self, sm, id):
         """
         Retrieves the specific blinding factor (randomness) used for a specific Smart Meter.
         
@@ -112,14 +154,16 @@ class Aggregator:
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:
-                    sign_r_prime = self.pro.sig.schnorr_sign(self.sk, self.pp, str(blinding_factor))
+                    sign_r_prime = self.pro.sig.schnorr_sign(self.sk, self.pp, str(r_prime))
 
                     # Store mapping of pk -> Blinding_Factor for later use in Anonym()
                     pk_str = str((sm_pk.x, sm_pk.y))
                     self.pk_to_pk_prime[pk_str] = blinding_factor
                     
+                    enc_r_prime = self.pro.ahe.enc(self.sm_ek[id], r_prime)
                     
-                    return (blinding_factor, sign_r_prime)
+                    # return (blinding_factor, sign_r_prime)
+                    return (enc_r_prime, sign_r_prime)
         
         print("Public key not found in r_prime")
         return None
@@ -188,9 +232,8 @@ class Aggregator:
         sm_pk = pk[0]
         pp = pk[1]
         
-        if not self.pro.sig.schnorr_verify(sm_pk, pp, str((t, cts)), signature):
-            raise ValueError("Consumption check failed")
-        g = pp[1]
+        sm_consumption_verified = self.pro.sig.schnorr_verify(sm_pk, pp, str((t, cts)), signature)
+        assert sm_consumption_verified, "Consumption signature verification failed"
         
         self.participants_consumption_report.append(consumption_report)
             
@@ -205,10 +248,6 @@ class Aggregator:
     def get_participants_consumption(self):
         """Returns list of raw consumption reports."""
         return self.participants_consumption_report
-    
-    def get_agg_id_And_encryption_key(self):
-        """Returns ID and Encryption Key."""
-        return (self.id, self.get_encryption_key())
     
     def make_anonym_baseline(self):
         """
@@ -285,8 +324,12 @@ class Aggregator:
                 sm_consumption_t,
                 sm_consumption_proof
             )
+        pk_prime_commitment = self.get_participants()[0]
+        pk_prime_commitment_str = str((pk_prime_commitment.x, pk_prime_commitment.y))
+        _, commitment_ct, _ = baseline_BB[pk_prime_commitment_str] 
+        proof = prove_partial_decryption_share(self.pp, commitment_ct[0], self.dk_share)
 
-        return (baseline_pk_to_part, consumption_pk_to_part)
+        return (baseline_pk_to_part, consumption_pk_to_part), (commitment_ct, proof)
     
     def partial_dec_equal_cts(self, equal_cts):
         """
@@ -297,4 +340,6 @@ class Aggregator:
         for ct in equal_cts:
             partial_ct = self.pro.ahe.partial_decrypt(ct, self.dk_share)
             partial_cts.append(partial_ct)
+
+        
         return partial_cts

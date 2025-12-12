@@ -1,5 +1,6 @@
 import time
 import random
+from utils.elgamal_dec_proof import verify_correct_decryption
 from utils.procedures import Procedures
 
 class SmartMeter:
@@ -21,6 +22,7 @@ class SmartMeter:
 
         # Generate signing key pair and proof of ownership
         ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        ((self.ek, _, self.e_proof), self.dk) = self.pro.ekey_gen_single(pp)
         
         # as a default
         self.participating = False
@@ -33,6 +35,10 @@ class SmartMeter:
             tuple: (Public_Key_Point, Public_Params, Proof_of_Knowledge)
         """
         return (self.pk, self.pp, self.s_proof)
+    
+    def get_encryption_key(self):
+        """Returns the smart meter's own encryption key package."""
+        return (self.ek, self.pp, self.e_proof)
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
@@ -57,13 +63,44 @@ class SmartMeter:
         """
         self.agg_pk = agg_pk
 
+    def get_sm_id_And_encryption_key(self):
+        """Returns ID and Encryption Key."""
+        message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
+        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.sk, self.pp, message_to_verify))
+    # def set_agg_encrypytion_keys(self, agg):
+    #     """
+    #     Stores the Aggregator's encryption key.
+
+    #     Args:
+    #         agg_id (str): The Aggregator's identifier.
+    #         agg_ek (tuple): The Aggregator's ElGamal encryption key structure.
+    #     """
+    #     id, (ek, pp, proof), signature = agg
+    #     print(f"DSO received encryption key from agg {ek}")
+    #     message_to_verify = id + str(ek.x) + str(ek.y)
+    #     print(f"from dso the message is {message_to_verify}")
+
+    #     pk = None
+    #     if self.agg_pk is not None:
+    #         pk, _, _ = self.agg_pk
+
+    #     if pk is None or pp is None:
+    #         raise ValueError("pk could not be found in registy")
+    #     if not self.pro.sig.schnorr_verify(pk, pp, message_to_verify, signature):
+    #         raise ValueError("dso failed to verify aggregator")
+    #     if not verify_correct_decryption(ek, pp, proof):
+    #         raise ValueError("dso failed to verify aggregator's proof of correct decryption")
+
+    #     self.agg_ek = ek
+    
+
     def set_anon_key(self, anon_key):
         """ 
         Receives the randomness (blinding factor) used in Mix_id().
         
         This allows the Smart Meter to locally reconstruct its "Anonymous Identity" (pk')
         without revealing its value.
-        pk' = pk + r'
+        pk' = pk + g^r'
         
         It also verifies the Aggregator's signature on this assignment to ensure authenticity.
 
@@ -71,13 +108,16 @@ class SmartMeter:
             anon_key (tuple): A tuple containing (r_prime, signature).
                               r_prime is the blinding factor (EC Point or Scalar).
         """
-        r_prime, signature = anon_key
+        enc_r_prime, signature = anon_key
         
-        if not self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature):
-            print("Anonymous key signature verification failed.")
+        r_prime = self.pro.ahe.dec(self.dk, enc_r_prime)
+        
+        anon_key_verified = self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature)
+        if not anon_key_verified:
+            raise ValueError("Anonymous key signature verification failed.")
         
         # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
-        self.anon_id = r_prime
+        self.anon_id = r_prime * self.pp[1]
 
     def get_sm_baseline(self, m):
         """
@@ -134,7 +174,6 @@ class SmartMeter:
             None: Sets the internal state `self.in_event`.
         """
         sm_pk_prime = (self.anon_id + self.pk)
-        # print("")
 
         for anon_pk in input:
             if sm_pk_prime == anon_pk:
