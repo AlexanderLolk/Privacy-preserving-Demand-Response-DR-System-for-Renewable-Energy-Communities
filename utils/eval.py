@@ -87,7 +87,7 @@ class Eval:
             sm_baseline_ct_part_dr, _, _ = dr_baselines_parts[pk_prime_str]
             
             baseline = self.el._eval_threshold_decrypt((sm_baseline_ct_part_agg + sm_baseline_ct_part_dr), sm_baseline_ct)
-
+            
             # partial decryption of the consumption
             sm_consumption_ct_part_agg, _, _ = agg_consumptions_parts[pk_prime_str]
             sm_consumption_ct_part_dr, _, _ = dr_consumptions_parts[pk_prime_str]
@@ -220,10 +220,14 @@ class Eval:
         ct_eq = []
         π_eq = []
 
-        for ct_T_i in ct_T:
-            ct_eq_i, π_r_i = self.epet(ct_sum, ct_T_i)
-            ct_eq.append(ct_eq_i)
-            π_eq.append(π_r_i)
+        # for ct_T_i in ct_T:
+        #     ct_eq_i, π_r_i = self.epet(ct_sum, ct_T_i)
+        #     ct_eq.append(ct_eq_i)
+        #     π_eq.append(π_r_i)
+
+        ct_eq_i, π_r_i = self.epet(ct_sum, ct_T)
+        ct_eq.append(ct_eq_i)
+        π_eq.append(π_r_i)
 
         return (ct_eq, π_eq)
 

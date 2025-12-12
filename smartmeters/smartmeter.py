@@ -150,7 +150,8 @@ class SmartMeter:
         """
         t = int(time.time())
 
-        consume = random.randint(9, 10)
+        # consume = random.randint(9, 10)
+        consume = 8
         consumption_report = self.pro.report(self.id, self.sk, self.dso_ek, consume, t, self.get_public_key())
         return consumption_report
     

@@ -1,3 +1,4 @@
+import random
 from utils.ec_elgamal import ElGamal
 # test has been made with help from ai
 
@@ -121,8 +122,8 @@ def test_threshold_elgamal_on_target_reduction_eval(el):
     pub_key, key_shares, thresh_params = el.keygen_threshold()
     
     m = [0, 0, 0, 10, 8, 5, 3, 0, 0, 0, 0, 7, 0, 4, 2, 6, 9, 1, 0]
-
-    enc_tr = [el.enc(pub_key, val) for val in m]
+    r = random.randint(1, el.pp[2])
+    enc_tr = [el.enc(pub_key, val, r) for val in m]
     iden0 = 0 * el.pp[1]
     iden1 = 1 * el.pp[1]
 
@@ -140,7 +141,7 @@ def test_threshold_elgamal_on_target_reduction_eval(el):
         plaintext_point = el.threshold_decrypt(combined_partials, list_of_cts, thresh_params)
         plaintext = el._eval_threshold_decrypt(combined_partials, list_of_cts)
 
-        print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
+        # print(f"plaintext_point: x = {plaintext_point.x}, y = {plaintext_point.y}")
         
         decrypted_point.append(plaintext_point)
         decrypted.append(plaintext)
@@ -244,13 +245,13 @@ def test_threshold_elgamal_deterministic_0(el):
 
 if __name__ == "__main__":
     el = ElGamal()
-    test_keygen(el)
-    test_int_to_bytes_enc(el)
-    test_elgamal(el)
-    test_elgamal_big_number(el)
-    test_threshold_elgamal(el)
-    test_threshold_elgamal_on_target_reduction(el)
+    # test_keygen(el)
+    # test_int_to_bytes_enc(el)
+    # test_elgamal(el)
+    # test_elgamal_big_number(el)
+    # test_threshold_elgamal(el)
+    # test_threshold_elgamal_on_target_reduction(el)
     test_threshold_elgamal_on_target_reduction_eval(el)
-    test_eval_threshold_elgamal(el)
-    test_threshold_elgamal_point(el)
-    test_threshold_elgamal_deterministic_0(el)
+    # test_eval_threshold_elgamal(el)
+    # test_threshold_elgamal_point(el)
+    # test_threshold_elgamal_deterministic_0(el)

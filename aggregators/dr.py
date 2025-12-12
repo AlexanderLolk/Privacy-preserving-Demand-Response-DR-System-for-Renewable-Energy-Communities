@@ -66,6 +66,7 @@ class DR_Aggregator:
             raise ValueError("DSO signature verification on dk share failed")
 
         key_share = KeyShare(x, y, self.pp[0])
+        print(f"DR Aggregator received dk share: {key_share}")
 
         self.dk_share = key_share
     
@@ -139,6 +140,7 @@ class DR_Aggregator:
                 sm_consumption_proof
             )
 
+        # for proof of correct decryption on one of the commitments
         pk_prime_commitment = self.get_participants()[0]
         pk_prime_commitment_str = str((pk_prime_commitment.x, pk_prime_commitment.y))
         _, commitment_ct, _ = baseline_BB[pk_prime_commitment_str] 

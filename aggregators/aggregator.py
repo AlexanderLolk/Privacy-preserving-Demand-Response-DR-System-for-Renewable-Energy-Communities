@@ -73,6 +73,7 @@ class Aggregator:
             raise ValueError("DSO signature verification on dk share failed")
 
         key_share = KeyShare(x, y, self.pp[0])
+        print(f"key_share set in agg: {key_share}")
 
         self.dk_share = key_share
 
@@ -302,6 +303,9 @@ class Aggregator:
         """
         baseline_pk_to_part = {}
         consumption_pk_to_part = {}
+        print(f"Number of participants to partially decrypt: {len(self.get_participants())}")
+        print(f"Number of baseline reports on BB: {len(baseline_BB)}")
+        print(f"Number of consumption reports on BB: {len(consumption_PBB)}")
 
         for pk_prime in self.get_participants():
             # Convert the EC Point to a string key for dict lookup
@@ -324,11 +328,15 @@ class Aggregator:
                 sm_consumption_t,
                 sm_consumption_proof
             )
+    
+        # for proof of correct decryption on one of the commitments
         pk_prime_commitment = self.get_participants()[0]
         pk_prime_commitment_str = str((pk_prime_commitment.x, pk_prime_commitment.y))
         _, commitment_ct, _ = baseline_BB[pk_prime_commitment_str] 
         proof = prove_partial_decryption_share(self.pp, commitment_ct[0], self.dk_share)
 
+        print(f"len baseline_pk_to_part: {len(baseline_pk_to_part)}")
+        print(f"len consumption_pk_to_part: {len(consumption_pk_to_part)}")
         return (baseline_pk_to_part, consumption_pk_to_part), (commitment_ct, proof)
     
     def partial_dec_equal_cts(self, equal_cts):
