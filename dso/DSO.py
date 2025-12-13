@@ -30,10 +30,10 @@ class DSO:
         self.agg_ek = {}
         
         #  SKeyGen(id, pp) -> ((id, (pk, pp, proof)), sk)
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.__sk) = self.pro.skey_gen(init_id, pp)
         
         # Generate the main encryption key for the system and the shares for the aggregators
-        ((self.ek, self.thresh_params, self.e_proof), self.key_shares) = self.pro.ekey_gen(pp)
+        ((self.ek, self.thresh_params, self.e_proof), self.__key_shares) = self.pro.ekey_gen(pp)
         
         self.i = 0
 
@@ -148,7 +148,7 @@ class DSO:
         # print(f"\n\nNoisy Target Reduction list: {values} \n\n")
 
         enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
-        signature_TR = self.pro.sig.schnorr_sign(self.sk, self.pp, str(enc_TR))
+        signature_TR = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR
 
@@ -245,13 +245,13 @@ class DSO:
         # return share
 
         # stupid but works
-        share = self.key_shares[self.i]
+        share = self.__key_shares[self.i]
         self.i += 1
         # encrypt the share with the agg's encryption key
         x = share.x
         y = share.y
         # print(f"DSO encrypting dk share {x}, {y} for agg {agg_id} with ek {self.agg_ek[agg_id]}")
-        sig_share = self.pro.sig.schnorr_sign(self.sk, self.pp, str((x, y)))
+        sig_share = self.pro.sig.schnorr_sign(self.__sk, self.pp, str((x, y)))
         enc_share = self.pro.ahe.enc(self.agg_ek[agg_id], y)
 
 
@@ -271,8 +271,8 @@ class DSO:
         agg_msg_list = [agg_id for agg_id, _ in self.registered_agg]
         dr_msg_list = [dr_id for dr_id, _ in self.registered_dr]
 
-        sm_signatures = self.pro.sig.schnorr_sign_list(self.sk, self.pp, sm_msg_list)
-        agg_signatures = self.pro.sig.schnorr_sign_list(self.sk, self.pp, agg_msg_list)
-        dr_signatures = self.pro.sig.schnorr_sign_list(self.sk, self.pp, dr_msg_list)
+        sm_signatures = self.pro.sig.schnorr_sign_list(self.__sk, self.pp, sm_msg_list)
+        agg_signatures = self.pro.sig.schnorr_sign_list(self.__sk, self.pp, agg_msg_list)
+        dr_signatures = self.pro.sig.schnorr_sign_list(self.__sk, self.pp, dr_msg_list)
 
         return (self.registered_sm, sm_signatures, self.registered_agg, agg_signatures, self.registered_dr, dr_signatures)

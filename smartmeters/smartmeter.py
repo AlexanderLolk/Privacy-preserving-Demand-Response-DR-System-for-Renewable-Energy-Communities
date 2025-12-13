@@ -21,8 +21,8 @@ class SmartMeter:
            pp = self.pro.pub_param()
 
         # Generate signing key pair and proof of ownership
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
-        ((self.ek, _, self.e_proof), self.dk) = self.pro.ekey_gen_single(pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.__sk) = self.pro.skey_gen(init_id, pp)
+        ((self.ek, _, self.e_proof), self.__dk) = self.pro.ekey_gen_single(pp)
         
         # as a default
         self.participating = False
@@ -66,7 +66,7 @@ class SmartMeter:
     def get_sm_id_And_encryption_key(self):
         """Returns ID and Encryption Key."""
         message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
-        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.sk, self.pp, message_to_verify))
+        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.__sk, self.pp, message_to_verify))
     # def set_agg_encrypytion_keys(self, agg):
     #     """
     #     Stores the Aggregator's encryption key.
@@ -110,7 +110,7 @@ class SmartMeter:
         """
         enc_r_prime, signature = anon_key
         
-        r_prime = self.pro.ahe.dec(self.dk, enc_r_prime)
+        r_prime = self.pro.ahe.dec(self.__dk, enc_r_prime)
         
         anon_key_verified = self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature)
         if not anon_key_verified:
@@ -135,7 +135,7 @@ class SmartMeter:
             self.participating = True
 
         t = int(time.time())
-        baseline_report = self.pro.report(self.id, self.sk, self.dso_ek, m, t, self.get_public_key())
+        baseline_report = self.pro.report(self.id, self.__sk, self.dso_ek, m, t, self.get_public_key())
         return baseline_report
     
     def get_sm_consumption(self):
@@ -151,7 +151,7 @@ class SmartMeter:
         t = int(time.time())
 
         consume = random.randint(9, 10)
-        consumption_report = self.pro.report(self.id, self.sk, self.dso_ek, consume, t, self.get_public_key())
+        consumption_report = self.pro.report(self.id, self.__sk, self.dso_ek, consume, t, self.get_public_key())
         return consumption_report
     
     def is_participating(self):

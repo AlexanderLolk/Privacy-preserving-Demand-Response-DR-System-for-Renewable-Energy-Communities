@@ -22,9 +22,9 @@ class Aggregator:
         if pp is None:
            pp = self.pro.pub_param()
 
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = self.pro.skey_gen(init_id, pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.__sk) = self.pro.skey_gen(init_id, pp)
         # primarily uses the key share 'dk' from the DSO.
-        ((self.ek, _, self.e_proof), self.dk) = self.pro.ekey_gen_single(pp)
+        ((self.ek, _, self.e_proof), self.__dk) = self.pro.ekey_gen_single(pp)
 
         self.participants = []
         self.participants_baseline_report = []
@@ -47,7 +47,7 @@ class Aggregator:
     def get_agg_id_And_encryption_key(self):
         """Returns ID and Encryption Key."""
         message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
-        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.sk, self.pp, message_to_verify))
+        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.__sk, self.pp, message_to_verify))
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
@@ -68,7 +68,7 @@ class Aggregator:
         from threshold_crypto import KeyShare
         x, enc_share, signature = key_share
         
-        y = self.pro.ahe.dec(self.dk, enc_share)
+        y = self.pro.ahe.dec(self.__dk, enc_share)
         if self.pro.sig.schnorr_verify(self.dso_pk[0], self.dso_pk[1], str((x, y)), signature) == False:
             raise ValueError("DSO signature verification on dk share failed")
 
@@ -154,7 +154,7 @@ class Aggregator:
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:
-                    sign_r_prime = self.pro.sig.schnorr_sign(self.sk, self.pp, str(r_prime))
+                    sign_r_prime = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(r_prime))
 
                     # Store mapping of pk -> Blinding_Factor for later use in Anonym()
                     pk_str = str((sm_pk.x, sm_pk.y))
@@ -265,7 +265,7 @@ class Aggregator:
             pk_str = str((pk.x, pk.y))
             r_prime = self.pk_to_pk_prime[pk_str]
             r_prime_list.append(r_prime)
-        return self.pro.anonym(self.get_participants_baseline(), r_prime_list, self.sk)
+        return self.pro.anonym(self.get_participants_baseline(), r_prime_list, self.__sk)
     
     def make_anonym_consumption(self):
         """
@@ -284,7 +284,7 @@ class Aggregator:
             pk_str = str((pk.x, pk.y))
             r_prime = self.pk_to_pk_prime[pk_str]
             r_prime_list.append(r_prime)
-        return self.pro.anonym(self.get_participants_consumption(), r_prime_list, self.sk)
+        return self.pro.anonym(self.get_participants_consumption(), r_prime_list, self.__sk)
     
     def partial_dec_reports(self, baseline_BB, consumption_PBB):
         """

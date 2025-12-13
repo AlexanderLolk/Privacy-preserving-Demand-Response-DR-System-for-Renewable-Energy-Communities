@@ -20,8 +20,8 @@ class DR_Aggregator:
         if pp is None:
             pp = pro.pub_param()
 
-        ((self.id, (self.pk, self.pp, self.s_proof)), self.sk) = pro.skey_gen(init_id, pp)
-        ((self.ek, _, self.e_proof), self.dk) = pro.ekey_gen_single(pp)
+        ((self.id, (self.pk, self.pp, self.s_proof)), self.__sk) = pro.skey_gen(init_id, pp)
+        ((self.ek, _, self.e_proof), self.__dk) = pro.ekey_gen_single(pp)
 
         self.dk_share = None
         self.thresh_params = None
@@ -38,7 +38,7 @@ class DR_Aggregator:
     def get_dr_agg_id_And_encryption_key(self):
         """Returns ID and Encryption Key."""
         message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
-        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.sk, self.pp, message_to_verify))
+        return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.__sk, self.pp, message_to_verify))
 
     def set_dso_public_keys(self, dso_pk, dso_ek):
         """
@@ -61,7 +61,7 @@ class DR_Aggregator:
         from threshold_crypto import KeyShare
         x, enc_share, signature = key_share
         
-        y = self.pro.ahe.dec(self.dk, enc_share)
+        y = self.pro.ahe.dec(self.__dk, enc_share)
         if self.pro.sig.schnorr_verify(self.dso_pk[0], self.dso_pk[1], str((x, y)), signature) == False:
             raise ValueError("DSO signature verification on dk share failed")
 
@@ -97,7 +97,7 @@ class DR_Aggregator:
         Returns:
             tuple: (Selected_List, Signature, DR_Agg_PK)
         """
-        signature = self.pro.sig.schnorr_sign(self.sk, self.pp, str(self.selected))
+        signature = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(self.selected))
         
         return (self.selected, signature, self.get_public_key())
     
