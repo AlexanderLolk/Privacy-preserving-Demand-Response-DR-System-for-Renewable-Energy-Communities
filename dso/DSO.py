@@ -34,8 +34,6 @@ class DSO:
         
         # Generate the main encryption key for the system and the shares for the aggregators
         ((self.ek, self.thresh_params, self.e_proof), self.key_shares) = self.pro.ekey_gen(pp)
-        for share in self.key_shares:
-            print(f"DSO key share generated: {share}")
         
         self.i = 0
 
@@ -147,7 +145,7 @@ class DSO:
 
         random.shuffle(values)
 
-        print(f"\n\nNoisy Target Reduction list: {values} \n\n")
+        # print(f"\n\nNoisy Target Reduction list: {values} \n\n")
 
         enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
         signature_TR = self.pro.sig.schnorr_sign(self.sk, self.pp, str(enc_TR))

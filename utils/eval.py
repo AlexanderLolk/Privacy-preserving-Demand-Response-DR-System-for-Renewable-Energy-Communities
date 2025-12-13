@@ -76,7 +76,8 @@ class Eval:
         self.for_marked_or_not_selected = []
         self.eval_results = []
         CT_red = []
-
+        print(f"len of participants : {len(participants)}")
+        i = 0
         for pk_prime in participants:
             pk_prime_str = str((pk_prime.x, pk_prime.y))
             sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
@@ -109,7 +110,7 @@ class Eval:
                 continue 
             
             self.eval_results.append((ct_o, t, pk_prime, ord_proof))
-            
+        
             CT_red.append((ct_red, t, pk_prime))
 
         if len(CT_red) < 1:
@@ -178,9 +179,23 @@ class Eval:
         """
         ct_diff_list = []
         for ct_b, ct_c in zip(ct_bs, ct_cs):
+            print("\nnew consumptio")
+            for cts in ct_diff_list:
+                c1, c2 = cts
+                print("new chipertext")
+                print(f"c1 x = {c1.x}\n y= {c1.y}")
+                print(f"c2 x = {c2.x}\n y= {c2.y}")
+            print("\n\n\n")
             ct_diff_tuple = self.sub(ct_b, ct_c)
             ct_diff_list.append(ct_diff_tuple)
         
+        # print("\n")
+        # for cts in ct_diff_list:
+        #     print(f"ct is = {cts}")
+        #     c1, c2 = cts
+        #     print(f"c1 x = {c1.x}\n y= {c1.y}")
+        #     print(f"\nc2 x = {c2.x}\n y= {c2.y}")
+                
         return ct_diff_list
 
     def ct_aggregation(self, reduc_set):
@@ -229,6 +244,7 @@ class Eval:
         ct_eq.append(ct_eq_i)
         π_eq.append(π_r_i)
 
+        print(f"len of ct_t  = {len(ct_T)}")
         return (ct_eq, π_eq)
 
     def epet(self, ct_sum, ct_t_i):
@@ -254,6 +270,8 @@ class Eval:
         r = tc.number.random_in_range(1, order)
 
         ct_eq = []
+
+        
             
         # Since ct_t_i is a list of typles (bit-wise encryption), we iterate through it to extract each tuple
         for (c1_t, c2_t) in ct_t_i:
@@ -354,9 +372,9 @@ class Eval:
         
         # Define Identity Point (0*G)
         identity_point = 0 * g
-        
-        M_set_final = []
 
+        M_set_final = []
+        print(f"\nlen of ct_rq_list : {len(ct_eq_list)}")
         for i in range(len(ct_eq_list)):
             # Get partial decryptions for ciphertext i from all aggregators
             ct_eq_i = ct_eq_list[i] # list of tuples
@@ -371,7 +389,7 @@ class Eval:
                 ct_eq_i,  # Pass tuple (C1, C2) directly
                 thresh_params
             )
-            
+
             if plaintext_point == identity_point:
                 M_set_final.append(1)  # Target met (Diff == 0)
             else:

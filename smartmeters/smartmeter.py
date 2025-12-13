@@ -100,7 +100,7 @@ class SmartMeter:
         
         This allows the Smart Meter to locally reconstruct its "Anonymous Identity" (pk')
         without revealing its value.
-        pk' = pk + g^r'
+        pk' = pk + g*r'
         
         It also verifies the Aggregator's signature on this assignment to ensure authenticity.
 
@@ -150,8 +150,7 @@ class SmartMeter:
         """
         t = int(time.time())
 
-        # consume = random.randint(9, 10)
-        consume = 8
+        consume = random.randint(9, 10)
         consumption_report = self.pro.report(self.id, self.sk, self.dso_ek, consume, t, self.get_public_key())
         return consumption_report
     

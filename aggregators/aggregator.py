@@ -73,7 +73,6 @@ class Aggregator:
             raise ValueError("DSO signature verification on dk share failed")
 
         key_share = KeyShare(x, y, self.pp[0])
-        print(f"key_share set in agg: {key_share}")
 
         self.dk_share = key_share
 

@@ -176,12 +176,12 @@ class ElGamal:
             ciphertext (tuple): The (C1, C2) tuple.
 
         Returns:
-            list: A list containing the decrypted bit (0 or 1).
+            EccPoint: A ecc point.
         """
         c1 = ciphertext[0]
         c2 = ciphertext[1]
-        s = (self.pp[2] + -secret_key) * c1
-        s2 = c2 + s
+        c1_com = (self.pp[2] + -secret_key) * c1
+        s2 = c2 + c1_com
         return s2
     
     def dec(self, secret_key, ciphertexts):
@@ -392,47 +392,3 @@ class ElGamal:
         decrypted_message = self.__bits_to_int(decrypted_bits)
 
         return decrypted_message
-    
-    def threshold_decrypt_single(
-        self,
-        partial_decryptions: list,
-        encrypted_message: tuple,
-        threshold_params: tc.ThresholdParameters,
-    ):
-        """
-        Combines partial decryptions for a single ElGamal ciphertext (C1, C2)
-        and recovers the decrypted message point.
-
-        Args:
-            partial_decryptions (list): list of tc.PartialDecryption objects, one per key share.
-            encrypted_message (tuple): single tuple (C1, C2).
-            threshold_params (tc.ThresholdParameters): Parameters used to generate the shares.
-
-        Returns:
-            ECC.EccPoint: the recovered message point (C2 - reconstructed_nonce * g).
-        """
-
-        # Expect partial_decryptions to be a list of PartialDecryption objects (one per share)
-        c1, c2 = encrypted_message
-
-        # Collect indices
-        partial_indices = [pd.x for pd in partial_decryptions]
-
-        # Compute Lagrange coefficients for the available shares
-        lagrange_coefficients = [
-            tc.lagrange_coefficient_for_key_share_indices(partial_indices, idx, self.curve)
-            for idx in partial_indices
-        ]
-
-        # Compute weighted sum of the partial decryptions (yC1 values)
-        summands = [
-            (lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1)
-            for i in range(len(partial_decryptions))
-        ]
-
-        accumulated_point = tc.number.ecc_sum(summands)
-
-        # Recover the message point: M_point = C2 - accumulated_point
-        restored_point = c2 + (-accumulated_point)
-
-        return restored_point

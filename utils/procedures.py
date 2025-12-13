@@ -17,6 +17,7 @@ class Procedures:
         """
         self.pp = self.pub_param(curve)
         self.ahe = ElGamal(self.pp)
+        self.r = tc.random_in_range(2, self.pp[2]-1)
         
     def pub_param(self, curve="P-256"):
         """
@@ -173,9 +174,10 @@ class Procedures:
         Returns:
             tuple: (SmartMeter_PK, (Time, Ciphertexts, Signature))
         """
-        r = tc.random_in_range(2, self.pp[2]-1)
+        r = tc.random_in_range(2, self.pp[2])
         if m > 0:
-            cts = self.ahe.enc(dso_ek[0], m, r)
+            cts = self.ahe.enc(dso_ek[0], m, self.r)
+            # cts = self.ahe.enc(dso_ek[0], m)
         else:
             # deterministic encryption of 0
             cts = self.ahe.enc(dso_ek[0], m, 1)
