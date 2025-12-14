@@ -69,11 +69,11 @@ Line 20 in main: NUM_SM = 10
 
 For the number of participants:
 ```
-Line 25 in main: NUM_PARTICIPANTS = NUM_SM - 2
+Line 24 in main: NUM_PARTICIPANTS = NUM_SM - 2
 ```
 For the number of selected participants:
 ```
-Line 28 in main: NUM_SELECTED = NUM_PARTICIPANTS // 2
+Line 27 in main: NUM_SELECTED = NUM_PARTICIPANTS // 2
 ```
 
 ## Edit baseline, consumption or target reduction
@@ -81,7 +81,7 @@ If you want to change the value for baseline, consumption or target reduction, t
 
 For the value of the baseline:
 ```
-Line 160 in main: m = 10
+Line 158 in main: m = 10
 ```
 
 For the value of the consumption:

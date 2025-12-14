@@ -9,7 +9,6 @@ from src.utils.elgamal_dec_proof import verify_partial_decryption_share
 # It instantiates all entities (DSO, Smart Meters, Aggregators)
 # and steps them through the protocol phases.
 
-
 # ---------------------------------------------------------
 # SYSTEM SETUP & INSTANTIATION
 # ---------------------------------------------------------
@@ -79,7 +78,6 @@ noisy_target_reduction = dso.generate_noisy_list()
 bb.publish_target_reduction(noisy_target_reduction)
 
 
-
 # ---------------------------------------------------------
 # KEY DISTRIBUTION
 # ---------------------------------------------------------
@@ -122,7 +120,6 @@ for smart_meter in sms:
     smart_meter.set_agg_public_keys(bb.register_aggregator[0][1])
 
 
-
 # ---------------------------------------------------------
 # MIX PHASE (Anonymization Setup)
 # ---------------------------------------------------------
@@ -141,9 +138,10 @@ for smartmeter in sms:
 # Smart Meters retrieve their specific blinding factor to recognize their new anonymous ID
 for smartmeter in sms:
     ### some method for the smartmeter to get the anon_pk
-    smartmeter.set_anon_key(agg.set_anon_key_mix(smartmeter.get_public_key(), smartmeter.id))
+    #NOTE: by using threading or better s
+    enc_sign_anon_key = agg.set_anon_key_mix(smartmeter.get_public_key(), smartmeter.id)
+    smartmeter.set_anon_key(enc_sign_anon_key)
     print(f"Smartmeter {smartmeter.id} got anon key mix.")
-
 
 
 # ---------------------------------------------------------
@@ -161,7 +159,6 @@ for i, smartmeter in enumerate(sms):
     else:
         m = 0 # non-participating user sends 0 report
 
-
     # Smart Meter encrypts and signs the report
     report_data = smartmeter.get_sm_baseline(m)
     print(f"Smartmeter {smartmeter.id} sent report.")
@@ -172,7 +169,6 @@ for i, smartmeter in enumerate(sms):
 
 # Aggregator publishes list of anonymized participants found to the Board
 bb.publish_participants(agg.get_participants())
-
 
 
 # ---------------------------------------------------------
@@ -188,7 +184,6 @@ bb.publish_baseline_anonym_reports(anonym_bb, agg.id)
 
 # Publish consumption reports
 bb.publish_consumption_anonym_reports(anonym_pbb)
-
 
 
 # ---------------------------------------------------------

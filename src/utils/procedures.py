@@ -117,11 +117,6 @@ class Procedures:
         
         return ((ek, pp, πdk), dk)
 
-    def log_phase(self, name, start_time):
-        duration = time.time() - start_time
-        print(f"[PERFORMANCE] {name} completed in {duration:.4f} seconds")
-
-
     def mix_id(self, ID_pk, expo):
         """
         Anonymizes and shuffles a list of identity public keys using shuffling.
@@ -137,8 +132,7 @@ class Procedures:
         Returns:
             tuple: (Shuffled_PKs, Randomness_Used, Shuffle_Proof)
         """
-
-        from utils.shuffle import Shuffle
+        from src.utils.shuffle import Shuffle
         shuffle = Shuffle(self.pp)
 
         
@@ -151,14 +145,11 @@ class Procedures:
             pk = idpk[1][0]
             Id_A_pk.append(pk)
 
-        start_time = time.time()
         # set up the shuffle proof
         e_prime, r_prime, ψ = shuffle.GenShuffle(Id_A_pk)
-        self.log_phase("GenShuffle", start_time) 
-        start_time = time.time()
+
         # proof of shuffle and anonymised list of pks
         πmix_proof= shuffle.GenProof(Id_A_pk, e_prime, r_prime, ψ, expo)
-        self.log_phase("GenProof", start_time) 
 
         return (e_prime, r_prime, πmix_proof)
 

@@ -24,12 +24,15 @@ if __name__ == "__main__":
     # Initialize the Trusted Authority / Distribution System Operator
     dso = distributer.DSO()
 
-    NUM_SM      = 130     # Total Smart Meters
+    NUM_SM      = 13     # Total Smart Meters
     NUM_AGG     = 1      # Energy Aggregator
     NUM_DR_AGG  = 1      # DR Aggregator
     
     # Define how many users will actually try to join the event
-    NUM_PARTICIPANTS = NUM_SM - 40
+    NUM_PARTICIPANTS = NUM_SM - 4
+
+    # And how many is selected by the DR aggregator
+    NUM_SELECTED = NUM_PARTICIPANTS // 2
 
     sms     = []
     aggs    = []
@@ -211,7 +214,6 @@ if __name__ == "__main__":
     print("\n\nSELECTION PHASE STARTED\n")
     
     participants = agg.get_participants()
-    NUM_SELECTED = len(participants)//2
     
     # DR Aggregator retrieves the list of anonymous candidates
     dr_agg.set_pseudo_anonymous_iden(participants)

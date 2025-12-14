@@ -142,7 +142,7 @@ class Aggregator:
             sm_pk = sm
 
         _, g, _ = self.pp
-
+        
         # using additive logic (pk + r*G)
         for r_prime in self.mix_anon_list[1]:
 
