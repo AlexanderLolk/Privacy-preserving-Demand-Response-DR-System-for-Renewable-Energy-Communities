@@ -29,7 +29,7 @@ To setup a image for this project, first run this command:
 ```
 docker build -t name-of-your-image .
 ```
-Once install all required components will be within your image.
+Once done, all required components will have been installed within your image.
 
 ## Running the program
 
