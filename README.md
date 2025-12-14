@@ -1,19 +1,19 @@
 # Privacy-preserving-Demand-Response-DR-System-for-Renewable-Energy-Communities
 Bachelor project 2025
 
-This project is implementation of a privacy-preserving Demand Response (DR) program designed for a community of users who can participate in a energy consumption system.
+This project is implementation of a privacy-preserving Demand Response (DR) program designed for a community of users who can participate in an energy consumption system.
 
 ## Download
-You can download this project by downloading the release build or by cloning from the github.
+You can download this project by downloading the release build or by cloning it from the github.
 
 ## Installation
-Once the project is on your local system, there are two way to run this project.
+Once the project is on your local system, there are two ways of running it.
 
-Our code requires Python, a library pycryptodome and another repository from tompetersen: https://github.com/tompetersen/threshold-crypto
+The program requires Python, the library "pycryptodome" and the library: https://github.com/tompetersen/threshold-crypto by tompetersen.
 
-if they are not already installed on your device, then the following will take care of that.
+if these libraries are not already installed on your device, then use the following commands below.
 
-Note: These commands are run within the project folder.
+Note: These commands should be run within the project folder.
 
 ### Local installation
 To install all of these run this in your terminal:
@@ -23,7 +23,7 @@ pip install .
 This will create a clone of the mentioned repository in temporary folder and install the required components.
 
 ### Docker installation
-If you have docker, is it also possible to setup a image container for this project.
+If you have docker, it is also possible to setup a image container for this project.
 
 To setup a image for this project, first run this command:
 ```
@@ -34,33 +34,33 @@ Once done, all required components will have been installed within your image.
 ## Running the program
 
 ### Local
-When running this project locally, ensure you have python on your device.
+When running this project locally, ensure you have Python (version 3.10 +) installed on your device.
 
 To run the program, use this command:
 ```
 python main.py 
 ```
 
-If you want to run any of the test in the /tests folder, use this command:
+If you want to run any of the tests in the /tests folder, use this command:
 ```
 python -m tests.NAME-OF-THE-TEST
 ```
-Note: When doing this, the .py does not need to added. <br>Example: python -m tests.test_performance
+Note: When doing this, the .py does not need to added as Python needs to run the module. <br>Example: python -m tests.test_performance
 
 ### Docker
-The project can then be run with this command within the container:
+The project can then be run with the following command within the container:
 ```
 docker run -it NAME-OF-YOUR-IMAGE python main.py
 ```
 
-Running test in the container is done by:
+Running the tests in the container is done by:
 ```
 docker run -it NAME-OF-YOUR-IMAGE python -m tests.NAME-OF-THE-TEST
 ```
 
 ## Edit components
 If you want to run with different amount of smart meters, participants or selected participants, 
-then there are three place to do this in main.
+then there are three place to do this in main.py.
 
 For the number of smart meters:
 ```
