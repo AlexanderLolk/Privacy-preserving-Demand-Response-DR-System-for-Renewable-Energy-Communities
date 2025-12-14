@@ -19,7 +19,7 @@ class Shuffle:
     """
     def __init__(self, pp):
         (self.curve, self.g, self.order) = pp
-    
+
     def get_h_generators(self, N):
         """ 
         Generates a list of N independent generators (h_1, ..., h_N).

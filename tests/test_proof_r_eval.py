@@ -1,5 +1,5 @@
-from utils.eval import Eval       
-from utils.procedures import Procedures
+from src.utils.eval import Eval       
+from src.utils.procedures import Procedures
 
 # test has been made with help from ai
 def run_check():

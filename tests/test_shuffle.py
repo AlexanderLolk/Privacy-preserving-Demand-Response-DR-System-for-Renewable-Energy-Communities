@@ -1,5 +1,5 @@
-from utils.shuffle import Shuffle
-from utils.procedures import Procedures
+from src.utils.shuffle import Shuffle
+from src.utils.procedures import Procedures
 # test has been made with help from ai
 
 # testing shuffle flow

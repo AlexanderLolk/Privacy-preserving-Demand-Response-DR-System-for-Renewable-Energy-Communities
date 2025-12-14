@@ -1,4 +1,4 @@
-import utils.private_key_proof as sch
+import src.utils.private_key_proof as sch
 import threshold_crypto as tc
 # test has been made with help from ai
 def test_schnorr_NIZKP():

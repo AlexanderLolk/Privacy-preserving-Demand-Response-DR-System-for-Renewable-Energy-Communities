@@ -1,6 +1,6 @@
 import time
-from utils.elgamal_dec_proof import hash_to_int
-from utils.ec_elgamal import ElGamal
+from src.utils.elgamal_dec_proof import hash_to_int
+from src.utils.ec_elgamal import ElGamal
 import threshold_crypto as tc
 
 class Eval:

@@ -1,5 +1,5 @@
 import threshold_crypto as tc
-from utils.signature import Signature
+from src.utils.signature import Signature
 # test has been made with help from ai
 
 def test_schnorr_signature():

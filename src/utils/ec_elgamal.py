@@ -332,7 +332,6 @@ class ElGamal:
 
         return decrypted_message_point
     
-    # this or a ZK range proof
     def _eval_threshold_decrypt(
         self,
         partial_decryptions: list,

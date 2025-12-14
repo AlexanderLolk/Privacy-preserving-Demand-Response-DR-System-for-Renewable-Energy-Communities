@@ -1,6 +1,6 @@
 import random
-from utils.elgamal_dec_proof import prove_partial_decryption_share
-from utils.procedures import Procedures
+from src.utils.elgamal_dec_proof import prove_partial_decryption_share
+from src.utils.procedures import Procedures
 
 class DR_Aggregator:
     """ 

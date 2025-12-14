@@ -1,5 +1,5 @@
-from utils.elgamal_dec_proof import verify_correct_decryption, prove_partial_decryption_share
-from utils.procedures import Procedures
+from src.utils.elgamal_dec_proof import verify_correct_decryption, prove_partial_decryption_share
+from src.utils.procedures import Procedures
 
 class Aggregator:
     """ 

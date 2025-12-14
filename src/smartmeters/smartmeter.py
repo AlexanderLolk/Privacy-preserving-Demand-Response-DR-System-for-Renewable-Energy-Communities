@@ -1,7 +1,7 @@
 import time
 import random
-from utils.elgamal_dec_proof import verify_correct_decryption
-from utils.procedures import Procedures
+from src.utils.elgamal_dec_proof import verify_correct_decryption
+from src.utils.procedures import Procedures
 
 class SmartMeter:
     """ 

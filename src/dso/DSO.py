@@ -1,6 +1,6 @@
-from utils.procedures import Procedures
-from utils.private_key_proof import schnorr_NIZKP_verify
-from utils.elgamal_dec_proof import verify_correct_decryption
+from src.utils.procedures import Procedures
+from src.utils.private_key_proof import schnorr_NIZKP_verify
+from src.utils.elgamal_dec_proof import verify_correct_decryption
 import random
 
 class DSO:

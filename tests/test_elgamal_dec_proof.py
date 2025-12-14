@@ -1,5 +1,5 @@
-from utils.ec_elgamal import ElGamal
-import utils.elgamal_dec_proof as dec
+from src.utils.ec_elgamal import ElGamal
+import src.utils.elgamal_dec_proof as dec
 # test has been made with help from ai
 
 def test_dec_proof():

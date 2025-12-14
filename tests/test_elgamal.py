@@ -1,5 +1,5 @@
 import random
-from utils.ec_elgamal import ElGamal
+from src.utils.ec_elgamal import ElGamal
 # test has been made with help from ai
 
 def test_keygen(el):
