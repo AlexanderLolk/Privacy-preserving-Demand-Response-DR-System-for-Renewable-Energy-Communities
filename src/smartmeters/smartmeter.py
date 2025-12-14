@@ -3,6 +3,7 @@ import random
 from src.utils.elgamal_dec_proof import verify_correct_decryption
 from src.utils.procedures import Procedures
 
+
 class SmartMeter:
     """ 
     Represents a Smart Meter (user).
@@ -67,34 +68,9 @@ class SmartMeter:
         """Returns ID and Encryption Key."""
         message_to_verify = self.id + str(self.ek.x) + str(self.ek.y)
         return (self.id, self.get_encryption_key(), self.pro.sig.schnorr_sign(self.__sk, self.pp, message_to_verify))
-    # def set_agg_encrypytion_keys(self, agg):
-    #     """
-    #     Stores the Aggregator's encryption key.
-
-    #     Args:
-    #         agg_id (str): The Aggregator's identifier.
-    #         agg_ek (tuple): The Aggregator's ElGamal encryption key structure.
-    #     """
-    #     id, (ek, pp, proof), signature = agg
-    #     print(f"DSO received encryption key from agg {ek}")
-    #     message_to_verify = id + str(ek.x) + str(ek.y)
-    #     print(f"from dso the message is {message_to_verify}")
-
-    #     pk = None
-    #     if self.agg_pk is not None:
-    #         pk, _, _ = self.agg_pk
-
-    #     if pk is None or pp is None:
-    #         raise ValueError("pk could not be found in registy")
-    #     if not self.pro.sig.schnorr_verify(pk, pp, message_to_verify, signature):
-    #         raise ValueError("dso failed to verify aggregator")
-    #     if not verify_correct_decryption(ek, pp, proof):
-    #         raise ValueError("dso failed to verify aggregator's proof of correct decryption")
-
-    #     self.agg_ek = ek
     
 
-    def set_anon_key(self, anon_key):
+    def set_anon_key(self, anon_key_w_sign):
         """ 
         Receives the randomness (blinding factor) used in Mix_id().
         
@@ -108,16 +84,22 @@ class SmartMeter:
             anon_key (tuple): A tuple containing (r_prime, signature).
                               r_prime is the blinding factor (EC Point or Scalar).
         """
-        enc_r_prime, signature = anon_key
+        enc_anon_key, signature = anon_key_w_sign
         
-        r_prime = self.pro.ahe.dec(self.__dk, enc_r_prime)
+        x = self.pro.ahe.dec(self.__dk, enc_anon_key[0])
+        y = self.pro.ahe.dec(self.__dk, enc_anon_key[1])
         
-        anon_key_verified = self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature)
+        from Crypto.PublicKey import _point
+        anon_key = _point.EccPoint(x, y, self.pp[0]._name)
+        
+        # anon_key_verified = self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(r_prime), signature)
+        anon_key_verified = self.pro.sig.schnorr_verify(self.agg_pk[0], self.agg_pk[1], str(x) + str(y), signature)
         if not anon_key_verified:
             raise ValueError("Anonymous key signature verification failed.")
         
         # The final Point on the curve (pk'). This is what the rest of the network sees as the sm identity.
-        self.anon_id = r_prime * self.pp[1]
+        # self.anon_id = r_prime * self.pp[1]
+        self.anon_id = anon_key
 
     def get_sm_baseline(self, m):
         """

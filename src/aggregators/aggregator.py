@@ -154,16 +154,18 @@ class Aggregator:
             
             for pk_prime in self.mix_anon_list[0]:
                 if pk_prime_check == pk_prime:
-                    sign_r_prime = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(r_prime))
+                    # sign_r_prime = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(r_prime))
+                    sign_anon_key = self.pro.sig.schnorr_sign(self.__sk, self.pp, (str(pk_prime.x) + str(pk_prime.y)))
 
                     # Store mapping of pk -> Blinding_Factor for later use in Anonym()
                     pk_str = str((sm_pk.x, sm_pk.y))
                     self.pk_to_pk_prime[pk_str] = blinding_factor
                     
-                    enc_r_prime = self.pro.ahe.enc(self.sm_ek[id], r_prime)
-                    
-                    # return (blinding_factor, sign_r_prime)
-                    return (enc_r_prime, sign_r_prime)
+                    # enc_r_prime = self.pro.ahe.enc(self.sm_ek[id], r_prime)
+                    enc_anon_key_1 = self.pro.ahe.enc(self.sm_ek[id], int(pk_prime.x))
+                    enc_anon_key_2 = self.pro.ahe.enc(self.sm_ek[id], int(pk_prime.y))
+                    return ((enc_anon_key_1, enc_anon_key_2), sign_anon_key)
+                    # return (enc_r_prime, sign_r_prime)
         
         print("Public key not found in r_prime")
         return None
