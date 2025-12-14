@@ -20,12 +20,12 @@ To install all of these run this in your terminal:
 ```
 pip install .
 ```
-This will create a clone of the meantioned repository in temporary folder and install the required components.
+This will create a clone of the mentioned repository in temporary folder and install the required components.
 
 ### Docker installation
-If you have docker, is it also possiable to setup a contrainer for this project.
+If you have docker, is it also possible to setup a image container for this project.
 
-To setup a image contraining this project, first run this command:
+To setup a image for this project, first run this command:
 ```
 docker build -t name-of-your-image .
 ```
@@ -42,7 +42,7 @@ python main.py
 ```
 
 ### docker
-The project can then be ran with this command:
+The project can then be run with this command within the container:
 ```
 docker run -it name-of-your-image python Main.py
 ```
