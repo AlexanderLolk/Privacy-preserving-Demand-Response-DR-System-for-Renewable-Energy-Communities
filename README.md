@@ -33,7 +33,7 @@ Once install all required components will be within your image.
 
 ## Running the program
 
-### local
+### Local
 When running this project locally, ensure you have python on your device.
 
 To run the program, use this command:
@@ -41,7 +41,7 @@ To run the program, use this command:
 python main.py 
 ```
 
-### docker
+### Docker
 The project can then be run with this command within the container:
 ```
 docker run -it name-of-your-image python Main.py
