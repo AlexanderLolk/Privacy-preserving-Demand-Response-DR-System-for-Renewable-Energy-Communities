@@ -11,7 +11,7 @@ Once the project is on your local system, there are two ways of running it.
 
 The program requires Python, the library "pycryptodome" and the library: https://github.com/tompetersen/threshold-crypto by tompetersen.
 
-if these libraries are not already installed on your device, then use the following commands below.
+If these libraries are not already installed on your device, then use the following commands below.
 
 Note: These commands should be run within the project folder.
 
