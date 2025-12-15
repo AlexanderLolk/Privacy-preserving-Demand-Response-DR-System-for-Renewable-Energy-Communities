@@ -4,7 +4,6 @@ from src.utils.elgamal_dec_proof import verify_correct_decryption
 from src.utils.shuffle import Shuffle
 from src.utils.signature import Signature
 
-
 class Board:
     """ 
     Represents both the Draft Version paper's public and Private Bulletin Board.
@@ -249,7 +248,7 @@ class Board:
             pk_key = str((pk_prime.x, pk_prime.y))
             self.consumption_report_map[pk_key] = t, ct, proof
 
-        # not sure if needed
+        # this is for eval
         self.sm_consumptions = consumption_report
 
     def get_sm_consumption(self):

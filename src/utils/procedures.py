@@ -56,8 +56,6 @@ class Procedures:
         self.sig = Signature()
         sk, pk = self.sig.key_gen("P-256")
         assert pk == sk * pp[1], "Public key does not match private key"
-        
-        # self.
 
         proof =  nizkp.schnorr_NIZKP_proof(pk, pp, sk)
         return ((id, (pk, pp, proof)), sk)
@@ -178,7 +176,6 @@ class Procedures:
         r = tc.random_in_range(2, self.pp[2])
         if m > 0:
             cts = self.ahe.enc(dso_ek[0], m, self.r)
-            # cts = self.ahe.enc(dso_ek[0], m)
         else:
             # deterministic encryption of 0
             cts = self.ahe.enc(dso_ek[0], m, 1)
@@ -240,8 +237,8 @@ class Procedures:
                 raise ValueError("Invalid input format for sm_report")
             
             # TODO check if index is correct, normally it is done by ZKP
-            # ANSWER: THEY DO NOT ALIGN!!!!!!
-            # FOR NOW, AGG HAS A MAP TO STORE THE pk TO pk_prime
+            # Answer: they do not align
+            # For now, agg has a map to store the pk to pk_prime
             # pk_prime = (r_prime) * pk_pt
 
             # Compute the re-randomized public key: pk' = pk + r'

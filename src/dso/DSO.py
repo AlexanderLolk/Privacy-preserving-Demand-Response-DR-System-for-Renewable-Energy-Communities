@@ -244,7 +244,7 @@ class DSO:
 
         # return share
 
-        # stupid but works
+        # currently just hands out shares in order of calls
         share = self.__key_shares[self.i]
         self.i += 1
         # encrypt the share with the agg's encryption key

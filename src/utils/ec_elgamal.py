@@ -277,9 +277,8 @@ class ElGamal:
         """
         
         num_bits = len(encrypted_message)
-        # print("num_bit: " + str(num_bits))
+        
         num_shares = len(partial_decryptions) // num_bits
-        # print(f"Number of bits: {num_bits}, Number of shares: {num_shares}")
         
         # Changing partial_decryptions from [share0_bit0, share0_bit1, ..., share1_bit0, share1_bit1, ...]
         # to [[share0_bit0, share1_bit0], [share0_bit1, share1_bit1], ...]

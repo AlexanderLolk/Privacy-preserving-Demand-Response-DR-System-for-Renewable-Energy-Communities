@@ -242,7 +242,6 @@ evaluator = eval.Eval(dso.get_encryption_key())
 agg_share, agg_proof = agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
 dr_share, dr_proof = dr_agg.partial_dec_reports(bb.get_sm_baseline(), bb.get_sm_consumption())
 
-# TODO CHECK PARTIAL PROOF with agg encryption
 if not verify_partial_decryption_share(agg.pp, agg_proof[0][0], agg_proof[1]):
     raise ValueError("Aggregator partial decryption share proof verification failed!")
 

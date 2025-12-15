@@ -256,8 +256,6 @@ class Eval:
 
         ct_eq = []
 
-        
-            
         # Since ct_t_i is a list of typles (bit-wise encryption), we iterate through it to extract each tuple
         for (c1_t, c2_t) in ct_t_i:
             c1_sum, c2_sum = ct_sum
