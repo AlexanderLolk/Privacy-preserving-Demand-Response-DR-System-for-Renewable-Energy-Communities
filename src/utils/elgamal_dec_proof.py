@@ -120,8 +120,7 @@ def prove_partial_decryption_share(pp, ct, key_share):
     
     ct1, ct2 = ct
     
-    ks0 = key_share
-    y_i = ks0.y  # Secret key share
+    y_i = key_share.y  # Secret key share
     share_commitment = int(y_i) * g  # E_i (public verification share)
 
     # Compute partial decryption share

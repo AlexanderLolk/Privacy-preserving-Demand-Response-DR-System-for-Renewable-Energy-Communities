@@ -58,7 +58,6 @@ class Eval:
             tuple: (Encrypted_Result_List, Proofs)
                    The result is a list of ciphertexts that encrypt '0' if success, or random if fail.
         """
-        print("\nin eval")
         
         target_reduction = BB.get_target_reduction()
         baseline_BB = BB.get_sm_baseline()
@@ -120,7 +119,6 @@ class Eval:
         ct_sum = self.ct_aggregation(CT_red)
         
         # PET comparison
-        print(f"Aggregator computing new PET (ct_eq) and publishing to Board.")
         ct_eq, π_eq = self.pet_comparison(ct_sum, target_reduction)
         
         return ct_eq, π_eq
@@ -348,7 +346,6 @@ class Eval:
         Returns:
             list: List of 1s (Success) and 0s (Fail) for each target compared.
         """
-        print("\nin combine_decryption_shares")
         print("Attempting to combine decryption shares...")
 
         g = self.dso_ek[1][1]
