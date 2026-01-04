@@ -10,6 +10,9 @@ class Eval:
     This class performs operations on encrypted data (homomorphic subtraction, aggregation)
     and executes the Private Equality Test (PET) to determine if the total reduction 
     matched the target, without decrypting individual user data.
+
+    references:
+        - Draft Paper
     """
     def __init__(self, dso_ek):
         """

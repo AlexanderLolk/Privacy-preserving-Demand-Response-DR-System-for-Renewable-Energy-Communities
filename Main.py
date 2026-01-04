@@ -6,6 +6,8 @@ import src.boards.board             as board
 import src.utils.eval               as eval
 from src.utils.elgamal_dec_proof import verify_partial_decryption_share
 
+# Most comments are edited by LLM generations for clarity.
+
 # It instantiates all entities (DSO, Smart Meters, Aggregators)
 # and steps them through the protocol phases.
 

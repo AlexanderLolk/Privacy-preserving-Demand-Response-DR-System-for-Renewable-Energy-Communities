@@ -2,6 +2,8 @@ import hashlib
 from Crypto.PublicKey import ECC
 import threshold_crypto as tc
 
+# Code inspired by petlib: https://github.com/gdanezis/petlib/blob/master/examples/zkp.py & https://www.youtube.com/watch?v=r9hJiDrtukI
+
 class Signature:
     def key_gen(self, curve_name="P-256"):
         """

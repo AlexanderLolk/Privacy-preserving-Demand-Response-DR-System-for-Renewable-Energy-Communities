@@ -39,6 +39,9 @@ def prove_correct_decryption(ek, pp, m, dk, ciphertext):
             - ciphertext: The input ciphertext.
             - (A1, A2): Commitment points for the ZKP.
             - s: The response scalar.
+    
+    References:
+        - Code inspired by
     """
     # Extract ciphertext components
     ct_0, ct_1 = ciphertext
@@ -113,6 +116,9 @@ def prove_partial_decryption_share(pp, ct, key_share):
 
     Returns:
         tuple: (A1, A2, z, ct1, D_i, share_commitment)
+        
+    references:
+        - Code inspired by "A Secure and Optimally Efficient Multi-Authority Election Scheme" https://berry.win.tue.nl/papers/euro97.pdf page 6 (2.3 Robust threshold ElGamal cryptosystem)
     """
 
     g = pp[1]
@@ -120,6 +126,7 @@ def prove_partial_decryption_share(pp, ct, key_share):
     
     ct1, ct2 = ct
     
+    # code snippet inspire https://github.com/hyperion-voting/hyperion/blob/main/primitives.py#L304
     ks0 = key_share
     y_i = ks0.y  # Secret key share
     share_commitment = int(y_i) * g  # E_i (public verification share)
@@ -163,6 +170,9 @@ def verify_partial_decryption_share(pp, ct, proof):
 
     Returns:
         bool: True if valid, False otherwise.
+        
+    references:
+        - Code inspired by "A Secure and Optimally Efficient Multi-Authority Election Scheme" https://berry.win.tue.nl/papers/euro97.pdf page 6
     """
     ct1, _ = ct
     g = pp[1]

@@ -1,6 +1,8 @@
 import hashlib
 import threshold_crypto as tc
 
+# code inspired by NIZKP
+
 def schnorr_NIZKP_challenge(elements):
     """Create a deterministic SHA-256 challenge from the provided elements.
 

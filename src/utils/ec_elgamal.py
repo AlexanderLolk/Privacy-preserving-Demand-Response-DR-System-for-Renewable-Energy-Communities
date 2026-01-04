@@ -9,6 +9,7 @@ class ElGamal:
 
     References:
         - code used for threshold decryption: https://github.com/hyperion-voting/hyperion/blob/main/primitives.py#L227, https://github.com/tompetersen/threshold-crypto
+        - Inspired by ElGamal encryption: https://github.com/gdanezis/petlib/blob/master/examples/AHEG.py
     """
     def __init__(self, curve="P-256"):
         if isinstance(curve, str):
@@ -87,7 +88,6 @@ class ElGamal:
             message = (message << 1) | bit
 
         return message
-
 
     def encrypt_single(self, encryption_key: ECC.EccPoint, message: int):
         """
