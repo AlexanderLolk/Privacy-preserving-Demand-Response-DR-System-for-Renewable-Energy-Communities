@@ -41,7 +41,7 @@ def prove_correct_decryption(ek, pp, m, dk, ciphertext):
             - s: The response scalar.
     
     References:
-        - Code inspired by
+        - Code inspired by https://link.springer.com/content/pdf/10.1007/3-540-48071-4_7.pdf page 5-6
     """
     # Extract ciphertext components
     ct_0, ct_1 = ciphertext
