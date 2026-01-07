@@ -18,7 +18,7 @@ from src.utils.elgamal_dec_proof import verify_partial_decryption_share
 # Initialize the Trusted Authority / Distribution System Operator
 dso = distributer.DSO()
 
-NUM_SM      = 10     # Total Smart Meters
+NUM_SM      = 6     # Total Smart Meters
 NUM_AGG     = 1      # Energy Aggregator
 NUM_DR_AGG  = 1      # DR Aggregator
 
@@ -255,6 +255,7 @@ if not verify_partial_decryption_share(dr_agg.pp, dr_proof[0][0], dr_proof[1]):
 # The Evaluator combines shares to check if Baseline - Consumption >= Target 
 # Right now it returns a list of "Equal Ciphertexts" for successful users.
 equal_cts, proofs = evaluator.eval(bb, bb, agg_share, dr_share)
+
 
 if len(equal_cts) < 1:
     print("No smartmeters can be evaluated")

@@ -346,9 +346,12 @@ class Aggregator:
         Often used for verifying the DSO's Noisy List.
         """
         partial_cts = []
-        for ct in equal_cts:
-            partial_ct = self.pro.ahe.partial_decrypt(ct, self.dk_share)
-            partial_cts.append(partial_ct)
-
+        # for ct in equal_cts:
+        #     partial_ct = self.pro.ahe.partial_decrypt(ct, self.dk_share)
+        #     partial_cts.append(partial_ct)
+        # return partial_cts
         
-        return partial_cts
+        partial_ct = self.pro.ahe.partial_decrypt(equal_cts, self.dk_share)
+        partial_cts.append(partial_ct)
+        return partial_ct
+        

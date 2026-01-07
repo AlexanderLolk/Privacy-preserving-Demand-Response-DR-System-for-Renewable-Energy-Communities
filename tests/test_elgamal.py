@@ -243,6 +243,7 @@ def test_threshold_elgamal_deterministic_0(el):
     # Compare point coordinates
     assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
 
+
 if __name__ == "__main__":
     el = ElGamal()
     # test_keygen(el)
@@ -251,7 +252,7 @@ if __name__ == "__main__":
     # test_elgamal_big_number(el)
     # test_threshold_elgamal(el)
     # test_threshold_elgamal_on_target_reduction(el)
-    test_threshold_elgamal_on_target_reduction_eval(el)
+    # test_threshold_elgamal_on_target_reduction_eval(el)
     # test_eval_threshold_elgamal(el)
     # test_threshold_elgamal_point(el)
     # test_threshold_elgamal_deterministic_0(el)

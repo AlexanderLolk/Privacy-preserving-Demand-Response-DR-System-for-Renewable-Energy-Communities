@@ -128,12 +128,13 @@ class ElGamal:
             list: A list of (C1, C2) tuples, one for each bit of the message.
         """
         
-        if r is None:
-            r = tc.number.random_in_range(2, self.pp[2])
+        
         
         list_bits = self.__int_to_bits(message)
         encryptions = []
         for bit in list_bits:
+            if r is None:
+                r = tc.number.random_in_range(2, self.pp[2])
             bit_point = bit * self.pp[1]
             c1 = r * self.pp[1]
             c2 = (r * encryption_key) + bit_point
@@ -245,6 +246,7 @@ class ElGamal:
             list: A list of PartialDecryption objects containing the share index and the computed point.
         """
         list_PartialDecryptions = []
+        
         for ciphertext in ciphertexts:
             c1 = ciphertext[0]
             v_y = c1 * key_share.y

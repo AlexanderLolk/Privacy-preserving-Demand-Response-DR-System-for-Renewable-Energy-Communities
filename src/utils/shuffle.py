@@ -109,8 +109,8 @@ class Shuffle:
             pk_prime = e[i] + blinding_factor
 
             e_prime.append(pk_prime)
-
-        # shuffle it
+        #
+        # shuffle it 
         e_prime_shuffled = [e_prime[ψ[j]] for j in range(N)]
         return (e_prime_shuffled, r_prime, ψ)
 

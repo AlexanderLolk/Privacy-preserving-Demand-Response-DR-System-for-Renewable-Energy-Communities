@@ -136,11 +136,13 @@ class Eval:
         """
         ct_target_consumption_comparison, proof = ct_target_consumption_comparison_w_proof
 
+        print(f"\n\n len of ct_target_consumption_comparison {len(ct_target_consumption_comparison)} \n\n")
+
         # Partial decryption
         M_set_final, proof_shar = self.combine_decryption_shares(agg_share, dr_share, ct_target_consumption_comparison, thresh_param)
         
         print(f"\nEvaluation complete\n")
-        print(f" participants marked: {len(self.eval_results)}")
+        print(f" selected with consumption below their baseline: {len(self.eval_results)}")
         print(f" participants not selected or did not meet baseline: {len(self.for_marked_or_not_selected)}\n")
         print(f" target comparisons {len(ct_target_consumption_comparison)}")
         print(f" Final M_set: {M_set_final}")
@@ -222,13 +224,21 @@ class Eval:
         ct_eq = []
         π_eq = []
 
+        print(f"\n\n len of ct_T {len(ct_T)} \n\n")
+        
         # for ct_T_i in ct_T:
         #     ct_eq_i, π_r_i = self.epet(ct_sum, ct_T_i)
         #     ct_eq.append(ct_eq_i)
         #     π_eq.append(π_r_i)
 
         ct_eq_i, π_r_i = self.epet(ct_sum, ct_T)
-        ct_eq.append(ct_eq_i)
+
+        verify_r_proof = self.verify_r(ct_sum, ct_T, ct_eq_i, π_r_i)
+
+        if not verify_r_proof:
+            raise ValueError("Proof of knowledge for 'r' failed verification.")
+
+        ct_eq = ct_eq_i
         π_eq.append(π_r_i)
 
         return (ct_eq, π_eq)
@@ -252,27 +262,30 @@ class Eval:
         """
 
         order = self.dso_ek[1][2]
-        
         r = tc.number.random_in_range(1, order)
 
-        ct_eq = []
+        ct1_sum, ct2_sum = ct_sum
+        ct_eq_list = []
+        
+        # Since ct_t_i is a list of tuples (bit-wise encryption), we iterate through it to extract each tuple
+        for ct_t in ct_t_i:
+            ct1_t, ct2_t = ct_t
 
-        # Since ct_t_i is a list of typles (bit-wise encryption), we iterate through it to extract each tuple
-        for (c1_t, c2_t) in ct_t_i:
-            c1_sum, c2_sum = ct_sum
+            ct1_diff = ct1_sum + (-ct1_t)
+            ct2_diff = ct2_sum + (-ct2_t)
+            
+            # print(f"\n\nc1_diff: \n x={ct1_diff.x} \n y={ct1_diff.y}\n")
+            # print(f"c2_diff: \n x={ct2_diff.x} \n y={ct2_diff.y}\n")
 
-            c1_diff = c1_sum + (-c1_t)
-            c2_diff = c2_sum + (-c2_t)
+            ct1_eq = int(r) * ct1_diff
+            ct2_eq = int(r) * ct2_diff
 
-            c1_eq = int(r) * c1_diff
-            c2_eq = int(r) * c2_diff
-
-            ct_eq.append((c1_eq, c2_eq))
+            ct_eq_list.append((ct1_eq, ct2_eq))
 
         # pass the lists ct_sum and ct_t_i with proof_r
-        π_r_i = self.proof_r(ct_sum, ct_t_i, ct_eq, r)
+        π_r_i = self.proof_r(ct_sum, ct_t_i, ct_eq_list, r)
 
-        return (ct_eq, π_r_i)
+        return (ct_eq_list, π_r_i)
 
     def proof_r(self, ct1, ct2, ct_eq, witness):
         """
@@ -351,21 +364,26 @@ class Eval:
         """
         print("Attempting to combine decryption shares...")
 
-        g = self.dso_ek[1][1]
+        # g = self.dso_ek[1][1]
         
-        # Define Identity Point (0*G)
-        identity_point = 0 * g
+        # Define Identity Point
+        identity_point = 0 * self.dso_ek[1][1]
+        print(f"iden point : \n x={identity_point.x} \n y={identity_point.y}")
 
         M_set_final = []
         
+        # print(f"\n\n ct_eq_list {ct_eq_list} \n\n")
+        # print(f"agg_part: \n {agg_share}")
+        # print(f"dr_part: \n {dr_share}")
+        
         for i in range(len(ct_eq_list)):
             # Get partial decryptions for ciphertext i from all aggregators
-            ct_eq_i = ct_eq_list[i] # list of tuples
-
+            ct_eq_i = [ct_eq_list[i]] # list of tuples [(C1_eq, C2_eq)]
+            
             agg_partial_i = agg_share[i]
             dr_partial_i = dr_share[i]
-            
-            combined_partial = agg_partial_i + dr_partial_i
+
+            combined_partial = [agg_partial_i, dr_partial_i]
             
             plaintext_point = self.el.threshold_decrypt(
                 combined_partial, 
