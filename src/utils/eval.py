@@ -12,7 +12,7 @@ class Eval:
     matched the target, without decrypting individual user data.
 
     references:
-        - Draft Paper
+        - Draft Version Paper
     """
     def __init__(self, dso_ek):
         """
@@ -20,23 +20,65 @@ class Eval:
             dso_ek (tuple): The system-wide ElGamal encryption key.
         """
         self.dso_ek = dso_ek
+        self.el = ElGamal()
 
+    def collapse(self, cipher_list):
+        """
+        Helper function that collapses a list of ciphertexts into a single ciphertext
+        by applying weights (powers of 2) to each ciphertext and summing them.
+
+        This is done to convert bit-wise encrypted values into a single encrypted integer.
+
+        Args:
+            cipher_list (list): List of ciphertexts [(C1, C2), ...]
+        Returns:
+            tuple: Collapsed ciphertext (C1_total, C2_total)
+        """
+        total_a, total_b = None, None
+        for i, (a, b) in enumerate(cipher_list):
+            weight = 2**i
+            # Scalar multiplication: weight * Point
+            weighted_a = a * weight 
+            weighted_b = b * weight
+            
+            if total_a is None:
+                total_a, total_b = weighted_a, weighted_b
+            else:
+                total_a += weighted_a
+                total_b += weighted_b
+                
+        return total_a, total_b
+    
     def sub(self, c1, c2):
         """
         Helper function that computes the homomorphic subtraction of two encrypted values.
 
         Args:
-            c1 (list): Ciphertext of Baseline [(C1, C2), ...]
-            c2 (list): Ciphertext of Consumption [(C1, C2), ...]
+            c1 (list): Ciphertext of Baseline [(C1, C2), ...] or a tuple (C1, C2)
+            c2 (list): Ciphertext of Consumption [(C1, C2), ...] or a tuple (C1, C2)
 
         Returns:
             list: Encrypted difference [(C1, C2), ...]
         """
+        #if c1 is not a list
+        if isinstance(c1, list):
+            a1, b1 = self.collapse(c1)
+        else:
+            a1, b1 = c1
+
+        if isinstance(c2, list):
+            a2, b2 = self.collapse(c2)
+        else:
+             a2, b2 = c2
+        
+        return (a1 + (-a2), b1 + (-b2))
+    
+    def add(self, c1, c2):
 
         a1, b1 = c1
         a2, b2 = c2
         
-        return (a1 + (-a2), b1 + (-b2))
+        return (a1 + a2, b1 + b2)
 
     def eval(self, BB, PBB, agg_share, dr_share):
         """
@@ -61,7 +103,6 @@ class Eval:
             tuple: (Encrypted_Result_List, Proofs)
                    The result is a list of ciphertexts that encrypt '0' if success, or random if fail.
         """
-        
         target_reduction = BB.get_target_reduction()
         baseline_BB = BB.get_sm_baseline()
         consumption_PBB = PBB.get_sm_consumption()
@@ -69,8 +110,6 @@ class Eval:
         # lists
         participants = BB.get_participants()
         selected = BB.get_selected_sm()
-
-        self.el = ElGamal()
         
         agg_baselines_parts, agg_consumptions_parts = agg_share
         dr_baselines_parts, dr_consumptions_parts = dr_share
@@ -79,7 +118,6 @@ class Eval:
         self.eval_results = []
         CT_red = []
  
-        i = 0
         for pk_prime in participants:
             pk_prime_str = str((pk_prime.x, pk_prime.y))
             sm_baseline_t, sm_baseline_ct, sm_baseline_proof = baseline_BB[pk_prime_str]
@@ -89,13 +127,19 @@ class Eval:
             sm_baseline_ct_part_agg, _, _ = agg_baselines_parts[pk_prime_str]
             sm_baseline_ct_part_dr, _, _ = dr_baselines_parts[pk_prime_str]
             
-            baseline = self.el._eval_threshold_decrypt((sm_baseline_ct_part_agg + sm_baseline_ct_part_dr), sm_baseline_ct)
+            baseline = self.el._eval_threshold_decrypt(
+                (sm_baseline_ct_part_agg + sm_baseline_ct_part_dr),
+                sm_baseline_ct
+            )
             
             # partial decryption of the consumption
             sm_consumption_ct_part_agg, _, _ = agg_consumptions_parts[pk_prime_str]
             sm_consumption_ct_part_dr, _, _ = dr_consumptions_parts[pk_prime_str]
 
-            consumption = self.el._eval_threshold_decrypt((sm_consumption_ct_part_agg + sm_consumption_ct_part_dr), sm_consumption_ct)
+            consumption = self.el._eval_threshold_decrypt(
+                (sm_consumption_ct_part_agg + sm_consumption_ct_part_dr),
+                sm_consumption_ct
+            )
 
             # Order comparison (ord)
             # Note: ct_o is not ciphertext
@@ -171,7 +215,7 @@ class Eval:
 
         return result, t, ord_proof
 
-    def ct_reduction(self, ct_bs, ct_cs):
+    def ct_reduction(self, ct_b, ct_c):
         """
         Computes the Energy Reduction.
         
@@ -180,12 +224,9 @@ class Eval:
         Returns:
             list: Encrypted reduction list.
         """
-        ct_diff_list = []
-        for ct_b, ct_c in zip(ct_bs, ct_cs):
-            ct_diff_tuple = self.sub(ct_b, ct_c)
-            ct_diff_list.append(ct_diff_tuple)
-                
-        return ct_diff_list
+        ct_diff_tuple = self.sub(ct_b, ct_c)
+
+        return ct_diff_tuple
 
     def ct_aggregation(self, reduc_set):
         """
@@ -199,51 +240,35 @@ class Eval:
         Returns:
             tuple: (Total_C1, Total_C2)
         """
-
-        C1_prod, C2_prod = reduc_set[0][0][0]
-
+        CT_prod = reduc_set[0][0]
         for i in range(1, len(reduc_set)):
-            for j in range(1, len(reduc_set[i][0])):
-                C1_i, C2_i = reduc_set[i][0][j]
+            CT_i = reduc_set[i][0]
 
-                C1_prod = C1_prod + C1_i
-                C2_prod = C2_prod + C2_i
+            CT_prod = self.add(CT_prod, CT_i)
+            print(f"\n CT_prod is {CT_prod} \n")
             
-        return (C1_prod, C2_prod)
+        return CT_prod
 
-    def pet_comparison(self, ct_sum, ct_T):
+    def pet_comparison(self, ct_sum, ct_t_list):
         """
         Executes the Private Equality Test (PET) for multiple targets (e.g., Noisy List).
         
         Checks if Total_Reduction == Target_Reduction.
-        Iterates through all possible targets in `ct_T` (the noisy list) and calls `epet` for each.
+        Iterates through all possible targets in `ct_t_list` (the noisy list) and calls `epet` for each.
         
         Returns:
             tuple: (List_of_EQ_Ciphertexts, List_of_Proofs)
         """
         ct_eq = []
-        π_eq = []
-
-        print(f"\n\n len of ct_T {len(ct_T)} \n\n")
-        
-        # for ct_T_i in ct_T:
-        #     ct_eq_i, π_r_i = self.epet(ct_sum, ct_T_i)
-        #     ct_eq.append(ct_eq_i)
-        #     π_eq.append(π_r_i)
-
-        ct_eq_i, π_r_i = self.epet(ct_sum, ct_T)
-
-        verify_r_proof = self.verify_r(ct_sum, ct_T, ct_eq_i, π_r_i)
+        ct_eq, π_r = self.epet(ct_sum, ct_t_list)
+        verify_r_proof = self.verify_r(ct_sum, ct_t_list, ct_eq, π_r)
 
         if not verify_r_proof:
             raise ValueError("Proof of knowledge for 'r' failed verification.")
 
-        ct_eq = ct_eq_i
-        π_eq.append(π_r_i)
+        return (ct_eq, π_r)
 
-        return (ct_eq, π_eq)
-
-    def epet(self, ct_sum, ct_t_i):
+    def epet(self, ct_sum, ct_t_list):
         """
         Encrypted Private Equality Test (EPET) logic.
         
@@ -264,26 +289,20 @@ class Eval:
         order = self.dso_ek[1][2]
         r = tc.number.random_in_range(1, order)
 
-        ct1_sum, ct2_sum = ct_sum
         ct_eq_list = []
         
-        # Since ct_t_i is a list of tuples (bit-wise encryption), we iterate through it to extract each tuple
-        for ct_t in ct_t_i:
-            ct1_t, ct2_t = ct_t
+        # Since ct_t_list is a list of tuples (bit-wise encryption), we iterate through it to extract each tuple
+        for ct_t in ct_t_list:
+            ct_diff = self.sub(ct_sum, ct_t)
 
-            ct1_diff = ct1_sum + (-ct1_t)
-            ct2_diff = ct2_sum + (-ct2_t)
-            
-            # print(f"\n\nc1_diff: \n x={ct1_diff.x} \n y={ct1_diff.y}\n")
-            # print(f"c2_diff: \n x={ct2_diff.x} \n y={ct2_diff.y}\n")
-
+            ct1_diff, ct2_diff = ct_diff
             ct1_eq = int(r) * ct1_diff
             ct2_eq = int(r) * ct2_diff
-
+            
             ct_eq_list.append((ct1_eq, ct2_eq))
 
-        # pass the lists ct_sum and ct_t_i with proof_r
-        π_r_i = self.proof_r(ct_sum, ct_t_i, ct_eq_list, r)
+        # pass the lists ct_sum and ct_t_list with proof_r
+        π_r_i = self.proof_r(ct_sum, ct_t_list, ct_eq_list, r)
 
         return (ct_eq_list, π_r_i)
 
@@ -297,24 +316,22 @@ class Eval:
         Returns:
             tuple: (Commitments, Response, Challenge)
         """
-        g = self.dso_ek[1][1]
         order = self.dso_ek[1][2]
         r = tc.number.random_in_range(1, order)
 
-        # tuples
-        c1_sum, c2_sum = ct1
-
         A_values = []
-        for (c1_t, c2_t) in ct2:
-            c1_diff = c1_sum + (-c1_t)
-            c2_diff = c2_sum + (-c2_t)
+
+        for ct2_i in ct2:
+            ct_diff = self.sub(ct1, ct2_i)
+
+            c1_diff, c2_diff = ct_diff
             
             c1_A = int(r) * c1_diff
             c2_A = int(r) * c2_diff
 
             A_values.append((c1_A, c2_A))
 
-        challenge = hash_to_int(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
+        challenge = hash_to_int(self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
         response = (int(r) + int(challenge) * int(witness)) % int(order)
 
@@ -327,19 +344,16 @@ class Eval:
         Returns:
             bool: True if verification succeeds.
         """
-        g = self.dso_ek[1][1]
         order = self.dso_ek[1][2]
 
         A_values, response, challenge = proof
 
-        # tuples
-        c1_sum, c2_sum = ct1
+        c_check = hash_to_int(self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
 
-        c_check = hash_to_int(g, self.dso_ek, ct1, ct2, ct_eq, A_values, order=order)
+        for (A1, A2), ct_t_i, (c1_eq, c2_eq) in zip(A_values, ct2, ct_eq):
+            ct_diff = self.sub(ct1, ct_t_i)
 
-        for (A1, A2), (c1_t, c2_t), (c1_eq, c2_eq) in zip(A_values, ct2, ct_eq):
-            c1_diff = c1_sum + (-c1_t)
-            c2_diff = c2_sum + (-c2_t)
+            c1_diff, c2_diff = ct_diff
 
             V1 = int(response) * c1_diff
             V2 = int(response) * c2_diff
@@ -363,32 +377,21 @@ class Eval:
             list: List of 1s (Success) and 0s (Fail) for each target compared.
         """
         print("Attempting to combine decryption shares...")
-
-        # g = self.dso_ek[1][1]
         
         # Define Identity Point
         identity_point = 0 * self.dso_ek[1][1]
-        print(f"iden point : \n x={identity_point.x} \n y={identity_point.y}")
-
         M_set_final = []
         
-        # print(f"\n\n ct_eq_list {ct_eq_list} \n\n")
-        # print(f"agg_part: \n {agg_share}")
-        # print(f"dr_part: \n {dr_share}")
-        
         for i in range(len(ct_eq_list)):
-            # Get partial decryptions for ciphertext i from all aggregators
-            ct_eq_i = [ct_eq_list[i]] # list of tuples [(C1_eq, C2_eq)]
+            ct_eq_i = ct_eq_list[i] # list of tuples [(C1_eq, C2_eq)]
             
             agg_partial_i = agg_share[i]
             dr_partial_i = dr_share[i]
-
             combined_partial = [agg_partial_i, dr_partial_i]
             
-            plaintext_point = self.el.threshold_decrypt(
+            plaintext_point = self.el.threshold_decrypt_point(
                 combined_partial, 
                 ct_eq_i,  # Pass tuple (C1, C2) directly
-                thresh_params
             )
 
             if plaintext_point == identity_point:

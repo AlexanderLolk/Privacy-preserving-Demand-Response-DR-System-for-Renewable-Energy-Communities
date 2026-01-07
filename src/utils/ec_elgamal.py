@@ -42,7 +42,6 @@ class ElGamal:
     def __int_to_bits(self, message: int):
         """
         Converts integer to bits, LSB FIRST (Little Endian).
-        Index 0 = 1s place, Index 1 = 2s place, etc.
         """
         if message == 0:
             return [0]
@@ -50,7 +49,7 @@ class ElGamal:
         length = message.bit_length()
         list_bits = []
 
-        # Loop 0 to length (NOT reversed)
+        # Loop 0 to length
         for i in range(length):
             # (message >> 0) & 1 is the LSB
             list_bits.append(((message >> i) & 1))
@@ -83,7 +82,6 @@ class ElGamal:
         if isinstance(message, int):
             message = message * self.pp[1]
 
-
         c1 = r * self.pp[1]
         c2 = (r * encryption_key) + message
         
@@ -104,9 +102,6 @@ class ElGamal:
         Returns:
             list: A list of (C1, C2) tuples, one for each bit of the message.
         """
-        
-        
-        
         list_bits = self.__int_to_bits(message)
         encryptions = []
         for bit in list_bits:
@@ -370,11 +365,11 @@ class ElGamal:
 
         return decrypted_message
     
-    def threshold_decrypt_raw(self, partial_decryptions, ciphertext):
+    def threshold_decrypt_point(self, partial_decryptions, ciphertext):
         """
-        Decrypts a SINGLE ciphertext tuple directly to a Point.
+        Decrypts a single ciphertext tuple directly to a Point.
         
-        CRITICAL for PET: This skips the 'check_if_zero_or_one' logic, allowing 
+        This skips the 'check_if_zero_or_one' logic, allowing 
         us to see if the result is truly the Identity Point or a Random Point.
         """
         # Extract C1, C2 from the single tuple

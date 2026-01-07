@@ -258,10 +258,6 @@ def sub(el, c1, c2):
     return result
 
 def sub_as_integer(el, c1, c2):
-    """ 
-    Weights bits by 2^i and collapses them into one tuple 
-    before subtracting.
-    """
     def collapse(cipher_list):
         total_a, total_b = None, None
         for i, (a, b) in enumerate(cipher_list):
@@ -277,13 +273,9 @@ def sub_as_integer(el, c1, c2):
                 total_b += weighted_b
         return total_a, total_b
 
-    # 1. Turn [ct0, ct1, ct2] into one (A, B) representing the whole number
     int_ct1 = collapse(c1)
     int_ct2 = collapse(c2)
 
-    # 2. Subtract the resulting tuples
-    # (a1 - a2, b1 - b2)
-    # return (int_ct1[0] - int_ct2[0], int_ct1[1] - int_ct2[1])
     res_a = int_ct1[0] + (-int_ct2[0])
     res_b = int_ct1[1] + (-int_ct2[1])
     return (res_a, res_b)
@@ -293,8 +285,8 @@ def test_sub(el):
     """ Test homomorphic subtraction of encrypted values using threshold encryption. """
     pub_key, key_shares, thresh_params = el.keygen_threshold()
     
-    m1 = 1795
-    m2 = 82
+    m1 = 125
+    m2 = 8
     
     # Encrypt two messages
     cipher1 = el.enc(pub_key, m1)
@@ -302,6 +294,9 @@ def test_sub(el):
     
     print(f"Original message 1: {m1}")
     print(f"Original message 2: {m2}")
+    
+    print(f"Ciphertext 1 len: {len(cipher1)}")
+    print(f"Ciphertext 2 len: {len(cipher2)}")
     
     # Perform homomorphic subtraction
     cipher_sub = sub_as_integer(el, cipher1, cipher2)
@@ -311,7 +306,7 @@ def test_sub(el):
     partial_from_share1 = el.partial_decrypt([cipher_sub], key_shares[1])
     partial_combined = partial_from_share0 + partial_from_share1
     
-    result = el.threshold_decrypt_raw(partial_combined, cipher_sub)
+    result = el.threshold_decrypt_point(partial_combined, cipher_sub)
     expected = (m1 * el.pp[1]) + (-(m2 * el.pp[1]))
     
     print(f"Decrypted result: {result}")
