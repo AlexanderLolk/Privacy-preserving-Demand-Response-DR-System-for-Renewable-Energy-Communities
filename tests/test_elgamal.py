@@ -243,6 +243,87 @@ def test_threshold_elgamal_deterministic_0(el):
     # Compare point coordinates
     assert decrypted_msg == msg_point, f"Expected {msg_point}, got {decrypted_msg}"
 
+def sub(el, c1, c2):
+    """ Homomorphic subtraction of two encrypted lists of ciphertexts. """
+    # Pad the shorter list to match lengths
+    result = []
+    for pair1, pair2 in zip(c1, c2):
+        a1, b1 = pair1
+        a2, b2 = pair2
+        
+        # Perform the ElGamal subtraction logic: (a1 - a2, b1 - b2)
+        # Note: In many ElGamal implementations, subtraction is 
+        # actually division, or addition of the inverse.
+        result.append((a1 + (-a2), b1 + (-b2)))
+    return result
+
+def sub_as_integer(el, c1, c2):
+    """ 
+    Weights bits by 2^i and collapses them into one tuple 
+    before subtracting.
+    """
+    def collapse(cipher_list):
+        total_a, total_b = None, None
+        for i, (a, b) in enumerate(cipher_list):
+            weight = 2**i
+            # Scalar multiplication: weight * Point
+            weighted_a = a * weight 
+            weighted_b = b * weight
+            
+            if total_a is None:
+                total_a, total_b = weighted_a, weighted_b
+            else:
+                total_a += weighted_a
+                total_b += weighted_b
+        return total_a, total_b
+
+    # 1. Turn [ct0, ct1, ct2] into one (A, B) representing the whole number
+    int_ct1 = collapse(c1)
+    int_ct2 = collapse(c2)
+
+    # 2. Subtract the resulting tuples
+    # (a1 - a2, b1 - b2)
+    # return (int_ct1[0] - int_ct2[0], int_ct1[1] - int_ct2[1])
+    res_a = int_ct1[0] + (-int_ct2[0])
+    res_b = int_ct1[1] + (-int_ct2[1])
+    return (res_a, res_b)
+
+
+def test_sub(el):
+    """ Test homomorphic subtraction of encrypted values using threshold encryption. """
+    pub_key, key_shares, thresh_params = el.keygen_threshold()
+    
+    m1 = 1795
+    m2 = 82
+    
+    # Encrypt two messages
+    cipher1 = el.enc(pub_key, m1)
+    cipher2 = el.enc(pub_key, m2)
+    
+    print(f"Original message 1: {m1}")
+    print(f"Original message 2: {m2}")
+    
+    # Perform homomorphic subtraction
+    cipher_sub = sub_as_integer(el, cipher1, cipher2)
+    
+    # Decrypt the result using threshold decryption
+    partial_from_share0 = el.partial_decrypt([cipher_sub], key_shares[0])
+    partial_from_share1 = el.partial_decrypt([cipher_sub], key_shares[1])
+    partial_combined = partial_from_share0 + partial_from_share1
+    
+    result = el.threshold_decrypt_raw(partial_combined, cipher_sub)
+    expected = (m1 * el.pp[1]) + (-(m2 * el.pp[1]))
+    
+    print(f"Decrypted result: {result}")
+    print(f"Expected result: {expected}")
+    
+    assert result == expected, f"Expected {expected}, got {result}"
+    print("Homomorphic subtraction with threshold encryption verified!")
+    
+    print(f"result is : x = {result.x}, y = {result.y}")
+    print(f"expected is : x = {expected.x}, y = {expected.y}")
+
+
 
 if __name__ == "__main__":
     el = ElGamal()
@@ -256,3 +337,4 @@ if __name__ == "__main__":
     # test_eval_threshold_elgamal(el)
     # test_threshold_elgamal_point(el)
     # test_threshold_elgamal_deterministic_0(el)
+    test_sub(el)
