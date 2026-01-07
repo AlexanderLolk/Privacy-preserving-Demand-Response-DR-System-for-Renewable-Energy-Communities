@@ -14,7 +14,6 @@ class SmartMeter:
      - verifying its anonymized identity assignment.
      - generating signed, encrypted reports of energy consumption/reduction.
     """
-    
     def __init__(self, init_id="sm_id", pp=None):
         self.pro = Procedures()
         

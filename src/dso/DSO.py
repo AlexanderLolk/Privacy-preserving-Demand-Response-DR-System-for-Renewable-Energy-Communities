@@ -147,8 +147,8 @@ class DSO:
 
         # print(f"\n\nNoisy Target Reduction list: {values} \n\n")
 
-        enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
-        # enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
+        # enc_TR = [self.pro.ahe.encrypt_single(self.ek, val) for val in values]
+        enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
         signature_TR = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(enc_TR))
 
         return enc_TR, signature_TR

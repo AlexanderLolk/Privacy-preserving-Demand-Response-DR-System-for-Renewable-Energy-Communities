@@ -41,52 +41,28 @@ class ElGamal:
 
     def __int_to_bits(self, message: int):
         """
-        Helper function to convert an integer into a list of bits.
-        
-        Args:
-            message (int): The integer message to convert.
-
-        Returns:
-            list: A list of integers (0 or 1) representing the message binary.
-                  The order is from Most Significant Bit (MSB) to Least Significant Bit (LSB).
+        Converts integer to bits, LSB FIRST (Little Endian).
         """
         if message == 0:
             return [0]
 
         length = message.bit_length()
-        
         list_bits = []
 
-        # Extracts the bit at position i
-        # Example: n = 13 (1101) & i = 2
-        # (13 >> 2) = (1101) >> 2 = 3 (0011)
-        # 3 (0011) & 1 (0001) = 1 (0001)
-        for i in reversed(range(length)):
+        # Loop 0 to length
+        for i in range(length):
+            # (message >> 0) & 1 is the LSB
             list_bits.append(((message >> i) & 1))
 
         return list_bits
-    
+
     def __bits_to_int(self, bits: list):
         """
-        Helper function to reconstruct an integer from a list of bits.
-
-        Args:
-            bits (list): A list of integers (0 or 1).
-
-        Returns:
-            int: The reconstructed integer value.
+        Reconstructs integer from LSB-first bit list.
         """
         message = 0
-        
-        for bit in bits:
-            # Append one bit to the right side of the number
-            # example: wants to add 0101 into message
-            #   message = (message << 1) | 1   # 0000 -> 0001 (1)
-            #   message = (message << 1) | 0   # 0001 -> 0010 (2)
-            #   message = (message << 1) | 1   # 0010 -> 0101 (5)
-            #   result: 5 (0101)
-            message = (message << 1) | bit
-
+        for i, bit in enumerate(bits):
+            message += bit * (2 ** i)
         return message
 
     def encrypt_single(self, encryption_key: ECC.EccPoint, message: int):
@@ -105,7 +81,6 @@ class ElGamal:
     
         if isinstance(message, int):
             message = message * self.pp[1]
-
 
         c1 = r * self.pp[1]
         c2 = (r * encryption_key) + message
@@ -127,9 +102,6 @@ class ElGamal:
         Returns:
             list: A list of (C1, C2) tuples, one for each bit of the message.
         """
-        
-        
-        
         list_bits = self.__int_to_bits(message)
         encryptions = []
         for bit in list_bits:
@@ -392,3 +364,36 @@ class ElGamal:
         decrypted_message = self.__bits_to_int(decrypted_bits)
 
         return decrypted_message
+    
+    def threshold_decrypt_point(self, partial_decryptions, ciphertext):
+        """
+        Decrypts a single ciphertext tuple directly to a Point.
+        
+        This skips the 'check_if_zero_or_one' logic, allowing 
+        us to see if the result is truly the Identity Point or a Random Point.
+        """
+        # Extract C1, C2 from the single tuple
+        c1, c2 = ciphertext 
+        
+        # Get share indices from the partial decryptions
+        partial_indices = [dec.x for dec in partial_decryptions]
+        
+        # Calculate Lagrange Coefficients 
+        lagrange_coefficients = [
+            tc.lagrange_coefficient_for_key_share_indices(partial_indices, idx, self.curve)
+            for idx in partial_indices
+        ]
+        
+        # Weighted sum of the shares
+        summands = [
+            (lagrange_coefficients[i].coefficient * partial_decryptions[i].yC1)
+            for i in range(len(partial_decryptions))
+        ]
+        
+        # Reconstruct the shared secret effect
+        accumulated_point = tc.number.ecc_sum(summands)
+        
+        # Recover the message point: M = C2 - S
+        restored_point = c2 + (-accumulated_point)
+        
+        return restored_point
