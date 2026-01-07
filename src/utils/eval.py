@@ -243,9 +243,7 @@ class Eval:
         CT_prod = reduc_set[0][0]
         for i in range(1, len(reduc_set)):
             CT_i = reduc_set[i][0]
-
             CT_prod = self.add(CT_prod, CT_i)
-            print(f"\n CT_prod is {CT_prod} \n")
             
         return CT_prod
 
