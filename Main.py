@@ -18,7 +18,7 @@ from src.utils.elgamal_dec_proof import verify_partial_decryption_share
 # Initialize the Trusted Authority / Distribution System Operator
 dso = distributer.DSO()
 
-NUM_SM      = 6     # Total Smart Meters
+NUM_SM      = 14     # Total Smart Meters
 NUM_AGG     = 1      # Energy Aggregator
 NUM_DR_AGG  = 1      # DR Aggregator
 
@@ -76,7 +76,7 @@ bb.publish_dso_public_keys((dso.get_public_key(), dso.get_encryption_key()))
 bb.publish_smartmeters_and_aggregators(dso.sign_registered_lists())
 
 # DSO publishes the Noisy List (Encrypted Zero-Reports)
-noisy_target_reduction = dso.generate_noisy_list()
+noisy_target_reduction, target_print = dso.generate_noisy_list()
 bb.publish_target_reduction(noisy_target_reduction)
 
 
@@ -268,4 +268,4 @@ agg_equal_cts_share = agg.partial_dec_equal_cts(equal_cts)
 dr_equal_cts_share = dr_agg.partial_dec_equal_cts(equal_cts)
 
 # Does a final check: Does Decrypt(Result_CT) == 0?
-evaluator.final_check_eval(bb, bb, agg_equal_cts_share, dr_equal_cts_share, (equal_cts, proofs), dso.get_threshold_params())
+evaluator.final_check_eval(bb, bb, agg_equal_cts_share, dr_equal_cts_share, (equal_cts, proofs), dso.get_threshold_params(), target_print)

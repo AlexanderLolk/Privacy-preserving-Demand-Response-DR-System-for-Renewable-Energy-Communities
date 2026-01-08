@@ -170,7 +170,7 @@ class Eval:
         
         return ct_eq, π_eq
     
-    def final_check_eval(self, BB, PBB, agg_share, dr_share, ct_target_consumption_comparison_w_proof, thresh_param):
+    def final_check_eval(self, BB, PBB, agg_share, dr_share, ct_target_consumption_comparison_w_proof, thresh_param, target_print):
         """
         Finalizes the evaluation by checking the result of the Private Equality Test (PET).
         
@@ -186,11 +186,12 @@ class Eval:
         M_set_final, proof_shar = self.combine_decryption_shares(agg_share, dr_share, ct_target_consumption_comparison, thresh_param)
         
         print(f"\nEvaluation complete\n")
-        print(f" selected with consumption below their baseline: {len(self.eval_results)}")
-        print(f" participants not selected or did not meet baseline: {len(self.for_marked_or_not_selected)}\n")
-        print(f" target comparisons {len(ct_target_consumption_comparison)}")
-        print(f" Final M_set: {M_set_final}")
-        print(f" eval done")
+        print(f"selected with consumption below their baseline: {len(self.eval_results)}")
+        print(f"participants not selected or did not meet baseline: {len(self.for_marked_or_not_selected)}\n")
+        # print(f" target comparisons {len(ct_target_consumption_comparison)}")
+        print(f"Final M_set: \n{M_set_final}")
+        print(f"Target reduction list: \n{target_print}")
+        print(f"\n eval done")
 
         return BB
 

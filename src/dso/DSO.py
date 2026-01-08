@@ -116,7 +116,7 @@ class DSO:
         delta_Q = "8"
         
         dr_param = [p, phi, R, Ø, E, ts, te, delta_Q]
-        target_reduction_value = 10
+        target_reduction_value = 15
         return dr_param, target_reduction_value
 
     def generate_noisy_list(self):
@@ -151,7 +151,7 @@ class DSO:
         enc_TR = [self.pro.ahe.enc(self.ek, val) for val in values]
         signature_TR = self.pro.sig.schnorr_sign(self.__sk, self.pp, str(enc_TR))
 
-        return enc_TR, signature_TR
+        return (enc_TR, signature_TR), values 
 
     def get_public_key(self):
         """ 
